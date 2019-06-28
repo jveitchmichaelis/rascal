@@ -121,6 +121,7 @@ class Calibrator:
         valid_solution = False
         best_inliers = [False]
         best_p = None
+        best_cost = 1e50
         best_err = 1e50
         max_tries = 3e4
         sample_size = polydeg + 1
@@ -172,13 +173,16 @@ class Calibrator:
             if(fit_coeffs[-2] > self.max_slope):
                 continue
             
-            # Count inliers by absolute distance
+            # M-SAC Estimator (Torr and Zisserman, 1996)
             err = np.abs(polyfit_value(x, fit_coeffs[::-1]) - y)
+            err[err > thresh] = thresh
+            cost = sum(err)
             inliers = err < thresh
             
             # Want the most inliers with the lowest error
-            if sum(inliers) >= sum(best_inliers):
+            if cost <= best_cost:
                 best_inliers = inliers
+                best_cost = cost
 
                 best_p = np.polyfit(x[best_inliers], y[best_inliers], polydeg)
                 err = np.abs(polyfit_value(x[best_inliers], fit_coeffs[::-1]) - y[best_inliers])
