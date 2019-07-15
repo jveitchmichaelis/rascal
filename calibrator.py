@@ -31,17 +31,18 @@ class Calibrator:
     def fit(self, top_n=5):
 
         self.accumulator = self._hough_points(self.pairs[:, 0],
-                                              self.pairs[:, 1])
+                                              self.pairs[:, 1],
+                                              num_slopes=3600)
 
-        h, lines = self._get_top_lines(self.accumulator, bins=100, top_n=top_n)
+        h, lines = self._get_top_lines(self.accumulator, xbins=self.xbins, ybins=self.ybins, top_n=top_n)
 
         self.candidates = []
         for line in lines:
             m, c = line
-            inliers_x, inliers_y = self._get_candidate_points(m, c)
+            inliers_x, inliers_y = self._get_candidate_points(m, c, self.thresh)
             self.candidates.append((inliers_x, inliers_y))
 
-        return self._get_best_model(self.candidates)
+        return self._get_best_model(self.candidates, self.polydeg, self.thresh, self.brute_force)
 
     def set_fit_constraints(self,
                             min_slope=0.1,
@@ -50,7 +51,12 @@ class Calibrator:
                             max_intercept=500,
                             line_fit_thresh=5,
                             fit_tolerance=0.5,
-                            inlier_tolerance=1):
+                            inlier_tolerance=1,
+                            polydeg=3,
+                            thresh=10,
+                            xbins=100,
+                            ybins=100,
+                            brute_force=False):
         self.min_slope = min_slope
         self.max_slope = max_slope
         self.min_intercept = min_intercept
@@ -58,12 +64,17 @@ class Calibrator:
         self.line_fit_thresh = line_fit_thresh
         self.fit_tolerance = fit_tolerance
         self.inlier_tolerance = inlier_tolerance
+        self.polydeg = polydeg
+        self.thresh = thresh
+        self.xbins = xbins
+        self.ybins = ybins
+        self.brute_force = brute_force
 
     def _generate_pairs(self):
         self.pairs = np.array(
             [pair for pair in itertools.product(self.peaks, self.atlas)])
 
-    def _hough_points(self, x, y, num_slopes=3600):
+    def _hough_points(self, x, y, num_slopes):
         """
         Calculate the Hough transform for a set of input points.
         
@@ -90,9 +101,9 @@ class Calibrator:
 
         return np.array(accumulator)
 
-    def _get_top_lines(self, accumulator, bins=30, top_n=5):
+    def _get_top_lines(self, accumulator, top_n, xbins, ybins):
         h, xedges, yedges = np.histogram2d(
-            accumulator[:, 0], accumulator[:, 1], bins=bins)
+            accumulator[:, 0], accumulator[:, 1], bins=(xbins, ybins))
 
         xbin_width = (xedges[1] - xedges[0]) / 2
         ybin_width = (yedges[1] - yedges[0]) / 2
@@ -107,7 +118,7 @@ class Calibrator:
 
         return h, lines
 
-    def _get_candidate_points(self, m, c, thresh=5):
+    def _get_candidate_points(self, m, c, thresh):
 
         predicted = (m * self.pairs[:, 0] + c)
         actual = self.pairs[:, 1]
@@ -118,9 +129,9 @@ class Calibrator:
     def _solve_candidate_ransac(self,
                                 x,
                                 y,
-                                polydeg=3,
-                                thresh=1,
-                                brute_force=False):
+                                polydeg,
+                                thresh,
+                                brute_force):
 
         valid_solution = False
         best_inliers = [False]
@@ -210,7 +221,7 @@ class Calibrator:
 
         return (best_p, best_err, sum(best_inliers), valid_solution)
 
-    def _get_best_model(self, candidates):
+    def _get_best_model(self, candidates, polydeg, thresh, brute_force):
 
         best_inliers = 0
         best_p = None
@@ -222,7 +233,7 @@ class Calibrator:
         for candidate in candidate_list:
             x, y = candidate
             p, err, n_inliers, valid = self._solve_candidate_ransac(
-                x, y, thresh=self.inlier_threshold)
+                x, y, polydeg=3, thresh=self.inlier_threshold, brute_force=brute_force)
 
             if valid == False:
                 print("Invalid fit")
@@ -252,7 +263,7 @@ class Calibrator:
         y_match = []
 
         for p in self.peaks:
-            x = np.polyval(p, fit)
+            x = np.polyval(fit, p)
             diff = np.abs(self.atlas - x)
             idx = np.argmin(diff)
 
@@ -289,5 +300,5 @@ class Calibrator:
                         s="{:1.2f}".format(self.atlas[idx]),
                         rotation=90,
                         bbox=dict(facecolor='white', alpha=1))
-
+            plt.grid(linestyle=':')
             plt.show()

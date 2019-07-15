@@ -8,7 +8,7 @@ from calibrator import Calibrator
 
 def load_calibration_lines(input_file='calibration_lines.csv',
                            elements=["Hg", "Ar", "Xe", "CuNeAr", "Kr"],
-                           min_wavelength=300,
+                           min_wavelength=400,
                            max_wavelength=800):
     cal_lines = np.loadtxt(input_file, delimiter=',', dtype='U', skiprows=1)
     wave = cal_lines[:, 0].astype('float')
@@ -22,10 +22,12 @@ def load_calibration_lines(input_file='calibration_lines.csv',
 
 atlas = load_calibration_lines(
     "calibration_lines.csv", elements=["Xe"], min_wavelength=400, max_wavelength=800)
+print(atlas)
 
 spectrum = np.median(fits.open('v_a_20190516_55_1_0_1.fits')[0].data, axis=0)[200:]
 
-peaks, _ = find_peaks(spectrum, distance=3., threshold=1.)
+peaks, _ = find_peaks(spectrum, distance=10., threshold=20.)
+
 plt.plot(spectrum)
 plt.vlines(peaks,
               spectrum[peaks.astype('int')],
@@ -35,13 +37,13 @@ plt.vlines(peaks,
 
 c = Calibrator(peaks, atlas)
 c.set_fit_constraints(
-    min_slope=0.01,
-    max_slope=100.0,
-    min_intercept=0,
-    max_intercept=10000,
-    fit_tolerance=0.5,
-    line_fit_thresh=10)
+    min_slope=0.4,
+    max_slope=1.0,
+    min_intercept=300.,
+    max_intercept=500.,
+    fit_tolerance=0.2,
+    thresh=5)
 
-best_p = c.fit()
+best_p = c.fit(top_n=5)
 print(best_p)
 c.plot_fit(spectrum, best_p)
