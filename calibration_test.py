@@ -42,8 +42,8 @@ c.set_fit_constraints(
     min_intercept=300.,
     max_intercept=500.,
     fit_tolerance=0.2,
-    thresh=5)
+    thresh=10)
 
-best_p = c.fit(top_n=5)
+best_p = c.fit(sample_size=10, top_n=5)
 print(best_p)
 c.plot_fit(spectrum, best_p)
