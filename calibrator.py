@@ -6,13 +6,15 @@ try:
     import matplotlib.pyplot as plt
     matplotlib_imported = True
 except:
-    warnings.warn('matplotlib package not available. Plot cannot be generated.')
+    warnings.warn(
+        'matplotlib package not available. Plot cannot be generated.')
     matplotlib_imported = False
 try:
     from tqdm.autonotebook import tqdm
     tdqm_imported = True
 except:
-    warnings.warn('tqdm package not available. Progress bar will not be shown.')
+    warnings.warn(
+        'tqdm package not available. Progress bar will not be shown.')
     tdqm_imported = False
 
 
@@ -28,6 +30,8 @@ class Calibrator:
         self.inlier_threshold = 1
 
         self.set_fit_constraints()
+        self.set_guess_pairs()
+        self.set_known_pairs()
 
     def _generate_pairs(self):
         self.pairs = np.array(
@@ -85,14 +89,8 @@ class Calibrator:
 
         return self.pairs[:, 0][err < thresh], self.pairs[:, 1][err < thresh]
 
-    def _solve_candidate_ransac(self,
-                                x,
-                                y,
-                                polydeg,
-                                sample_size,
-                                max_tries,
-                                thresh,
-                                brute_force):
+    def _solve_candidate_ransac(self, x, y, polydeg, sample_size, max_tries,
+                                thresh, brute_force, progress):
 
         valid_solution = False
         best_inliers = [False]
@@ -116,7 +114,7 @@ class Calibrator:
             sampler = range(int(max_tries))
 
         # Brute force check all combinations. N choose 4 is pretty fast.
-        if tdqm_imported:
+        if tdqm_imported & progress:
             sampler_list = tqdm(sampler)
         else:
             sampler_list = sampler
@@ -167,15 +165,17 @@ class Calibrator:
             if cost <= best_cost:
                 best_inliers = inliers
                 best_cost = cost
-                
-                best_p = self.polyfit(x[best_inliers], y[best_inliers], polydeg)
-                err = np.abs(self.polyval(best_p, x[best_inliers]) - y[best_inliers])
+
+                best_p = self.polyfit(x[best_inliers], y[best_inliers],
+                                      polydeg)
+                err = np.abs(
+                    self.polyval(best_p, x[best_inliers]) - y[best_inliers])
                 best_err = err.mean()
 
                 # Perfect fit, break early
                 if sum(best_inliers) == len(x):
                     break
-            
+
         # Overfit check
         if sum(best_inliers) == polydeg + 1:
             valid_solution = False
@@ -186,19 +186,27 @@ class Calibrator:
 
         return (best_p, best_err, sum(best_inliers), valid_solution)
 
-    def _get_best_model(self, candidates, polydeg, sample_size, max_tries, thresh, brute_force):
+    def _get_best_model(self, candidates, polydeg, sample_size, max_tries,
+                        thresh, brute_force, progress):
 
         best_inliers = 0
         best_p = None
         best_err = 1e10
-        if tdqm_imported:
+        if tdqm_imported & progress:
             candidate_list = tqdm(candidates)
         else:
             candidate_list = candidates
         for candidate in candidate_list:
             x, y = candidate
             p, err, n_inliers, valid = self._solve_candidate_ransac(
-                x, y, polydeg=polydeg, sample_size=sample_size, max_tries=max_tries, thresh=self.inlier_threshold, brute_force=brute_force)
+                x,
+                y,
+                polydeg=polydeg,
+                sample_size=sample_size,
+                max_tries=max_tries,
+                thresh=self.inlier_threshold,
+                brute_force=brute_force,
+                progress=progress)
 
             if valid == False:
                 print("Invalid fit")
@@ -248,19 +256,20 @@ class Calibrator:
         self.xbins = xbins
         self.ybins = ybins
         self.brute_force = brute_force
-        if fittype=='poly':
+        if fittype == 'poly':
             self.polyfit = np.polyfit
             self.polyval = np.polyval
-        elif fittype=='legendre':
+        elif fittype == 'legendre':
             self.polyfit = np.polynomial.legendre.legfit
             self.polyval = np.polynomial.legendre.legval
-        elif fittype=='chebyshev':
+        elif fittype == 'chebyshev':
             self.polyfit = np.polynomial.chebyshev.chebfit
             self.polyval = np.polynomial.chebyshev.chebval
         else:
-            raise NameError('fittype must be: (1) poly, (2) legendre or (3) chebyshev')
+            raise NameError(
+                'fittype must be: (1) poly, (2) legendre or (3) chebyshev')
 
-    def set_guess_pairs(self, pix=(), wave=(), margin=5):
+    def set_guess_pairs(self, pix_guess=(), wave_guess=(), margin=5):
         '''
         Provide manual pixel-to-wavelength mapping, good guess values with a margin
         of error.
@@ -277,21 +286,37 @@ class Calibrator:
         self.pix = np.asarray(pix, dtype='float')
         self.wave = np.asarray(wave, dtype='float')
 
-    def fit(self, sample_size=5, max_tries=1e5, top_n=5):
+    def fit(self, sample_size=10, max_tries=1000, top_n=10, mode='normal',
+            progress=True):
 
-        self.accumulator = self._hough_points(self.pairs[:, 0],
-                                              self.pairs[:, 1],
-                                              num_slopes=3600)
+        if mode=='fast':
+            sample_size=5
+            max_tries=1000
+            top_n=5
+        if mode=='slow':
+            sample_size=10
+            max_tries=10000
+            top_n=10
+        if mode=='veryslow':
+            sample_size=10
+            max_tries=10000
+            top_n=100
+        self.accumulator = self._hough_points(
+            self.pairs[:, 0], self.pairs[:, 1], num_slopes=3600)
 
-        h, lines = self._get_top_lines(self.accumulator, top_n=top_n, xbins=self.xbins, ybins=self.ybins)
+        h, lines = self._get_top_lines(
+            self.accumulator, top_n=top_n, xbins=self.xbins, ybins=self.ybins)
 
         self.candidates = []
         for line in lines:
             m, c = line
-            inliers_x, inliers_y = self._get_candidate_points(m, c, self.thresh)
+            inliers_x, inliers_y = self._get_candidate_points(
+                m, c, self.thresh)
             self.candidates.append((inliers_x, inliers_y))
 
-        return self._get_best_model(self.candidates, self.polydeg, sample_size, max_tries, self.thresh, self.brute_force)
+        return self._get_best_model(self.candidates, self.polydeg, sample_size,
+                                    max_tries, self.thresh, self.brute_force,
+                                    progress)
 
     def match_peaks_to_atlas(self, fit, tolerance=0.5, polydeg=4):
 
@@ -315,18 +340,21 @@ class Calibrator:
             pix = np.arange(len(spectrum)).astype('float')
             wave = self.polyval(fit, pix)
 
-            fig, (ax1, ax2, ax3) = plt.subplots(nrows=3, sharex=True, gridspec_kw={'hspace': 0.}, figsize=(10,15))
+            fig, (ax1, ax2, ax3) = plt.subplots(
+                nrows=3,
+                sharex=True,
+                gridspec_kw={'hspace': 0.},
+                figsize=(10, 15))
             fig.tight_layout()
-        
+
             # Plot fitted spectrum
-            ax1.plot(
-                wave, spectrum)
+            ax1.plot(wave, spectrum)
             ax1.vlines(
                 self.polyval(fit, self.peaks),
                 spectrum[self.peaks.astype('int')],
-                spectrum.max(),
-                colors='C1',
-                alpha=0.5)
+                spectrum.max() * 1.05,
+                linestyles='dashed',
+                colors='C1')
 
             fitted_peaks = []
             fitted_diff = []
@@ -336,33 +364,60 @@ class Calibrator:
                 diff = self.atlas - x
                 idx = np.argmin(np.abs(diff))
                 all_diff.append(diff[idx])
+
                 print("Peak at: {} nm".format(x))
 
                 if np.abs(diff[idx]) < tolerance:
                     fitted_peaks.append(p)
                     fitted_diff.append(diff[idx])
                     print("- matched to {} nm".format(self.atlas[idx]))
+                    ax1.vlines(
+                        self.polyval(fit, p),
+                        spectrum[p.astype('int')],
+                        spectrum.max() * 1.05,
+                        colors='C1')
                     ax1.text(
                         x - 3,
                         0.8 * max(spectrum),
                         s="{:1.2f}".format(self.atlas[idx]),
                         rotation=90,
                         bbox=dict(facecolor='white', alpha=1))
+
+            rms = np.sqrt(np.mean(np.array(fitted_diff)**2.))
+
             ax1.grid(linestyle=':')
             ax1.set_ylabel('ADU')
+            ax1.set_ylim(spectrum.min(), spectrum.max() * 1.05)
 
             # Plot residuals
-            ax2.scatter(self.polyval(fit, fitted_peaks), fitted_diff, marker='+', color='C1', label='Peaks used for fitting')
+            ax2.scatter(
+                self.polyval(fit, fitted_peaks),
+                fitted_diff,
+                marker='+',
+                color='C1')
+            ax2.hlines(0, wave.min(), wave.max(), linestyles='dashed')
             ax2.grid(linestyle=':')
-            ax2.set_xlabel('Wavelength / nm')
             ax2.set_ylabel('Residual / nm')
             ax2.legend(loc='lower right')
-
+            '''
+            ax2.text(
+                min(wave) + np.ptp(wave) * 0.05,
+                max(spectrum),
+                'RMS =' + str(rms)[:6]
+                )
+            '''
             # Plot polynomial
-            ax3.scatter(self.polyval(fit, fitted_peaks), fitted_peaks, marker='+', color='C1', label='Peaks used for fitting')
+            ax3.scatter(
+                self.polyval(fit, fitted_peaks),
+                fitted_peaks,
+                marker='+',
+                color='C1',
+                label='Peaks used for fitting')
             ax3.plot(wave, pix)
             ax3.grid(linestyle=':')
+            ax3.set_xlabel('Wavelength / nm')
             ax3.set_ylabel('Pixel')
             ax3.legend(loc='lower right')
+            ax3.set_xlim(wave.min(), wave.max())
 
             plt.show()
