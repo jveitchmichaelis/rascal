@@ -23,15 +23,21 @@ class Calibrator:
         self.peaks = peaks
         self.atlas = atlas
 
+        # Create a list of all possible pairs of detected peaks and lines from atlas 
         self._generate_pairs()
+
+        # Configuring fitting constraints
+        self.set_fit_constraints()
+
+        # Include user supplied pairs that are always fitted to within a tolerance
+        self.set_guess_pairs()
+
+        # Include user supplied pairs that are always fitted as given
+        self.set_known_pairs()
 
         # It's unlikely we'll be out by more than half a nanometre.
         self.fit_tolerance = 0.5
         self.inlier_threshold = 1
-
-        self.set_fit_constraints()
-        self.set_guess_pairs()
-        self.set_known_pairs()
 
     def _generate_pairs(self):
         self.pairs = np.array(
@@ -41,30 +47,78 @@ class Calibrator:
         """
         Calculate the Hough transform for a set of input points.
         
-        Returns the 2D Hough accumulator matrix. The x-axis represents slope, the
-        y-axis represents intercept. Vertical lines (infinite gradient)
-        are not accommodated.
-        """
-        # Build up the accumulator
-        accumulator = []
+        Returns the 2D Hough accumulator matrix.
 
+        Parameters
+        ----------
+        x : 1D numpy array
+            The x-axis represents slope.
+        y : 1D numpy array
+            The y-axis represents intercept. Vertical lines (infinite gradient)
+            are not accommodated.
+        num_slopes : int
+            The number of slopes to be generated.
+
+        Returns
+        -------
+        accumulator : 2D numpy array
+            A 2D Hough accumulator array.
+
+        """
+
+        # Build up the accumulator
+        accumulator = None
+
+        # Loop through all the gradients
         for m in np.linspace(self.min_slope, self.max_slope, num_slopes):
-            # y = mx+c -> (y-mx) = c
+            # y = mx + c -> (y - mx) = c
             intercepts = y - m * x
 
-            for c in intercepts:
-                # Initial wavelength unlikely to be below 150 nm
-                if c < self.min_intercept:
-                    continue
+            # Masking for intercepts within range
+            mask = ((intercepts >= self.min_intercept) &
+                    (intercepts <= self.max_intercept))
+            intercepts = intercepts[mask]
 
-                if c > self.max_intercept:
-                    continue
+            i_length = len(intercepts)
+            if i_length == 0:
+                continue
 
-                accumulator.append((m, c))
+            # Create an array of gradient in the same size of intercepts
+            gradients = np.ones(i_length) * m
 
-        return np.array(accumulator)
+            # Create an array of Hough Points
+            hp = np.column_stack((gradients, intercepts))
+
+            # If accumulator is empty, change it ot the array of Hough Points
+            if accumulator is None:
+                accumulator = hp
+            else:
+                # Add to existing array
+                accumulator = np.concatenate((accumulator, hp))
+
+        return accumulator
 
     def _get_top_lines(self, accumulator, top_n, xbins, ybins):
+        '''
+        Parameters
+        ----------
+        accumulator : 2D numpy array
+            A 2D Hough accumulator array.
+        top_n : int
+            Top ranked lines to be fitted.
+        xbins : int
+            The number of bins in the pixel direction.
+        ybins : int
+            The number of bins in the wavelength direction.
+
+        Returns
+        -------
+        h : 
+
+        lines : 
+
+        '''
+
         h, xedges, yedges = np.histogram2d(
             accumulator[:, 0], accumulator[:, 1], bins=(xbins, ybins))
 
@@ -82,15 +136,53 @@ class Calibrator:
         return h, lines
 
     def _get_candidate_points(self, m, c, thresh):
+        '''
+        
+
+        '''
 
         predicted = (m * self.pairs[:, 0] + c)
         actual = self.pairs[:, 1]
         err = np.abs(predicted - actual)
+        mask = (err < thresh)
 
-        return self.pairs[:, 0][err < thresh], self.pairs[:, 1][err < thresh]
+        return self.pairs[:, 0][mask], actual[mask]
 
     def _solve_candidate_ransac(self, x, y, polydeg, sample_size, max_tries,
                                 thresh, brute_force, progress):
+        '''
+        Parameters
+        ----------
+        x : 1D numpy array
+            Array of pixels from peak detection.
+        y : 1D numpy array
+            Array of wavlengths from atlas.
+        polydeg : int
+            The order of polynomial (the polynomial type is definted in the 
+            set_fit_constraints).
+        sample_size : int
+            Number of lines to be fitted.
+        max_tries : int
+            Number of trials of polynomial fitting.
+        thresh :
+
+        brute_force : tuple
+            Solve all pixel-wavelength combinations with set to True.
+        progress : tuple
+            Show the progress bar with tdqm if set to True.
+
+        Returns
+        -------
+        best_p : list
+            A list of size polydeg of the best fit polynomial coefficient.
+        best_err : float
+            Arithmetic mean of the residuals.
+        sum(best_inliers) : int
+            Number of lines fitted within the thresh.
+        valid_solution : tuple
+            False if overfitted.
+
+        '''
 
         valid_solution = False
         best_inliers = [False]
@@ -103,6 +195,8 @@ class Calibrator:
         x = np.array(x)
         y = np.array(y)
 
+        # If the number of lines is smaller than the number of degree of polynomial
+        # fit, return failed fit.
         if len(np.unique(x)) <= polydeg:
             return (best_p, best_err, sum(best_inliers), False)
 
@@ -166,8 +260,11 @@ class Calibrator:
                 best_inliers = inliers
                 best_cost = cost
 
+                # Get the best fit polynomial coefficient
                 best_p = self.polyfit(x[best_inliers], y[best_inliers],
                                       polydeg)
+
+                # Get the residual of the fit
                 err = np.abs(
                     self.polyval(best_p, x[best_inliers]) - y[best_inliers])
                 best_err = err.mean()
@@ -182,12 +279,31 @@ class Calibrator:
         else:
             valid_solution = True
 
-        print(best_p)
-
         return (best_p, best_err, sum(best_inliers), valid_solution)
 
     def _get_best_model(self, candidates, polydeg, sample_size, max_tries,
                         thresh, brute_force, progress):
+        '''
+        Parameters
+        ----------
+        candidates :
+        polydeg :
+        sample_size : int
+            Number of lines to be fitted.
+        max_tries : int
+            Number of trials of polynomial fitting.
+        thresh :
+        
+        brute_force : tuple
+            Solve all pixel-wavelength combinations with set to True.
+        progress : tuple
+            Show the progress bar with tdqm if set to True.
+        Return
+        ------
+        coeff : list
+            List of best fit polynomial coefficient.
+
+        '''
 
         best_inliers = 0
         best_p = None
@@ -244,6 +360,38 @@ class Calibrator:
                             ybins=100,
                             brute_force=False,
                             fittype='poly'):
+        '''
+        Parameters
+        ----------
+        min_slope : float
+            Minimum wavelength/pixel gradient
+        max_slope : float
+            Maximum wavelength/pixel gradient
+        min_intercept : float
+            Minimum possible wavelength at pixel 0
+        max_intercept : float
+            Maximum possible wavelength at pixel 0
+        line_fit_thresh : float
+        
+        fit_tolerance : float
+        
+        inlier_tolerance : float
+
+        polydeg : int
+            Degree of the polynomial fit.
+        thresh : float
+        
+        xbins : int
+        
+        ybins : int
+
+        brute_force : tuple
+            Set to True to try all possible combination in the given parameter space
+        fittype : string
+            One of 'poly', 'legendre' or 'chebyshev'
+
+        '''
+
         self.min_slope = min_slope
         self.max_slope = max_slope
         self.min_intercept = min_intercept
@@ -269,41 +417,92 @@ class Calibrator:
             raise NameError(
                 'fittype must be: (1) poly, (2) legendre or (3) chebyshev')
 
-    def set_guess_pairs(self, pix_guess=(), wave_guess=(), margin=5):
+    def set_guess_pairs(self, pix_guess=(), wave_guess=(), margin=5.):
         '''
         Provide manual pixel-to-wavelength mapping, good guess values with a margin
         of error.
 
-        Not currently used.
+        Parameters
+        ----------
+        pix_guess : numeric value, list or numpy 1D array (N)
+            Any pixel value; can be outside the detector chip and
+            serve purely as anchor points.
+        wave_guess : numeric value, list or numpy 1D array (N)
+            The matching wavelength for each of the pix_guess.
+        margin : float
+            Tolerance in the wavelength value of the pixel-to-wavelength mappping.
+
         '''
+
         self.pix_guess = np.asarray(pix_guess, dtype='float')
         self.wave_guess = np.asarray(wave_guess, dtype='float')
+        self.margin = margin
 
     def set_known_pairs(self, pix=(), wave=()):
         '''
         Provide manual pixel-to-wavelength mapping, fixed values in the fit.
+        Use with caution because it can completely skew or bias the fit.
+
+        Parameters
+        ----------
+        pix : numeric value, list or numpy 1D array (N)
+            Any pixel value, can be outside the detector chip and
+            serve purely as anchor points.
+        wave : numeric value, list or numpy 1D array (N)
+            The matching wavelength for each of the pix.
+
         '''
+
         self.pix = np.asarray(pix, dtype='float')
         self.wave = np.asarray(wave, dtype='float')
 
     def fit(self, sample_size=10, max_tries=1000, top_n=10, mode='normal',
             progress=True):
+        '''
+        Parameters
+        ----------
+        sample_size : int (default: 10)
 
+        max_tries : int (default: 1000)
+
+        top_n : int (default: 10)
+
+        mode : String
+            Preset modes 'fast', 'normal', 'slow' and 'veryslow'. They override
+            supplied sample_size, max_tries and top_n. 'slow' should be fairly
+            reliable.
+        progress : tuple
+            True to show progress with tdqm. It is overrid if tdqm cannot be
+            imported.
+
+        '''
+
+        # Presets for fast, normal, slow and veryslow
         if mode=='fast':
             sample_size=5
             max_tries=1000
             top_n=5
+
+        if mode=='normal':
+            sample_size=10,
+            max_tries=1000,
+            top_n=10
+
         if mode=='slow':
             sample_size=10
             max_tries=10000
             top_n=10
+
         if mode=='veryslow':
             sample_size=10
             max_tries=10000
             top_n=100
+
+        # Generate the accumulator from the pairs
         self.accumulator = self._hough_points(
             self.pairs[:, 0], self.pairs[:, 1], num_slopes=3600)
 
+        # ?
         h, lines = self._get_top_lines(
             self.accumulator, top_n=top_n, xbins=self.xbins, ybins=self.ybins)
 
@@ -319,6 +518,25 @@ class Calibrator:
                                     progress)
 
     def match_peaks_to_atlas(self, fit, tolerance=0.5, polydeg=4):
+        '''
+        Fitting all the detected peaks with the given polynomail solution for
+        a fit using maximal information.
+
+        Parameters
+        ----------
+        fit : list
+            List of polynomial fit coefficients
+        tolerance : float (default: 0.5)
+            Absolute difference between fit and model in the unit of nm.
+        polydeg : int (default: 4)
+            Order of polynomial fit with all the detected peaks
+
+        Return
+        ------
+        coeff : list
+            List of best fit polynomial coefficient.
+
+        '''
 
         x_match = []
         y_match = []
@@ -332,9 +550,22 @@ class Calibrator:
                 x_match.append(p)
                 y_match.append(self.atlas[idx])
 
-        return self.polyfit(x_match, y_match, polydeg)
+        coeff = self.polyfit(x_match, y_match, polydeg)
+        return coeff
 
     def plot_fit(self, spectrum, fit, tolerance=0.5):
+        '''
+        Parameters
+        ----------
+        spectrum : 1D numpy array (N)
+            Array of length N pixels 
+        fit : 
+            Best fit polynomail coefficients
+        tolerance : float (default: 0.5)
+            Absolute difference between model and fitted wavelengths in unit of nm.
+
+        '''
+
         if matplotlib_imported:
 
             pix = np.arange(len(spectrum)).astype('float')
@@ -389,7 +620,7 @@ class Calibrator:
             ax1.set_ylabel('ADU')
             ax1.set_ylim(spectrum.min(), spectrum.max() * 1.05)
 
-            # Plot residuals
+            # Plot the residuals
             ax2.scatter(
                 self.polyval(fit, fitted_peaks),
                 fitted_diff,
@@ -406,7 +637,8 @@ class Calibrator:
                 'RMS =' + str(rms)[:6]
                 )
             '''
-            # Plot polynomial
+
+            # Plot the polynomial
             ax3.scatter(
                 self.polyval(fit, fitted_peaks),
                 fitted_peaks,
@@ -421,3 +653,6 @@ class Calibrator:
             ax3.set_xlim(wave.min(), wave.max())
 
             plt.show()
+        else:
+            warnings.warn(
+                'matplotlib package not available. Plot cannot be generated.')
