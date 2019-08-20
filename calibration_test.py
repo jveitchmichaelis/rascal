@@ -1,49 +1,76 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import astropy.units as u
 from astropy.io import fits
 from scipy.signal import find_peaks
 from calibrator import Calibrator
+plt.ion()
 
-def load_calibration_lines(input_file='calibration_lines.csv',
-                           elements=["Hg", "Ar", "Xe", "CuNeAr", "Kr"],
-                           min_wavelength=100,
-                           max_wavelength=1000):
-    cal_lines = np.loadtxt(input_file, delimiter=',', dtype='U', skiprows=1)
-    wave = cal_lines[:, 0].astype('float')
-    element = cal_lines[:, 1]
-    # Get lines of the requested elements
-    lines = wave[np.isin(element, elements)]
-    # Get only lines within the requested wavelength
-    mask = (lines > min_wavelength) * (lines < max_wavelength)
-    return lines[mask]
+spectrum = np.median(fits.open('v_a_20190516_55_1_0_1.fits')[0].data[110:130], axis=0)
 
-atlas = load_calibration_lines(
-    "calibration_lines.csv", elements=["Xe"], min_wavelength=300, max_wavelength=900)
+# pixelscale in unit of A/pix
+pix_scale = 9.2
+peaks, _ = find_peaks(
+  spectrum, distance=3., prominence=np.percentile(spectrum, 20))
 
-spectrum = np.median(fits.open('v_a_20190516_55_1_0_1.fits')[0].data[110:120], axis=0)
-
-peaks, _ = find_peaks(spectrum, distance=10., threshold=10.)
-
+plt.figure(1, figsize=(8,8))
+plt.clf()
 plt.plot(spectrum)
-plt.vlines(peaks,
-              spectrum[peaks.astype('int')],
-              spectrum.max(),
-              colors='C1')
+plt.vlines(peaks, spectrum[peaks.astype('int')], spectrum.max()*1.1, colors='C1')
+plt.ylim(0, spectrum.max()*1.1)
+plt.xlim(0, len(spectrum))
 
-c = Calibrator(peaks, atlas)
+c = Calibrator(peaks, elements=["Xe"], min_wavelength=3000., max_wavelength=9000.)
+
+# thresh (A) :: the individual line fitting tolerance to accept as a valid fitting point
+# fit_tolerance (A) :: the RMS
 c.set_fit_constraints(
-    min_slope=0.2,
-    max_slope=0.8,
-    min_intercept=200.,
-    max_intercept=500.,
-    fit_tolerance=0.5,
-    line_fit_thresh=2,
-    thresh=5,
-    polydeg=5,
-    fittype='poly')
+    n_pix=len(spectrum),
+    min_intercept=3000.,
+    max_intercept=5000.,
+    fit_tolerance=pix_scale*0.5,
+    thresh=pix_scale*2.,
+    polydeg=3
+    )
 
 # Providing known pixel-wavelength mapping
-#c.set_known_pairs([635.6024, 803.5022], [631.806, 711.96])
-best_p = c.fit(mode='slow', progress=False)
-c.plot_fit(spectrum, best_p)
+#best_p_fast = c.fit(mode='fast', progress=True)
+
+best_p = c.fit(
+    sample_size=5,
+    max_tries=100,
+    top_n=100,
+    n_slope=10000)
+#c.plot_fit(spectrum, best_p_fast, tolerance=pix_scale)
+#c.plot_fit(spectrum, best_p, tolerance=pix_scale*1.)
+c.plot_fit(spectrum, c.match_peaks_to_atlas(best_p)[0], tolerance=pix_scale*1.)
+
+
+coeff = best_p
+
+# Providing known pixel-wavelength mapping
+#best_p_fast = c.fit(mode='fast', progress=True)
+
+c.set_fit_constraints(
+    n_pix=len(spectrum),
+    min_intercept=3000.,
+    max_intercept=5000.,
+    fit_tolerance=pix_scale*0.5,
+    thresh=pix_scale*1.,
+    polydeg=5
+    )
+
+best_p = c.fit(
+    sample_size=10,
+    max_tries=2000,
+    top_n=10,
+    n_slope=10000,
+    coeff=coeff
+    )
+#c.plot_fit(spectrum, best_p_fast, tolerance=pix_scale)
+#c.plot_fit(spectrum, best_p, tolerance=pix_scale*1.)
+c.plot_fit(spectrum, c.match_peaks_to_atlas(best_p)[0], tolerance=pix_scale*1.)
+
+
+
+
+
