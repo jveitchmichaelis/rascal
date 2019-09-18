@@ -57,7 +57,7 @@ def polynomial(a, degree=3):
         t = a[0]
 
         for i in range(1,degree+1):
-            t += a[i]*x**(i)
+            t += a[i]*x**i
 
         return t
     
