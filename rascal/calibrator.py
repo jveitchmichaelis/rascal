@@ -20,7 +20,7 @@ except:
 
 
 class Calibrator:
-    def __init__(self, peaks=None, silence=False, elements=None):
+    def __init__(self, peaks=None, silence=False, elements=None, min_wavelength=1000, max_wavelength=10000):
         self.peaks = peaks
         self.silence = silence
 
@@ -31,10 +31,10 @@ class Calibrator:
         else:
             self.elements = elements
 
-        self.load_calibration_lines(self.elements)
+        self.load_calibration_lines(self.elements, min_wavelength, max_wavelength)
 
         if peaks is not None:
-            set_peaks(peaks)
+            self.set_peaks(peaks)
 
     def set_peaks(self, peaks):
         # Create a list of all possible pairs of detected peaks and lines from atlas 
@@ -93,7 +93,11 @@ class Calibrator:
         accumulator = np.column_stack((gradients, intercepts))
 
         return accumulator
-
+    
+    def _bin_accumulator(self, accumulator, xbins, ybins):
+        return np.histogram2d(
+            accumulator[:, 0], accumulator[:, 1], bins=(xbins, ybins))
+        
     def _get_top_lines(self, accumulator, top_n, xbins, ybins):
         '''
         Parameters
@@ -115,8 +119,8 @@ class Calibrator:
 
         '''
 
-        h, xedges, yedges = np.histogram2d(
-            accumulator[:, 0], accumulator[:, 1], bins=(xbins, ybins))
+        # Find the top bins
+        h, xedges, yedges = _bin_accumulator(accumulator, xbins, ybins)
 
         xbin_width = (xedges[1] - xedges[0]) / 2
         ybin_width = (yedges[1] - yedges[0]) / 2
@@ -370,8 +374,7 @@ class Calibrator:
     def list_arc_library(self):
         print(self.elements)
 
-    def load_calibration_lines(self,
-                               elements,
+    def load_calibration_lines(self,elements,
                                min_wavelength=1000.,
                                max_wavelength=10000.):
         '''
@@ -380,7 +383,6 @@ class Calibrator:
 
         if isinstance(elements, str):
             elements = [elements]
-
 
         lines = []
         line_elements = []
@@ -420,8 +422,7 @@ class Calibrator:
 
     def set_fit_constraints(self,
                             n_pix=1024,
-                            min_intercept=1000.,
-                            max_intercept=6000.,
+                            range_tolerance=500,
                             fit_tolerance=50.,
                             polydeg=5,
                             thresh=10.,
@@ -454,10 +455,12 @@ class Calibrator:
 
         '''
 
-        self.min_slope = (self.max_wavelength - max_intercept) / n_pix
-        self.max_slope = (self.max_wavelength - min_intercept) / n_pix
-        self.min_intercept = min_intercept
-        self.max_intercept = max_intercept
+        self.min_intercept = self.min_wavelength - range_tolerance
+        self.max_intercept = self.min_wavelength + range_tolerance
+
+        self.min_slope = (self.max_wavelength - range_tolerance - self.max_intercept) / n_pix
+        self.max_slope = (self.max_wavelength + range_tolerance - self.min_intercept) / n_pix
+        
         self.fit_tolerance = fit_tolerance
         self.polydeg = polydeg
         self.thresh = thresh
