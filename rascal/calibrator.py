@@ -1,6 +1,7 @@
 import warnings
 import itertools
 import numpy as np
+import pkg_resources
 import astropy.units as u
 try:
     import matplotlib.pyplot as plt
@@ -19,13 +20,23 @@ except:
 
 
 class Calibrator:
-    def __init__(self, peaks, silence=False, **kwargs):
+    def __init__(self, peaks=None, silence=False, elements=None):
         self.peaks = peaks
         self.silence = silence
-        self.elements = ["Hg", "Ar", "Xe", "CuNeAr", "Kr"]
 
-        self.load_calibration_lines(**kwargs)
+        if elements is None:
+            self.elements = ["Hg", "Ar", "Xe", "CuNeAr", "Kr"]
+        elif isinstance(elements, list) and len(elements) == 0:
+            raise ValueError
+        else:
+            self.elements = elements
 
+        self.load_calibration_lines(self.elements)
+
+        if peaks is not None:
+            set_peaks(peaks)
+
+    def set_peaks(self, peaks):
         # Create a list of all possible pairs of detected peaks and lines from atlas 
         self._generate_pairs()
 
@@ -360,23 +371,43 @@ class Calibrator:
         print(self.elements)
 
     def load_calibration_lines(self,
-                               elements=self.elements,
+                               elements,
                                min_wavelength=1000.,
                                max_wavelength=10000.):
         '''
         https://apps.dtic.mil/dtic/tr/fulltext/u2/a105494.pdf
         '''
-        cal_lines = np.loadtxt('calibration_lines.csv', delimiter=',', dtype='U', skiprows=1)
-        wave = cal_lines[:, 0].astype('float')
-        element = cal_lines[:, 1]
-        # Get lines of the requested elements
-        lines = wave[np.isin(element, elements)]
+
+        if isinstance(elements, str):
+            elements = [elements]
+
+
+        lines = []
+        line_elements = []
+
+        for arc in elements:
+            file_path = pkg_resources.resource_filename('rascal', 'arc_lines/{}.csv'.format(arc.lower()))
+
+            with open(file_path, 'r') as f:
+
+                f.readline()
+                for l in f.readlines():
+                    line, source = l.split(',')
+                    
+                    lines.append(float(line))
+                    line_elements.append(source)
+
+       
+        cal_lines = np.array(lines)
+        cal_elements = np.array(line_elements)
+
         # Get only lines within the requested wavelength
-        mask = (lines > min_wavelength) * (lines < max_wavelength)
-        self.atlas = lines[mask]
+        mask = (cal_lines > min_wavelength) * (cal_lines < max_wavelength)
+        self.atlas = cal_lines[mask]
+        self.atlas_elements = cal_elements[mask]
+
         self.min_wavelength = min_wavelength
         self.max_wavelength = max_wavelength
-        print(self.atlas)
 
     def clear_calibration_lines(self):
         self.atlas = None
@@ -525,7 +556,7 @@ class Calibrator:
         elif mode=='manual':
             pass
         else:
-            raise.NameError('Unknown mode. Please choose from '
+            raise NameError('Unknown mode. Please choose from '
                 '(1) fast,'
                 '(2) normal,'
                 '(3) slow, or'
