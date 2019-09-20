@@ -30,8 +30,14 @@ class Calibrator:
             raise ValueError
         else:
             self.elements = elements
+        
+        self.min_wavelength = min_wavelength
+        self.max_wavelength = max_wavelength
 
-        self.load_calibration_lines(self.elements, min_wavelength, max_wavelength)
+        # Configuring default fitting constraints
+        self.set_fit_constraints()
+
+        self.load_calibration_lines(self.elements, self.min_wavelength - self.range_tolerance, self.max_wavelength + self.range_tolerance)
 
         if peaks is not None:
             self.set_peaks(peaks)
@@ -39,9 +45,6 @@ class Calibrator:
     def set_peaks(self, peaks):
         # Create a list of all possible pairs of detected peaks and lines from atlas 
         self._generate_pairs()
-
-        # Configuring fitting constraints
-        self.set_fit_constraints()
 
         # Include user supplied pairs that are always fitted to within a tolerance
         self.set_guess_pairs()
@@ -120,28 +123,32 @@ class Calibrator:
         '''
 
         # Find the top bins
-        h, xedges, yedges = _bin_accumulator(accumulator, xbins, ybins)
+        hist, xedges, yedges = self._bin_accumulator(accumulator, xbins, ybins)
 
         xbin_width = (xedges[1] - xedges[0]) / 2
         ybin_width = (yedges[1] - yedges[0]) / 2
 
         top_bins = np.dstack(
-            np.unravel_index(np.argsort(h.ravel())[::-1][:top_n], h.shape))[0]
+            np.unravel_index(np.argsort(hist.ravel())[::-1][:top_n], hist.shape))[0]
 
         lines = []
         for b in top_bins:
             lines.append((xedges[b[0]] + xbin_width,
                           yedges[b[1]] + ybin_width))
 
-        return h, lines
+        return hist, lines
 
-    def _get_candidate_points(self, m, c, thresh):
+    def _get_candidate_points(self, dispersion, min_wavelength, thresh):
         '''
-        
+        Returns a list of peak/wavelengths pairs which agree with the fit
 
+        (wavelength - dispersion*x + min_wavelength) < thresh
+
+        Note: depending on the threshold set, one peak may match with multiple
+        wavelengths.
         '''
 
-        predicted = (m * self.pairs[:, 0] + c)
+        predicted = (dispersion * self.pairs[:, 0] + min_wavelength)
         actual = self.pairs[:, 1]
         err = np.abs(predicted - actual)
         mask = (err < thresh)
@@ -408,9 +415,6 @@ class Calibrator:
         self.atlas = cal_lines[mask]
         self.atlas_elements = cal_elements[mask]
 
-        self.min_wavelength = min_wavelength
-        self.max_wavelength = max_wavelength
-
     def clear_calibration_lines(self):
         self.atlas = None
 
@@ -422,28 +426,30 @@ class Calibrator:
 
     def set_fit_constraints(self,
                             n_pix=1024,
+                            num_slopes=1000,
                             range_tolerance=500,
                             fit_tolerance=50.,
                             polydeg=5,
-                            thresh=10.,
-                            xbins=100,
-                            ybins=100,
+                            thresh=15.,
+                            xbins=500,
+                            ybins=500,
                             brute_force=False,
                             fittype='poly'):
         '''
         Parameters
         ----------
-        min_intercept : float
-            Minimum possible wavelength at pixel 0
-        max_intercept : float
-            Maximum possible wavelength at pixel 0
+        range_tolerance: float
+            Estimation of the error on the provided spectral range
+            e.g. 3000-5000 with tolerance 500 will search for
+            solutions that may satisfy 2500-5500
         
         fit_tolerance : float
 
         polydeg : int
             Degree of the polynomial fit.
         thresh : float
-        
+            Threshold for considering a point to be an inlier during candidate peak/line
+            selection.
         xbins : int
         
         ybins : int
@@ -455,11 +461,14 @@ class Calibrator:
 
         '''
 
-        self.min_intercept = self.min_wavelength - range_tolerance
-        self.max_intercept = self.min_wavelength + range_tolerance
+        self.num_slopes = num_slopes
 
-        self.min_slope = (self.max_wavelength - range_tolerance - self.max_intercept) / n_pix
-        self.max_slope = (self.max_wavelength + range_tolerance - self.min_intercept) / n_pix
+        self.range_tolerance = range_tolerance
+        self.min_intercept = self.min_wavelength - self.range_tolerance
+        self.max_intercept = self.min_wavelength + self.range_tolerance
+
+        self.min_slope = (self.max_wavelength - self.range_tolerance - self.max_intercept) / n_pix
+        self.max_slope = (self.max_wavelength + self.range_tolerance - self.min_intercept) / n_pix
         
         self.fit_tolerance = fit_tolerance
         self.polydeg = polydeg
@@ -572,10 +581,11 @@ class Calibrator:
         self.accumulator = self._hough_points(
             self.pairs[:, 0], self.pairs[:, 1], num_slopes=n_slope)
 
-        # ?
+        # Get the line coeffients from the promising bins in the accumulator
         h, lines = self._get_top_lines(
             self.accumulator, top_n=top_n, xbins=self.xbins, ybins=self.ybins)
 
+        # Locate candidate points for these lines fits
         self.candidates = []
         for line in lines:
             m, c = line
