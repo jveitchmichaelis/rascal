@@ -28,49 +28,27 @@ c.set_fit_constraints(
     min_intercept=3000.,
     max_intercept=5000.,
     fit_tolerance=pix_scale*0.5,
-    thresh=pix_scale*2.,
-    polydeg=3
-    )
-
-# Providing known pixel-wavelength mapping
-#best_p_fast = c.fit(mode='fast', progress=True)
-
-best_p = c.fit(
-    sample_size=5,
-    max_tries=100,
-    top_n=100,
-    n_slope=10000)
-#c.plot_fit(spectrum, best_p_fast, tolerance=pix_scale)
-#c.plot_fit(spectrum, best_p, tolerance=pix_scale*1.)
-c.plot_fit(spectrum, c.match_peaks_to_atlas(best_p)[0], tolerance=pix_scale*1.)
-
-
-coeff = best_p
-
-# Providing known pixel-wavelength mapping
-#best_p_fast = c.fit(mode='fast', progress=True)
-
-c.set_fit_constraints(
-    n_pix=len(spectrum),
-    min_intercept=3000.,
-    max_intercept=5000.,
-    fit_tolerance=pix_scale*0.5,
     thresh=pix_scale*1.,
-    polydeg=5
+    polydeg=4
     )
 
+pix=np.array((241., 269., 280., 294., 317., 359., 462.5, 468.4, 477., 530.3, 752., 836., 900., 912., 980.))
+wave=np.array((4500.98, 4624.28, 4671.23, 4734.15, 4844.33, 5023.88, 5488.56, 5531.07, 5581.88, 5823.89, 6872.11, 7284.3, 7584.68, 7642.02, 7967.34))
+
+# Providing known pixel-wavelength mapping
+c.set_known_pairs(pix, wave)
+
+manual_p = np.polyfit(pix, wave, deg=4)
+c.plot_fit(spectrum, c.match_peaks_to_atlas(manual_p)[0], tolerance=pix_scale*1.)
+# best solution to date (18-9-2019)
+# array([ 9.14196336e-11, -7.08052801e-07,  1.32941263e-03,  3.84120934e+00, 3.50802551e+03])
+
 best_p = c.fit(
-    sample_size=10,
-    max_tries=2000,
+    sample_size=20,
+    max_tries=10000,
     top_n=10,
-    n_slope=10000,
-    coeff=coeff
-    )
+    n_slope=30000)
 #c.plot_fit(spectrum, best_p_fast, tolerance=pix_scale)
 #c.plot_fit(spectrum, best_p, tolerance=pix_scale*1.)
 c.plot_fit(spectrum, c.match_peaks_to_atlas(best_p)[0], tolerance=pix_scale*1.)
-
-
-
-
 

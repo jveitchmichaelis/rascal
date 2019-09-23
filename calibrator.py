@@ -19,10 +19,11 @@ except:
 
 
 class Calibrator:
-    def __init__(self, peaks, silence=False, **kwargs):
+    def __init__(self, peaks, elements=["Hg", "Ar", "Xe", "CuNeAr", "Kr"],
+                 silence=False, **kwargs):
         self.peaks = peaks
         self.silence = silence
-        self.elements = ["Hg", "Ar", "Xe", "CuNeAr", "Kr"]
+        self.elements = elements
 
         self.load_calibration_lines(**kwargs)
 
@@ -334,7 +335,7 @@ class Calibrator:
                 coeff=coeff,
                 progress=progress)
 
-            if not silence:
+            if not self.silence:
                 if not valid:
                     warnings.warn("Invalid fit")
                     continue
@@ -352,7 +353,7 @@ class Calibrator:
                     best_inliers = n_inliers
                     best_err = err
 
-        assert(best_p is None), "Couldn't fit"
+        assert(best_p is not None), "Couldn't fit"
 
         return best_p
 
@@ -360,7 +361,6 @@ class Calibrator:
         print(self.elements)
 
     def load_calibration_lines(self,
-                               elements=self.elements,
                                min_wavelength=1000.,
                                max_wavelength=10000.):
         '''
@@ -370,7 +370,7 @@ class Calibrator:
         wave = cal_lines[:, 0].astype('float')
         element = cal_lines[:, 1]
         # Get lines of the requested elements
-        lines = wave[np.isin(element, elements)]
+        lines = wave[np.isin(element, self.elements)]
         # Get only lines within the requested wavelength
         mask = (lines > min_wavelength) * (lines < max_wavelength)
         self.atlas = lines[mask]
@@ -525,7 +525,7 @@ class Calibrator:
         elif mode=='manual':
             pass
         else:
-            raise.NameError('Unknown mode. Please choose from '
+            raise NameError('Unknown mode. Please choose from '
                 '(1) fast,'
                 '(2) normal,'
                 '(3) slow, or'
