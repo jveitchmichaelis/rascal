@@ -3,6 +3,10 @@ import itertools
 import numpy as np
 import pkg_resources
 import astropy.units as u
+from . import models
+import scipy.optimize
+from collections import Counter
+
 try:
     import matplotlib.pyplot as plt
     matplotlib_imported = True
@@ -138,6 +142,26 @@ class Calibrator:
 
         return hist, lines
 
+    def _combine_linear_estimates(self, candidates):
+        peaks = []
+        wavelengths = []
+
+        for candidate in candidates:
+            peaks += list(candidate[0])
+            wavelengths += list(candidate[1])
+
+        peaks = np.array(peaks)
+        wavelengths = np.array(wavelengths)
+        
+        out_peaks = []
+        out_wavelengths = []
+
+        for peak in np.unique(peaks):
+            out_peaks.append(peak)
+            out_wavelengths.append(Counter(wavelengths[peaks == peak]).most_common(1)[0][0])
+
+        return out_peaks, out_wavelengths
+
     def _get_candidate_points(self, dispersion, min_wavelength, thresh):
         '''
         Returns a list of peak/wavelengths pairs which agree with the fit
@@ -155,15 +179,49 @@ class Calibrator:
 
         return self.pairs[:, 0][mask], actual[mask]
 
-    def _solve_candidate_ransac(self, x, y, polydeg, sample_size, max_tries,
-                                thresh, brute_force, coeff, progress):
+    def _normalise_input(self, x, y):
+        """
+        Transforms inputs to have unit variance
+        """
+        x_scale = x.std()
+        y_scale = y.std()
+        
+        x_norm = x/x_scale
+        y_norm = y/y_scale
+        
+        return x_norm, y_norm
+
+    def _robust_polyfit(self, x, y, degree=3):
+
+        x_n, y_n = self._normalise_input(x, y)
+
+        x0 = np.ones(degree+1)
+        res = scipy.optimize.least_squares(models.poly_cost_function, x0, args=(x_n, y_n, degree), loss='huber', diff_step=1e-5)
+        p = res.x
+
+        p *= y.std()
+
+        for i in range(0, degree):
+            p[i] /= x.std() ** (degree-i)
+
+        return p
+
+    def _solve_candidate_ransac(self, x, y,
+                                polydeg = 3,
+                                sample_size = 4,
+                                max_tries = 1e4,
+                                thresh = 15,
+                                brute_force = False,
+                                coeff = None,
+                                progress = False,
+                                filter_close = True):
         '''
         Parameters
         ----------
         x : 1D numpy array
             Array of pixels from peak detection.
         y : 1D numpy array
-            Array of wavlengths from atlas.
+            Array of wavelengths from atlas.
         polydeg : int
             The order of polynomial (the polynomial type is definted in the 
             set_fit_constraints).
@@ -172,7 +230,7 @@ class Calibrator:
         max_tries : int
             Number of trials of polynomial fitting.
         thresh :
-
+            Threshold for considering a point an inlier
         brute_force : tuple
             Solve all pixel-wavelength combinations with set to True.
         coeff : None or 1D numpy array
@@ -198,13 +256,21 @@ class Calibrator:
         best_cost = 1e50
         best_err = 1e50
         best_mask = [False]
-        n_best = sum(best_mask)
+        best_inliers = 0
 
         if sample_size <= polydeg:
             sample_size = polydeg + 1
 
         x = np.array(x)
         y = np.array(y)
+
+        # Filter close wavelengths
+        if filter_close:
+            unique_y = np.unique(y)
+            idx = np.argwhere(unique_y[1:] - unique_y[0:-1] < 3*thresh)
+            separation_mask = np.argwhere((y == unique_y[idx]).sum(0) == 0)
+            y = y[separation_mask].flatten()
+            x = x[separation_mask].flatten()
 
         if coeff is not None:
             fit = self.polyval(coeff, x)
@@ -258,56 +324,58 @@ class Calibrator:
             x_hat = np.concatenate((x_hat, self.pix))
             y_hat = np.concatenate((y_hat, self.wave))
 
-            # Try to fit the data
+            # Try to fit the data.
+            # This doesn't need to be robust, it's an exact fit.
             fit_coeffs = self.polyfit(x_hat, y_hat, polydeg)
 
-            '''
             # Discard out-of-bounds fits
             if ((fit_coeffs[-1] < self.min_intercept) |
                 (fit_coeffs[-1] > self.max_intercept) |
                 (fit_coeffs[-2] < self.min_slope) |
                 (fit_coeffs[-2] > self.max_slope)):
                 continue
-            '''
+
+            max_wavelength = self.polyval(fit_coeffs, max(x))
+            if max_wavelength > self.max_wavelength:
+                continue
 
             # M-SAC Estimator (Torr and Zisserman, 1996)
             fit = self.polyval(fit_coeffs, x)
-
-            if max(fit) > self.max_wavelength:
-                continue
-
-            if min(fit) < self.min_wavelength:
-                continue
-
             err = np.abs(fit - y)
             err[err > thresh] = thresh
             cost = sum(err)
+
             # reject lines outside the rms limit (thresh)
             best_mask = err < thresh
-            n_best = sum(best_mask)
+            n_inliers = sum(best_mask)
 
             # Want the most inliers with the lowest error
-            if cost <= best_cost:
+            if n_inliers >= best_inliers:
 
-                # Get the best fit polynomial coefficient
-                best_p = self.polyfit(x[best_mask], y[best_mask], polydeg)
+                # Now we do a robust fit
+                best_p = self._robust_polyfit(x[best_mask], y[best_mask], polydeg)
 
                 # Get the residual of the fit
                 err = np.abs(self.polyval(best_p, x[best_mask]) - y[best_mask])
+                err[err > thresh] = thresh
                 best_cost = sum(err)
-                best_err = np.sqrt(np.mean(err**.2))
+                best_err = np.sqrt(np.mean(err**2))
+                best_inliers = n_inliers
+
+                if tdqm_imported & progress:
+                    sampler_list.set_description("Most inliers: {:d}, best error: {:1.2f}".format(n_inliers, best_err))
 
                 # Perfect fit, break early
-                if n_best == len(x):
+                if best_inliers == len(x):
                     break
 
         # Overfit check
-        if n_best == polydeg + 1:
+        if best_inliers == polydeg + 1:
             valid_solution = False
         else:
             valid_solution = True
 
-        return (best_p, best_err, n_best, valid_solution)
+        return (best_p, best_err, best_inliers, valid_solution)
 
     def _get_best_model(self, candidates, polydeg, sample_size, max_tries,
                         thresh, brute_force, coeff, progress):
@@ -335,17 +403,14 @@ class Calibrator:
 
         '''
 
-        best_inliers = 0
-        best_p = None
-        best_err = 1e10
         if tdqm_imported & progress:
             candidate_list = tqdm(candidates)
         else:
             candidate_list = candidates
 
-        for candidate in candidate_list:
-            x, y = candidate
-            p, err, n_inliers, valid = self._solve_candidate_ransac(
+        x, y = self._combine_linear_estimates(candidates)
+
+        p, err, n_inliers, valid = self._solve_candidate_ransac(
                 x,
                 y,
                 polydeg=polydeg,
@@ -356,27 +421,17 @@ class Calibrator:
                 coeff=coeff,
                 progress=progress)
 
-            if not silence:
-                if not valid:
-                    warnings.warn("Invalid fit")
-                    continue
+        if not self.silence:
+            if not valid:
+                warnings.warn("Invalid fit")
 
-                if err > self.fit_tolerance:
-                    warnings.warn("Error too large")
-                    continue
+            if err > self.fit_tolerance:
+                print(err, self.fit_tolerance)
+                warnings.warn("Error too large")
 
-            if n_inliers >= best_inliers:
-                # Accept a better fit if we have equal numbers of inliers
-                if n_inliers == best_inliers and err >= best_err:
-                    continue
-                else:
-                    best_p = p
-                    best_inliers = n_inliers
-                    best_err = err
+        assert(p is not None), "Couldn't fit"
 
-        assert(best_p is None), "Couldn't fit"
-
-        return best_p
+        return p
 
     def list_arc_library(self):
         print(self.elements)
@@ -428,11 +483,12 @@ class Calibrator:
                             n_pix=1024,
                             num_slopes=1000,
                             range_tolerance=500,
-                            fit_tolerance=50.,
-                            polydeg=5,
-                            thresh=15.,
-                            xbins=500,
-                            ybins=500,
+                            fit_tolerance=20.,
+                            polydeg=4,
+                            candidate_thresh=15.,
+                            ransac_thresh=10,
+                            xbins=50,
+                            ybins=50,
                             brute_force=False,
                             fittype='poly'):
         '''
@@ -447,9 +503,13 @@ class Calibrator:
 
         polydeg : int
             Degree of the polynomial fit.
-        thresh : float
+        candidate_thresh : float
             Threshold for considering a point to be an inlier during candidate peak/line
-            selection.
+            selection. Don't make this too small, it should allow for the error between
+            a linear and non-linear fit.
+        ransac_thresh: float
+            The distance criteria to be considered an inlier to a fit. This should be close
+            to the size of the expected residuals on the final fit (e.g. 10-20A maximum)
         xbins : int
         
         ybins : int
@@ -472,7 +532,8 @@ class Calibrator:
         
         self.fit_tolerance = fit_tolerance
         self.polydeg = polydeg
-        self.thresh = thresh
+        self.ransac_thresh = ransac_thresh
+        self.candidate_thresh = candidate_thresh
         self.xbins = xbins
         self.ybins = ybins
         self.brute_force = brute_force
@@ -528,7 +589,7 @@ class Calibrator:
         self.pix = np.asarray(pix, dtype='float')
         self.wave = np.asarray(wave, dtype='float')
 
-    def fit(self, sample_size=5, max_tries=1000, top_n=10, n_slope=3000,
+    def fit(self, sample_size=5, max_tries=1000, top_n=20, n_slope=3000,
             mode='manual', progress=True, coeff=None):
         '''
         Parameters
@@ -582,7 +643,7 @@ class Calibrator:
             self.pairs[:, 0], self.pairs[:, 1], num_slopes=n_slope)
 
         # Get the line coeffients from the promising bins in the accumulator
-        h, lines = self._get_top_lines(
+        _, lines = self._get_top_lines(
             self.accumulator, top_n=top_n, xbins=self.xbins, ybins=self.ybins)
 
         # Locate candidate points for these lines fits
@@ -590,11 +651,11 @@ class Calibrator:
         for line in lines:
             m, c = line
             inliers_x, inliers_y = self._get_candidate_points(
-                m, c, self.thresh)
+                m, c, self.candidate_thresh)
             self.candidates.append((inliers_x, inliers_y))
 
         return self._get_best_model(self.candidates, self.polydeg, sample_size,
-                                    max_tries, self.thresh, self.brute_force,
+                                    max_tries, self.ransac_thresh, self.brute_force,
                                     coeff, progress)
 
     def match_peaks_to_atlas(self, fit, tolerance=5., polydeg=5.):
@@ -630,10 +691,10 @@ class Calibrator:
                 x_match.append(p)
                 y_match.append(self.atlas[idx])
 
-        coeff = self.polyfit(x_match, y_match, polydeg)
+        coeff = self._robust_polyfit(x_match, y_match, polydeg)
         return coeff, x_match, y_match
 
-    def plot_fit(self, spectrum, fit, tolerance=5.):
+    def plot_fit(self, spectrum, fit, tolerance=5., silence=True):
         '''
         Parameters
         ----------
@@ -676,12 +737,14 @@ class Calibrator:
                 idx = np.argmin(np.abs(diff))
                 all_diff.append(diff[idx])
 
-                print("Peak at: {} A".format(x))
+                if not silence: 
+                    print("Peak at: {} A".format(x))
 
                 if np.abs(diff[idx]) < tolerance:
                     fitted_peaks.append(p)
                     fitted_diff.append(diff[idx])
-                    print("- matched to {} A".format(self.atlas[idx]))
+                    if not silence:
+                        print("- matched to {} A".format(self.atlas[idx]))
                     ax1.vlines(
                         self.polyval(fit, p),
                         spectrum[p.astype('int')],
