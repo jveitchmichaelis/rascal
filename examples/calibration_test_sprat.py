@@ -7,7 +7,7 @@ from astropy.io import fits
 
 from scipy.signal import find_peaks
 
-spectrum = fits.open("./v_a_20190516_55_1_0_1.fits")[0].data.mean(0)
+spectrum = np.median(fits.open("./v_a_20190516_55_1_0_1.fits")[0].data)
 
 atlas = load_calibration_lines(elements = ["Xe"], min_wavelength=300, max_wavelength=850)
 
