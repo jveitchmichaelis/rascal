@@ -350,15 +350,16 @@ class Calibrator:
             n_inliers = sum(best_mask)
 
             # Want the most inliers with the lowest error
-            if n_inliers >= best_inliers:
+            if cost <= best_cost:
 
                 # Now we do a robust fit
                 best_p = self._robust_polyfit(x[best_mask], y[best_mask], polydeg)
+                best_cost = cost
 
                 # Get the residual of the fit
                 err = np.abs(self.polyval(best_p, x[best_mask]) - y[best_mask])
                 err[err > thresh] = thresh
-                best_cost = sum(err)
+                #best_cost = sum(err)
                 best_err = np.sqrt(np.mean(err**2))
                 best_inliers = n_inliers
 
@@ -456,6 +457,8 @@ class Calibrator:
 
                 f.readline()
                 for l in f.readlines():
+                    if l[0] == '#':
+                        continue
                     line, source = l.split(',')
                     
                     lines.append(float(line))
@@ -694,7 +697,7 @@ class Calibrator:
         coeff = self._robust_polyfit(x_match, y_match, polydeg)
         return coeff, x_match, y_match
 
-    def plot_fit(self, spectrum, fit, tolerance=5., silence=True):
+    def plot_fit(self, spectrum, fit, tolerance=5., silence=True, output_filename=None):
         '''
         Parameters
         ----------
@@ -796,5 +799,8 @@ class Calibrator:
             ax3.set_xlim(wave.min(), wave.max())
 
             plt.show()
+
+            if output_filename is not None:
+                fig.savefig(output_filename)
         else:
             assert(matplotlib_imported), 'matplotlib package not available. Plot cannot be generated.'
