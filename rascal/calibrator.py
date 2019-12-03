@@ -183,6 +183,7 @@ class Calibrator:
         """
         Transforms inputs to have unit variance
         """
+
         x_scale = x.std()
         y_scale = y.std()
         
@@ -192,17 +193,18 @@ class Calibrator:
         return x_norm, y_norm
 
     def _robust_polyfit(self, x, y, degree=3):
-
+        x = np.asarray(x)
+        y = np.asarray(y)
         x_n, y_n = self._normalise_input(x, y)
 
-        x0 = np.ones(degree+1)
+        x0 = np.ones(int(degree+1))
         res = scipy.optimize.least_squares(models.poly_cost_function, x0, args=(x_n, y_n, degree), loss='huber', diff_step=1e-5)
         p = res.x
 
         p *= y.std()
 
-        for i in range(0, degree):
-            p[i] /= x.std() ** (degree-i)
+        for i in range(0, int(degree)):
+            p[i] /= x.std() ** int(degree-i)
 
         return p
 

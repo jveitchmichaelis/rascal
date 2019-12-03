@@ -60,8 +60,8 @@ def polynomial(a, degree=3):
     def poly(x):
         t = a[-1]
 
-        for i in range(1, degree+1):
-            t += a[degree-i]*x**i
+        for i in range(1, int(degree+1)):
+            t += a[int(degree-i)]*x**i
 
         return t
     
