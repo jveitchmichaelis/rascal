@@ -1,11 +1,13 @@
 import warnings
 import itertools
 import numpy as np
-import pkg_resources
 import astropy.units as u
 from . import models
 import scipy.optimize
 from collections import Counter
+
+from . util import load_calibration_lines
+from . synthetic import SyntheticSpectrum
 
 try:
     import matplotlib.pyplot as plt
@@ -57,12 +59,12 @@ class Calibrator:
         # Configuring default fitting constraints
         self.set_fit_constraints()
 
-        self.load_calibration_lines(self.elements, self.min_wavelength - self.range_tolerance, self.max_wavelength + self.range_tolerance)
+        self._get_atlas(self.elements, self.min_wavelength - self.range_tolerance, self.max_wavelength + self.range_tolerance)
 
         if peaks is not None:
-            self.set_peaks(peaks)
+            self._set_peaks(peaks)
 
-    def set_peaks(self, peaks):
+    def _set_peaks(self, peaks):
         # Create a list of all possible pairs of detected peaks and lines from atlas 
         self._generate_pairs()
 
@@ -208,8 +210,7 @@ class Calibrator:
         return x_norm, y_norm
 
     def _robust_polyfit(self, x, y, degree=3):
-        x = np.asarray(x)
-        y = np.asarray(y)
+
         x_n, y_n = self._normalise_input(x, y)
 
         x0 = np.ones(int(degree+1))
@@ -421,11 +422,6 @@ class Calibrator:
 
         '''
 
-        if tdqm_imported & progress:
-            candidate_list = tqdm(candidates)
-        else:
-            candidate_list = candidates
-
         x, y = self._combine_linear_estimates(candidates)
 
         p, err, n_inliers, valid = self._solve_candidate_ransac(
@@ -470,41 +466,10 @@ class Calibrator:
     def list_arc_library(self):
         print(self.elements)
 
-    def load_calibration_lines(self,elements,
-                               min_wavelength=1000.,
-                               max_wavelength=10000.):
-        '''
-        https://apps.dtic.mil/dtic/tr/fulltext/u2/a105494.pdf
-        '''
-
-        if isinstance(elements, str):
-            elements = [elements]
-
-        lines = []
-        line_elements = []
-
-        for arc in elements:
-            file_path = pkg_resources.resource_filename('rascal', 'arc_lines/{}.csv'.format(arc.lower()))
-
-            with open(file_path, 'r') as f:
-
-                f.readline()
-                for l in f.readlines():
-                    if l[0] == '#':
-                        continue
-                    line, source = l.split(',')
-                    
-                    lines.append(float(line))
-                    line_elements.append(source)
-
-       
-        cal_lines = np.array(lines)
-        cal_elements = np.array(line_elements)
-
-        # Get only lines within the requested wavelength
-        mask = (cal_lines > min_wavelength) * (cal_lines < max_wavelength)
-        self.atlas = cal_lines[mask]
-        self.atlas_elements = cal_elements[mask]
+    def _get_atlas(self, elements, min_wavelength, max_wavelength):
+        self.atlas, self.atlas_elements, _ = load_calibration_lines(elements,
+                                                                    min_wavelength,
+                                                                    max_wavelength)
 
     def clear_calibration_lines(self):
         self.atlas = None
@@ -556,15 +521,15 @@ class Calibrator:
             One of 'poly', 'legendre' or 'chebyshev'
 
         '''
-
+        self.n_pix = n_pix
         self.num_slopes = num_slopes
 
         self.range_tolerance = range_tolerance
         self.min_intercept = self.min_wavelength - self.range_tolerance
         self.max_intercept = self.min_wavelength + self.range_tolerance
 
-        self.min_slope = (self.max_wavelength - self.range_tolerance - self.max_intercept) / n_pix
-        self.max_slope = (self.max_wavelength + self.range_tolerance - self.min_intercept) / n_pix
+        self.min_slope = (self.max_wavelength - self.range_tolerance - self.max_intercept) / self.n_pix
+        self.max_slope = (self.max_wavelength + self.range_tolerance - self.min_intercept) / self.n_pix
         
         self.fit_tolerance = fit_tolerance
         self.polydeg = polydeg
@@ -730,7 +695,8 @@ class Calibrator:
         coeff = self._robust_polyfit(x_match, y_match, polydeg)
         return coeff, x_match, y_match
 
-    def plot_fit(self, spectrum, fit, tolerance=5., silence=True,
+
+    def plot_fit(self, spectrum, fit, tolerance=5., plot_atlas=True, silence=True,
                  output_filename=None, verbose=False, renderer='default'):
         '''
         Parameters
@@ -764,6 +730,16 @@ class Calibrator:
                 spectrum.max() * 1.05,
                 linestyles='dashed',
                 colors='C1')
+            
+            # Plot the atlas
+            if plot_atlas:
+                #spec = SyntheticSpectrum(fit, model_type='poly', degree=len(fit)-1)
+                #x_locs = spec.get_pixels(self.atlas)
+                ax1.vlines(
+                    self.atlas,
+                    0,
+                    spectrum.max() * 1.05,
+                    colors='C2')
 
             fitted_peaks = []
             fitted_diff = []
@@ -787,6 +763,7 @@ class Calibrator:
                         spectrum[p.astype('int')],
                         spectrum.max() * 1.05,
                         colors='C1')
+
                     ax1.text(
                         x - 3,
                         0.8 * max(spectrum),

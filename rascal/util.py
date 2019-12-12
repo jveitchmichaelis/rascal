@@ -1,23 +1,46 @@
-import os
-import numpy as np 
+import numpy as np
+import pkg_resources
 
-def load_calibration_lines(input_file = None, elements = ["Hg", "Ar", "Xe", "CuNeAr", "Kr"], min_wavelength=350, max_wavelength=800, transform=None):
 
-    if input_file is None:
-        input_file = '{}/calibration_lines.csv'.format(os.path.dirname(__file__))
-    
-    with open(input_file,'r') as calfile:
-        data = calfile.readlines()[1:]
-    
-    cal_lines = [line.replace('\n', '').split(',')[:2] for line in data]
+def load_calibration_lines(elements,
+                               min_wavelength=1000.,
+                               max_wavelength=10000.):
+        '''
+        https://apps.dtic.mil/dtic/tr/fulltext/u2/a105494.pdf
+        '''
 
-    lines = np.array(np.sort([float(line[0]) for line in cal_lines if line[1].rstrip() in elements]))
+        if isinstance(elements, str):
+            elements = [elements]
 
-    mask = (lines > min_wavelength)*(lines < max_wavelength)
+        lines = []
+        line_elements = []
+        line_strengths = []
 
-    if transform == 'a_to_nm':
-        lines /= 10.0
-    elif transform == 'nm_to_a':
-        lines *= 10.0
-    
-    return lines[mask]
+        for arc in elements:
+            file_path = pkg_resources.resource_filename('rascal', 'arc_lines/{}.csv'.format(arc.lower()))
+
+            with open(file_path, 'r') as f:
+
+                f.readline()
+                for l in f.readlines():
+                    if l[0] == '#':
+                        continue
+                        
+                    data = l.split(',')
+                    if len(data) > 2:
+                        line, strength, source = data[:3]
+                        line_strengths.append(float(strength))
+                    else:
+                        line, source = data[:2]
+                        line_strengths.append(0)
+                    
+                    lines.append(float(line))
+                    line_elements.append(source)
+       
+        cal_lines = np.array(lines)
+        cal_elements = np.array(line_elements)
+        cal_strengths = np.array(line_strengths)
+
+        # Get only lines within the requested wavelength
+        mask = (cal_lines > min_wavelength) * (cal_lines < max_wavelength)
+        return cal_lines[mask], cal_elements[mask], cal_strengths[mask]
