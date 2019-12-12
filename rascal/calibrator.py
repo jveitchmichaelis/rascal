@@ -12,8 +12,22 @@ try:
     matplotlib_imported = True
 except:
     warnings.warn(
-        'matplotlib package not available. Plot cannot be generated.')
+        'matplotlib package not available.')
     matplotlib_imported = False
+
+try:
+    import plotly.graph_objects as go
+    import plotly.io as pio
+    plotly_imported = True
+except ImportError:
+    if matplotlib_imported:
+        warnings.warn(
+            'plotly is not present, only matplotlib can be used.')
+    else:
+        warnings.warn(
+            'Plot cannot be generated.')
+
+
 try:
     from tqdm.autonotebook import tqdm
     tdqm_imported = True
@@ -27,6 +41,8 @@ class Calibrator:
     def __init__(self, peaks=None, silence=False, elements=None, min_wavelength=1000, max_wavelength=10000):
         self.peaks = peaks
         self.silence = silence
+        self.matplotlib_imported = matplotlib_imported
+        self.plotly_imported = plotly_imported
 
         if elements is None:
             self.elements = ["Hg", "Ar", "Xe", "CuNeAr", "Kr"]
@@ -196,14 +212,14 @@ class Calibrator:
         y = np.asarray(y)
         x_n, y_n = self._normalise_input(x, y)
 
-        x0 = np.ones(degree+1)
+        x0 = np.ones(int(degree+1))
         res = scipy.optimize.least_squares(models.poly_cost_function, x0, args=(x_n, y_n, degree), loss='huber', diff_step=1e-5)
         p = res.x
 
         p *= y.std()
 
-        for i in range(0, degree):
-            p[i] /= x.std() ** (degree-i)
+        for i in range(0, int(degree)):
+            p[i] /= x.std() ** int(degree-i)
 
         return p
 
@@ -434,6 +450,22 @@ class Calibrator:
         assert(p is not None), "Couldn't fit"
 
         return p
+
+    def use_plotly(self):
+        if plt:
+            self.matplotlib_imported = False
+            self.plotly_imported = True
+        else:
+            warnings.warn(
+                'plotly package is not available.')
+
+    def use_matplotlib(self):
+        if plt:
+            self.matplotlib_imported = True
+            self.plotly_imported = False
+        else:
+            warnings.warn(
+                'matplotlib package is not available.')
 
     def list_arc_library(self):
         print(self.elements)
@@ -698,7 +730,8 @@ class Calibrator:
         coeff = self._robust_polyfit(x_match, y_match, polydeg)
         return coeff, x_match, y_match
 
-    def plot_fit(self, spectrum, fit, tolerance=5., silence=True, output_filename=None):
+    def plot_fit(self, spectrum, fit, tolerance=5., silence=True,
+                 output_filename=None, verbose=False, renderer='default'):
         '''
         Parameters
         ----------
@@ -711,7 +744,7 @@ class Calibrator:
 
         '''
 
-        if matplotlib_imported:
+        if self.matplotlib_imported:
 
             pix = np.arange(len(spectrum)).astype('float')
             wave = self.polyval(fit, pix)
@@ -803,5 +836,146 @@ class Calibrator:
 
             if output_filename is not None:
                 fig.savefig(output_filename)
+
+        elif self.plotly_imported:
+
+            pix = np.arange(len(spectrum)).astype('float')
+            wave = self.polyval(fit, pix)
+
+            fig = go.Figure()
+
+            # Top plot - arc spectrum and matched peaks
+            fig.add_trace(
+                go.Scatter(x=wave,
+                           y=spectrum,
+                           mode='lines',
+                           line=dict(color='royalblue'),
+                           yaxis='y3'))
+
+            spec_max = spectrum.max() * 1.05
+
+            p_x = []
+            p_y = []
+            for i, p in enumerate(self.peaks):
+                p_x.append(self.polyval(fit, p))
+                p_y.append(spectrum[int(p)])
+
+            fig.add_trace(
+                go.Scatter(x=p_x,
+                           y=p_y,
+                           mode='markers',
+                           marker=dict(color='firebrick'),
+                           yaxis='y3'))
+
+            fitted_peaks = []
+            fitted_diff = []
+            all_diff = []
+
+            for p in self.peaks:
+                x = self.polyval(fit, p)
+                diff = self.atlas - x
+                idx = np.argmin(np.abs(diff))
+                all_diff.append(diff[idx])
+
+                if not silence: 
+                    print("Peak at: {} A".format(x))
+
+                if np.abs(diff[idx]) < tolerance:
+                    fitted_peaks.append(p)
+                    fitted_diff.append(diff[idx])
+                    if not silence:
+                        print("- matched to {} A".format(self.atlas[idx]))
+
+                    p_x_matched = []
+                    p_y_matched = []
+                    for i, p in enumerate(self.peaks):
+                        p_x_matched.append(self.polyval(fit, p))
+                        p_y_matched.append(spectrum[int(p)])
+                    fig.add_trace(
+                        go.Scatter(x=p_x_matched,
+                                   y=p_y_matched,
+                                   mode='markers',
+                                   marker=dict(color='orange'),
+                                   name='Matched peaks',
+                                   yaxis='y3'
+                                   )
+                                )
+
+            # Middle plot - Residual plot
+            rms = np.sqrt(np.mean(np.array(fitted_diff)**2.))
+            x_fitted = self.polyval(fit, fitted_peaks)
+            fig.add_trace(
+                go.Scatter(x=x_fitted,
+                           y=fitted_diff,
+                           mode='markers',
+                           marker=dict(color='orange'),
+                           yaxis='y2')
+                )
+            fig.add_trace(
+                go.Scatter(x=[wave.min(), wave.max()],
+                           y=[0, 0],
+                           mode='lines',
+                           line=dict(color='royalblue', dash='dash'),
+                           yaxis='y2'
+                           )
+                )
+
+            # Bottom plot - Polynomial fit for Pixel to Wavelength
+            fig.add_trace(
+                go.Scatter(x=x_fitted,
+                           y=fitted_peaks,
+                           mode='markers',
+                           marker=dict(color='orange'),
+                           yaxis='y1',
+                           name='Peaks used for fitting')
+                )
+            fig.add_trace(
+                go.Scatter(x=wave,
+                           y=pix,
+                           mode='lines',
+                           line=dict(color='royalblue'),
+                           yaxis='y1')
+                )
+
+            # Layout, Title, Grid config
+            fig.update_layout(autosize=True,
+                              yaxis3=dict(title='ADU',
+                                         range=[np.log10(np.percentile(spectrum,10)), np.log10(spec_max)],
+                                         domain=[0.67,1.0],
+                                         showgrid=True,
+                                         type='log'
+                                        ),
+                              yaxis2=dict(title='Residual / A',
+                                          range=[min(fitted_diff), max(fitted_diff)],
+                                          domain=[0.33,0.66],
+                                          showgrid=True
+                                         ),
+                              yaxis=dict(title='Pixel',
+                                          range=[0., max(pix)],
+                                          domain=[0.,0.32],
+                                          showgrid=True
+                                         ),
+                              xaxis=dict(title='Wavelength / A',
+                                         zeroline=False,
+                                         range=[min(wave), max(wave)],
+                                         showgrid=True,
+                                         ),
+                              hovermode='closest',
+                              showlegend=False,
+                              height=800,
+                              width=1000
+                              )
+
+            if verbose:
+                return fig.to_json()
+            if renderer == 'default':
+                fig.show()
+            else:
+                fig.show(renderer)
+
         else:
-            assert(matplotlib_imported), 'matplotlib package not available. Plot cannot be generated.'
+
+            assert(self.matplotlib_imported), ('matplotlib package not available. ' +
+                'Plot cannot be generated.')
+            assert(self.plotly_imported), ('plotly package not available. ' +
+                'Plot cannot be generated.')
