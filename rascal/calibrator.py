@@ -692,6 +692,9 @@ class Calibrator:
                 x_match.append(p)
                 y_match.append(self.atlas[idx])
 
+        x_match = np.array(x_match)
+        y_match = np.array(y_match)
+        
         coeff = self._robust_polyfit(x_match, y_match, polydeg)
         return coeff, x_match, y_match
 
