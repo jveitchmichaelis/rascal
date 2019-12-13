@@ -3,7 +3,6 @@ import itertools
 import numpy as np
 import astropy.units as u
 from . import models
-import scipy.optimize
 from collections import Counter
 
 from . util import load_calibration_lines
@@ -40,7 +39,14 @@ except:
 
 
 class Calibrator:
-    def __init__(self, peaks=None, silence=False, elements=None, min_wavelength=1000, max_wavelength=10000):
+    def __init__(self, peaks=None, silence=False, elements=None,
+                    min_wavelength=1000, 
+                    max_wavelength=10000, 
+                    range_tolerance=200, 
+                    min_atlas=None, 
+                    max_atlas=None, 
+                    min_intensity=0,
+                    min_distance=10):
         self.peaks = peaks
         self.silence = silence
         self.matplotlib_imported = matplotlib_imported
@@ -57,9 +63,18 @@ class Calibrator:
         self.max_wavelength = max_wavelength
 
         # Configuring default fitting constraints
-        self.set_fit_constraints()
+        self.set_fit_constraints(range_tolerance=range_tolerance)
 
-        self._get_atlas(self.elements, self.min_wavelength - self.range_tolerance, self.max_wavelength + self.range_tolerance)
+        if min_atlas is None:
+            min_atlas = self.min_wavelength - self.range_tolerance
+        
+        if max_atlas is None:
+            max_atlas = self.max_wavelength + self.range_tolerance
+
+        assert max_atlas > min_atlas
+        assert min_atlas >= 0
+
+        self._get_atlas(self.elements, min_wavelength=min_atlas, max_wavelength=max_atlas, min_intensity=min_intensity, min_distance=min_distance)
 
         if peaks is not None:
             self._set_peaks(peaks)
@@ -180,7 +195,7 @@ class Calibrator:
 
         return out_peaks, out_wavelengths
 
-    def _get_candidate_points(self, dispersion, min_wavelength, thresh):
+    def _get_candidate_points_linear(self, dispersion, min_wavelength, thresh):
         '''
         Returns a list of peak/wavelengths pairs which agree with the fit
 
@@ -197,32 +212,31 @@ class Calibrator:
 
         return self.pairs[:, 0][mask], actual[mask]
 
-    def _normalise_input(self, x, y):
-        """
-        Transforms inputs to have unit variance
-        """
-        x_scale = x.std()
-        y_scale = y.std()
-        
-        x_norm = x/x_scale
-        y_norm = y/y_scale
-        
-        return x_norm, y_norm
+    def _get_candidate_points_poly(self, fit, tolerance=5):
+        '''
+        Returns a list of peak/wavelengths pairs which agree with the fit
 
-    def _robust_polyfit(self, x, y, degree=3):
+        (wavelength - dispersion*x + min_wavelength) < thresh
 
-        x_n, y_n = self._normalise_input(x, y)
+        Note: depending on the threshold set, one peak may match with multiple
+        wavelengths.
+        '''
 
-        x0 = np.ones(int(degree+1))
-        res = scipy.optimize.least_squares(models.poly_cost_function, x0, args=(x_n, y_n, degree), loss='huber', diff_step=1e-5)
-        p = res.x
+        x_match = []
+        y_match = []
 
-        p *= y.std()
+        for p in self.peaks:
+            x = self.polyval(fit, p)
+            diff = np.abs(self.atlas - x)
 
-        for i in range(0, int(degree)):
-            p[i] /= x.std() ** int(degree-i)
+            for y in self.atlas[diff < tolerance]:
+                x_match.append(p)
+                y_match.append(y)
 
-        return p
+        x_match = np.array(x_match)
+        y_match = np.array(y_match)
+
+        return x_match, y_match
 
     def _solve_candidate_ransac(self, x, y,
                                 polydeg = 3,
@@ -371,7 +385,7 @@ class Calibrator:
             if cost <= best_cost:
 
                 # Now we do a robust fit
-                best_p = self._robust_polyfit(x[best_mask], y[best_mask], polydeg)
+                best_p = models.robust_polyfit(x[best_mask], y[best_mask], polydeg)
                 best_cost = cost
 
                 # Get the residual of the fit
@@ -440,8 +454,7 @@ class Calibrator:
                 warnings.warn("Invalid fit")
 
             if err > self.fit_tolerance:
-                print(err, self.fit_tolerance)
-                warnings.warn("Error too large")
+                warnings.warn("Error too large {} > {}".format(err, self.fit_tolerance))
 
         assert(p is not None), "Couldn't fit"
 
@@ -466,10 +479,10 @@ class Calibrator:
     def list_arc_library(self):
         print(self.elements)
 
-    def _get_atlas(self, elements, min_wavelength, max_wavelength):
-        self.atlas, self.atlas_elements, _ = load_calibration_lines(elements,
-                                                                    min_wavelength,
-                                                                    max_wavelength)
+    def _get_atlas(self, elements, min_wavelength, max_wavelength, min_intensity, min_distance):
+        self.atlas_elements, self.atlas, self.atlas_intensities = load_calibration_lines(elements,
+                                                    min_wavelength,
+                                                    max_wavelength)
 
     def clear_calibration_lines(self):
         self.atlas = None
@@ -651,7 +664,7 @@ class Calibrator:
         self.candidates = []
         for line in lines:
             m, c = line
-            inliers_x, inliers_y = self._get_candidate_points(
+            inliers_x, inliers_y = self._get_candidate_points_linear(
                 m, c, self.candidate_thresh)
             self.candidates.append((inliers_x, inliers_y))
 
@@ -659,7 +672,7 @@ class Calibrator:
                                     max_tries, self.ransac_thresh, self.brute_force,
                                     coeff, progress)
 
-    def match_peaks_to_atlas(self, fit, tolerance=5., polydeg=5.):
+    def match_peaks_to_atlas(self, fit, tolerance=1., polydeg=5.):
         '''
         Fitting all the detected peaks with the given polynomail solution for
         a fit using maximal information.
@@ -713,7 +726,10 @@ class Calibrator:
 
         '''
 
-        if self.matplotlib_imported:
+        if log_spectrum:
+            spectrum = np.log(spectrum)
+
+        if matplotlib_imported:
 
             pix = np.arange(len(spectrum)).astype('float')
             wave = self.polyval(fit, pix)
@@ -778,7 +794,10 @@ class Calibrator:
 
             ax1.grid(linestyle=':')
             ax1.set_ylabel('ADU')
-            ax1.set_ylim(spectrum.min(), spectrum.max() * 1.05)
+            if log_spectrum:
+                ax1.set_ylim(0, spectrum.max() * 1.05)
+            else:
+                ax1.set_ylim(spectrum.min(), spectrum.max() * 1.05)
 
             # Plot the residuals
             ax2.scatter(
