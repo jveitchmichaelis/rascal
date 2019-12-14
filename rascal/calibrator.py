@@ -672,7 +672,7 @@ class Calibrator:
                                     max_tries, self.ransac_thresh, self.brute_force,
                                     coeff, progress)
 
-    def match_peaks_to_atlas(self, fit, tolerance=1., polydeg=5.):
+    def match_peaks_to_atlas(self, fit, tolerance=1., polydeg=5):
         '''
         Fitting all the detected peaks with the given polynomail solution for
         a fit using maximal information.
