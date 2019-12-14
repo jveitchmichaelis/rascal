@@ -131,14 +131,12 @@ def load_calibration_lines(elements,
 def gauss(x,a,x0,sigma):
     return a*exp(-(x-x0)**2/(2*sigma**2))
 
-def refine_peaks(spectrum, peaks):
+def refine_peaks(spectrum, peaks, window_width=10):
     refined_peaks = []
     
     spectrum = np.array(spectrum)
     
     for peak in peaks:
-
-        window_width = 10
 
         y = spectrum[int(peak)-window_width:int(peak)+window_width]
         y /= y.max()
@@ -150,7 +148,7 @@ def refine_peaks(spectrum, peaks):
         sigma = sum(y*(x-mean)**2)/n
 
         try:
-            popt,pcov = curve_fit(gauss,x,y,p0=[1,mean,sigma])
+            popt, _ = curve_fit(gauss,x,y,p0=[1,mean,sigma])
             height, centre, width = popt
 
             if height < 0:
