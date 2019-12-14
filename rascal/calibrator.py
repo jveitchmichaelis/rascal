@@ -711,12 +711,12 @@ class Calibrator:
         x_match = np.array(x_match)
         y_match = np.array(y_match)
         
-        coeff = self._robust_polyfit(x_match, y_match, polydeg)
+        coeff = models.robust_polyfit(x_match, y_match, polydeg)
         return coeff, x_match, y_match
 
 
     def plot_fit(self, spectrum, fit, tolerance=5., plot_atlas=True, silence=True,
-                 output_filename=None, verbose=False, renderer='default'):
+                 output_filename=None, verbose=False, renderer='default', log_spectrum=True):
         '''
         Parameters
         ----------
