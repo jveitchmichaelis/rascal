@@ -6,7 +6,6 @@ import logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger()
 
-
 def test_no_elements():
     logger.info("Testing no elements")
     cal = Calibrator()
@@ -19,7 +18,7 @@ def test_empty_elements():
          cal = Calibrator(elements=[])
 
 def test_load_single_line():
-    element_list = ["Hg", "Ar", "Xe", "CuNeAr", "Kr"]
+    element_list = ["Hg", "Ar", "Xe", "Kr"]
 
     for element in element_list:
         logger.info("Testing load single element: {}".format(element))
@@ -29,7 +28,7 @@ def test_load_single_line():
 
 def test_load_mutliple_lines():
 
-    element_list = ["Hg", "Ar", "Xe", "CuNeAr", "Kr"]
+    element_list = ["Hg", "Ar", "Xe", "Kr"]
 
     for i in range(1, len(element_list)+1):
         for elements in combinations(element_list, i):

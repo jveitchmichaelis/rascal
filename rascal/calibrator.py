@@ -2,11 +2,14 @@ import warnings
 import itertools
 import numpy as np
 import astropy.units as u
-from . import models
 from collections import Counter
 
 from . util import load_calibration_lines
 from . synthetic import SyntheticSpectrum
+from . import models
+
+plotly_imported = False
+matplotlib_imported = False
 
 try:
     import matplotlib.pyplot as plt
@@ -53,7 +56,7 @@ class Calibrator:
         self.plotly_imported = plotly_imported
 
         if elements is None:
-            self.elements = ["Hg", "Ar", "Xe", "CuNeAr", "Kr"]
+            self.elements = ["Hg", "Ar", "Xe", "Kr", "Ne"]
         elif isinstance(elements, list) and len(elements) == 0:
             raise ValueError
         else:
