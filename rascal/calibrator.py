@@ -842,7 +842,7 @@ class Calibrator:
                     ax1.text(
                         x - 3,
                         0.8 * max(spectrum),
-                        s="{:1.2f}".format(self.atlas[idx]),
+                        s="{}:{:1.2f}".format(self.atlas_elements[idx], self.atlas[idx]),
                         rotation=90,
                         bbox=dict(facecolor='white', alpha=1))
 
