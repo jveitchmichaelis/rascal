@@ -42,47 +42,51 @@ except:
 
 
 class Calibrator:
-    def __init__(self, peaks=None, silence=False, elements=None,
+    def __init__(self, peaks,
+                    num_pixels,
                     min_wavelength=1000, 
-                    max_wavelength=10000, 
-                    range_tolerance=200, 
-                    min_atlas=None, 
-                    max_atlas=None, 
-                    min_intensity=0,
-                    min_distance=10):
+                    max_wavelength=10000,
+                    silence=False):
+
         self.peaks = peaks
         self.silence = silence
         self.matplotlib_imported = matplotlib_imported
         self.plotly_imported = plotly_imported
+        self.n_pix = num_pixels
 
-        if elements is None:
-            self.elements = ["Hg", "Ar", "Xe", "Kr", "Ne"]
-        elif isinstance(elements, list) and len(elements) == 0:
-            raise ValueError
-        else:
-            self.elements = elements
+        self.atlas_elements = []
+        self.atlas = []
+        self.atlas_intensities = []
         
         self.min_wavelength = min_wavelength
         self.max_wavelength = max_wavelength
 
         # Configuring default fitting constraints
-        self.set_fit_constraints(range_tolerance=range_tolerance)
+        self.set_fit_constraints()
 
-        if min_atlas is None:
-            min_atlas = self.min_wavelength - self.range_tolerance
+    def add_atlas(self, elements, min_wavelength=None, max_wavelength=None, min_intensity=None, min_distance=None):
+
+        if min_wavelength is None:
+            min_wavelength = self.min_wavelength - max(self.range_tolerance, self.linearity_thresh)
         
-        if max_atlas is None:
-            max_atlas = self.max_wavelength + self.range_tolerance
+        if max_wavelength is None:
+            max_wavelength = self.max_wavelength + max(self.range_tolerance, self.linearity_thresh)
 
-        assert max_atlas > min_atlas
-        assert min_atlas >= 0
+        if isinstance(elements, str):
+            elements = [elements]
 
-        self._get_atlas(self.elements, min_wavelength=min_atlas, max_wavelength=max_atlas, min_intensity=min_intensity, min_distance=min_distance)
+        for element in elements:
 
-        if peaks is not None:
-            self._set_peaks(peaks)
+            line_elements, lines, intensities = load_calibration_lines(element, min_wavelength, max_wavelength)
+
+            self.atlas_elements.extend(line_elements)
+            self.atlas.extend(lines)
+            self.atlas_intensities.extend(intensities)
+
+        self._set_peaks(self.peaks)
 
     def _set_peaks(self, peaks):
+
         # Create a list of all possible pairs of detected peaks and lines from atlas 
         self._generate_pairs()
 
@@ -93,8 +97,20 @@ class Calibrator:
         self.set_known_pairs()
 
     def _generate_pairs(self):
-        self.pairs = np.array(
-            [pair for pair in itertools.product(self.peaks, self.atlas)])
+        
+        #self.pairs = np.array([pair for pair in itertools.product(self.peaks, self.atlas)])
+
+        
+        pairs = [pair for pair in itertools.product(self.peaks, self.atlas)]
+
+        # Remove pairs outside polygon
+        valid_area = plt.Polygon([(0,self.min_wavelength - self.linearity_thresh),
+                    (0,self.min_wavelength + self.linearity_thresh),
+                    (self.n_pix,self.max_wavelength + self.linearity_thresh),
+                    (self.n_pix,self.max_wavelength - self.linearity_thresh)])
+
+        self.pairs = np.array([pair for pair in pairs if valid_area.contains_point(pair)])
+        
 
     def _hough_points(self, x, y, num_slopes):
         """
@@ -497,13 +513,13 @@ class Calibrator:
         self.atlas = lines
 
     def set_fit_constraints(self,
-                            n_pix=1024,
                             num_slopes=1000,
                             range_tolerance=500,
-                            fit_tolerance=20.,
+                            fit_tolerance=10.,
                             polydeg=4,
                             candidate_thresh=15.,
-                            ransac_thresh=10,
+                            linearity_thresh=500,
+                            ransac_thresh=1,
                             xbins=50,
                             ybins=50,
                             brute_force=False,
@@ -511,41 +527,46 @@ class Calibrator:
         '''
         Parameters
         ----------
-        range_tolerance: float
+        num_slopes : float
+            Number of slopes to consider during Hough transform
+        range_tolerance : float
             Estimation of the error on the provided spectral range
             e.g. 3000-5000 with tolerance 500 will search for
             solutions that may satisfy 2500-5500
-        
         fit_tolerance : float
-
+            Sets a tolerance on whether a fit found by RANSAC is considered acceptable
         polydeg : int
             Degree of the polynomial fit.
         candidate_thresh : float
-            Threshold for considering a point to be an inlier during candidate peak/line
-            selection. Don't make this too small, it should allow for the error between
-            a linear and non-linear fit.
-        ransac_thresh: float
-            The distance criteria to be considered an inlier to a fit. This should be close
-            to the size of the expected residuals on the final fit (e.g. 10-20A maximum)
+            Threshold  (Angstroms) for considering a point to be an inlier during candidate peak/line
+            selection. This should be reasonable small as we want to search for candidate points which
+            are *locally* linear.
+        ransac_thresh : float
+            The distance criteria  (Angstroms) to be considered an inlier to a fit. This should be close
+            to the size of the expected residuals on the final fit (e.g. 1A is typical)
+        linearity_thresh : float
+            A threshold (Angstroms) that expresses how non-linear the solution can be. This mostly affects
+            which atlas points are included and should be reasonably large, e.g. 500A.
         xbins : int
-        
+            Number of bins for Hough accumulation
         ybins : int
-
+            Number of bins for Hough accumulation
         brute_force : tuple
             Set to True to try all possible combination in the given parameter space
         fittype : string
             One of 'poly', 'legendre' or 'chebyshev'
 
         '''
-        self.n_pix = n_pix
         self.num_slopes = num_slopes
-
         self.range_tolerance = range_tolerance
+        self.linearity_thresh = linearity_thresh
+
+        # Start wavelength in the spectrum, +/- some tolerance
         self.min_intercept = self.min_wavelength - self.range_tolerance
         self.max_intercept = self.min_wavelength + self.range_tolerance
 
-        self.min_slope = (self.max_wavelength - self.range_tolerance - self.max_intercept) / self.n_pix
-        self.max_slope = (self.max_wavelength + self.range_tolerance - self.min_intercept) / self.n_pix
+        self.min_slope = (self.max_wavelength - self.max_intercept - self.range_tolerance) / self.n_pix
+        self.max_slope = (self.max_wavelength - self.min_intercept + self.range_tolerance) / self.n_pix
         
         self.fit_tolerance = fit_tolerance
         self.polydeg = polydeg
@@ -554,6 +575,7 @@ class Calibrator:
         self.xbins = xbins
         self.ybins = ybins
         self.brute_force = brute_force
+
         if fittype == 'poly':
             self.polyfit = np.polyfit
             self.polyval = np.polyval
@@ -655,6 +677,13 @@ class Calibrator:
         if sample_size > len(self.atlas):
             sample_size = len(self.atlas)
 
+        self._get_candidates(n_slope)
+
+        return self._get_best_model(self.candidates, self.polydeg, sample_size,
+                                    max_tries, self.ransac_thresh, self.brute_force,
+                                    coeff, progress)
+
+    def _get_candidates(self, n_slope=1000, top_n=50):
         # Generate the accumulator from the pairs
         self.accumulator = self._hough_points(
             self.pairs[:, 0], self.pairs[:, 1], num_slopes=n_slope)
@@ -670,10 +699,6 @@ class Calibrator:
             inliers_x, inliers_y = self._get_candidate_points_linear(
                 m, c, self.candidate_thresh)
             self.candidates.append((inliers_x, inliers_y))
-
-        return self._get_best_model(self.candidates, self.polydeg, sample_size,
-                                    max_tries, self.ransac_thresh, self.brute_force,
-                                    coeff, progress)
 
     def match_peaks_to_atlas(self, fit, tolerance=1., polydeg=5):
         '''
@@ -714,6 +739,34 @@ class Calibrator:
         coeff = models.robust_polyfit(x_match, y_match, polydeg)
         return coeff, x_match, y_match
 
+    def plot_search_space(self,  best_p=None):
+        plt.figure(figsize=(16,9))
+
+        self._get_candidates()
+
+        plt.scatter(*self.pairs.T, s=2)
+
+        plt.hlines(self.min_intercept, 0, self.n_pix)
+        plt.hlines(self.max_intercept, 0, self.n_pix, linestyle='dashed', alpha=0.5)
+        plt.hlines(self.max_intercept + self.n_pix*self.max_slope, 0, self.n_pix)
+        plt.hlines(self.min_wavelength + self.n_pix*self.min_slope, 0, self.n_pix, linestyle='dashed', alpha=0.5)
+
+        r = plt.Polygon([(0,self.min_wavelength - self.linearity_thresh),
+                    (0,self.min_wavelength + self.linearity_thresh),
+                    (self.n_pix,self.max_wavelength + self.linearity_thresh),
+                    (self.n_pix,self.max_wavelength - self.linearity_thresh)],
+                        alpha=0.3)
+
+        ax = plt.gca()
+        ax.add_patch(r)
+
+        if best_p is not None:
+         plt.scatter(self.peaks, self.polyval(best_p, self.peaks), color='red')
+            
+        plt.xlim(0, self.n_pix)
+        plt.ylim(self.min_wavelength - self.range_tolerance, self.max_wavelength + self.range_tolerance)
+
+        plt.show()
 
     def plot_fit(self, spectrum, fit, tolerance=5., plot_atlas=True, silence=True,
                  output_filename=None, verbose=False, renderer='default', log_spectrum=True):
