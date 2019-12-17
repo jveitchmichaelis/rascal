@@ -1,7 +1,7 @@
 import numpy as np
 import random
 from scipy.optimize import curve_fit
-from scipy import asarray as ar,exp
+from scipy import asarray as ar, exp
 import pkg_resources
 
 """
@@ -85,57 +85,62 @@ def load_calibration_lines(elements=[], min_wavelength=0, max_wavelength=15000, 
 
 
 """
+
+
 def load_calibration_lines(elements,
-                               min_wavelength=1000.,
-                               max_wavelength=10000.):
-        '''
-        https://apps.dtic.mil/dtic/tr/fulltext/u2/a105494.pdf
-        '''
+                           min_wavelength=1000.,
+                           max_wavelength=10000.):
+    '''
+    https://apps.dtic.mil/dtic/tr/fulltext/u2/a105494.pdf
+    '''
 
-        if isinstance(elements, str):
-            elements = [elements]
+    if isinstance(elements, str):
+        elements = [elements]
 
-        lines = []
-        line_elements = []
-        line_strengths = []
+    lines = []
+    line_elements = []
+    line_strengths = []
 
-        for arc in elements:
-            file_path = pkg_resources.resource_filename('rascal', 'arc_lines/{}.csv'.format(arc.lower()))
+    for arc in elements:
+        file_path = pkg_resources.resource_filename(
+            'rascal', 'arc_lines/{}.csv'.format(arc.lower()))
 
-            with open(file_path, 'r') as f:
+        with open(file_path, 'r') as f:
 
-                f.readline()
-                for l in f.readlines():
-                    if l[0] == '#':
-                        continue
-                        
-                    data = l.rstrip().split(',')
-                    if len(data) > 2:
-                        line, strength, source = data[:3]
-                        line_strengths.append(float(strength))
-                    else:
-                        line, source = data[:2]
-                        line_strengths.append(0)
-                    
-                    lines.append(float(line))
-                    line_elements.append(source)
-       
-        cal_lines = np.array(lines)
-        cal_elements = np.array(line_elements)
-        cal_strengths = np.array(line_strengths)
+            f.readline()
+            for l in f.readlines():
+                if l[0] == '#':
+                    continue
 
-        # Get only lines within the requested wavelength
-        mask = (cal_lines > min_wavelength) * (cal_lines < max_wavelength)
-        return cal_elements[mask], cal_lines[mask], cal_strengths[mask]
+                data = l.rstrip().split(',')
+                if len(data) > 2:
+                    line, strength, source = data[:3]
+                    line_strengths.append(float(strength))
+                else:
+                    line, source = data[:2]
+                    line_strengths.append(0)
 
-def gauss(x,a,x0,sigma):
+                lines.append(float(line))
+                line_elements.append(source)
+
+    cal_lines = np.array(lines)
+    cal_elements = np.array(line_elements)
+    cal_strengths = np.array(line_strengths)
+
+    # Get only lines within the requested wavelength
+    mask = (cal_lines > min_wavelength) * (cal_lines < max_wavelength)
+    return cal_elements[mask], cal_lines[mask], cal_strengths[mask]
+
+
+def gauss(x, a, x0, sigma):
     return a*exp(-(x-x0)**2/(2*sigma**2))
+
 
 def refine_peaks(spectrum, peaks, window_width=10):
     refined_peaks = []
-    
+
     spectrum = np.array(spectrum)
-    
+
     for peak in peaks:
 
         y = spectrum[int(peak)-window_width:int(peak)+window_width]
@@ -143,12 +148,12 @@ def refine_peaks(spectrum, peaks, window_width=10):
 
         x = np.arange(len(y))
 
-        n = len(x)                          
-        mean = sum(x*y)/n                   
+        n = len(x)
+        mean = sum(x*y)/n
         sigma = sum(y*(x-mean)**2)/n
 
         try:
-            popt, _ = curve_fit(gauss,x,y,p0=[1,mean,sigma])
+            popt, _ = curve_fit(gauss, x, y, p0=[1, mean, sigma])
             height, centre, width = popt
 
             if height < 0:
@@ -156,5 +161,5 @@ def refine_peaks(spectrum, peaks, window_width=10):
             refined_peaks.append(peak-window_width+centre)
         except RuntimeError:
             continue
-            
+
     return np.array(refined_peaks)
