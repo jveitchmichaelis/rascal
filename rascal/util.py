@@ -109,7 +109,7 @@ def load_calibration_lines(elements,
                     if l[0] == '#':
                         continue
                         
-                    data = l.split(',')
+                    data = l.rstrip().split(',')
                     if len(data) > 2:
                         line, strength, source = data[:3]
                         line_strengths.append(float(strength))
