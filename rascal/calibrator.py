@@ -64,7 +64,7 @@ class Calibrator:
         # Configuring default fitting constraints
         self.set_fit_constraints()
 
-    def add_atlas(self, elements, min_wavelength=None, max_wavelength=None, min_intensity=None, min_distance=None):
+    def add_atlas(self, elements, min_wavelength=None, max_wavelength=None, min_intensity=None, min_distance=None, include_first_order=False):
 
         if min_wavelength is None:
             min_wavelength = self.min_wavelength - \
@@ -80,7 +80,7 @@ class Calibrator:
         for element in elements:
 
             line_elements, lines, intensities = load_calibration_lines(
-                element, min_wavelength, max_wavelength)
+                element, min_wavelength, max_wavelength, include_first_order)
 
             self.atlas_elements.extend(line_elements)
             self.atlas.extend(lines)
