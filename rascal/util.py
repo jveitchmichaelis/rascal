@@ -90,7 +90,7 @@ def load_calibration_lines(elements=[], min_wavelength=0, max_wavelength=15000, 
 def load_calibration_lines(elements,
                            min_wavelength=1000.,
                            max_wavelength=10000.,
-                           include_first_order=False):
+                           include_second_order=False):
     '''
     https://apps.dtic.mil/dtic/tr/fulltext/u2/a105494.pdf
     '''
@@ -124,12 +124,11 @@ def load_calibration_lines(elements,
                 lines.append(float(line))
                 line_elements.append(source)
 
-                if include_first_order:
-                    
+                if include_second_order:
                     wavelength = 2*lines[-1]
 
                     lines.append(wavelength)
-                    line_elements.append(line_elements[-1]+"_1")
+                    line_elements.append(line_elements[-1]+"_2")
                     line_strengths.append(line_strengths[-1])
 
     cal_lines = np.array(lines)
