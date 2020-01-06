@@ -1,1 +1,7 @@
 sphinx-autoapi
+astropy
+matplotlib
+plotly
+tqdm
+numpy
+scipy
