@@ -18,10 +18,11 @@ sys.path.insert(0, os.path.abspath('../..'))
 # -- Project information -----------------------------------------------------
 
 project = 'RASCAL'
-copyright = '2020, Josh Veitch-Michaelis, Marco Lam'
+copyright = '2019-2020, Josh Veitch-Michaelis, Marco Lam'
 author = 'Josh Veitch-Michaelis, Marco Lam'
 
 # The full version, including alpha/beta/rc tags
+version = '0.0.1'
 release = '0.0.1'
 
 
@@ -47,12 +48,12 @@ autoapi_dirs = ['../../rascal']
 
 # -- Options for HTML output -------------------------------------------------
 
-# The theme to use for HTML and HTML Help pages.  See the documentation for
-# a list of builtin themes.
-#
-html_theme = 'alabaster'
-
-# Add any paths that contain custom static files (such as style sheets) here,
-# relative to this directory. They are copied after the builtin static files,
-# so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+# Readthedocs.
+on_rtd = os.environ.get("READTHEDOCS", None) == "True"
+if on_rtd:  # only import and set the theme if we're building docs locally
+    import sphinx_rtd_theme
+    html_theme = 'sphinx_rtd_theme'
+    html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
+else:
+    html_theme = 'alabaster'
+    html_static_path = ["_static"]
