@@ -1,5 +1,5 @@
 Synthetic
 =========
 
-.. automodule:: rascal.synthetic
+.. autoclass:: rascal.synthetic.SyntheticSpectrum
     :members:

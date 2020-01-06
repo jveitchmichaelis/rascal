@@ -1,5 +1,5 @@
 Calibrator
 ==========
 
-.. automodule:: rascal.calibrator
+.. autoclass:: rascal.calibrator.Calibrator
     :members:
