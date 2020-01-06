@@ -20,10 +20,11 @@ sys.path.insert(0, os.path.abspath('../..'))
 project = 'RASCAL'
 copyright = '2019-2020, Josh Veitch-Michaelis, Marco Lam'
 author = 'Josh Veitch-Michaelis, Marco Lam'
+__version__ = '0.0.1'
 
 # The full version, including alpha/beta/rc tags
-version = '0.0.1'
-release = '0.0.1'
+version = __version__
+release = __version__
 
 
 # -- General configuration ---------------------------------------------------
@@ -33,7 +34,7 @@ release = '0.0.1'
 # ones.
 extensions = ['sphinx.ext.todo', 'sphinx.ext.viewcode', 'sphinx.ext.autodoc',
     'sphinx.ext.autosectionlabel', 'sphinx.ext.coverage', 'autoapi.extension'
-]
+    ]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -43,8 +44,12 @@ templates_path = ['_templates']
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = []
 
-# Produce API reference automatically
+# Produce API reference automatically for every public and private methods
 autoapi_dirs = ['../../rascal']
+autodoc_default_flags = ['members', 'undoc-members', 'private-members'
+    ]
+autoclass_content = 'both'
+autoapi_python_class_content = 'both'
 
 # -- Options for HTML output -------------------------------------------------
 
