@@ -49,6 +49,8 @@ autoapi_dirs = ['../../rascal']
 # -- Options for HTML output -------------------------------------------------
 
 # Readthedocs.
+master_doc = 'index'
+
 on_rtd = os.environ.get("READTHEDOCS", None) == "True"
 if on_rtd:  # only import and set the theme if we're building docs locally
     import sphinx_rtd_theme
