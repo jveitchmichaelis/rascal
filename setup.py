@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-install_requires=['scipy', 'numpy', 'tqdm', 'matplotlib', 'astropy']
+install_requires=['scipy', 'numpy', 'tqdm', 'matplotlib', 'astropy', 'pyniverse', 'pytest']
 
 __packagename__ = "rascal"
 
