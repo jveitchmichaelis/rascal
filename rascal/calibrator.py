@@ -67,12 +67,10 @@ class Calibrator:
     def add_atlas(self, elements, min_wavelength=None, max_wavelength=None, min_intensity=None, min_distance=None, include_second_order=False):
 
         if min_wavelength is None:
-            min_wavelength = self.min_wavelength - \
-                max(self.range_tolerance, self.linearity_thresh)
+            min_wavelength = self.min_wavelength - self.range_tolerance
 
         if max_wavelength is None:
-            max_wavelength = self.max_wavelength + \
-                max(self.range_tolerance, self.linearity_thresh)
+            max_wavelength = self.max_wavelength + self.range_tolerance
 
         if isinstance(elements, str):
             elements = [elements]
@@ -106,14 +104,21 @@ class Calibrator:
         pairs = [pair for pair in itertools.product(self.peaks, self.atlas)]
 
         # Remove pairs outside polygon
-        valid_area = plt.Polygon([(0, self.min_wavelength - self.linearity_thresh),
-                                  (0, self.min_wavelength + self.linearity_thresh),
-                                  (self.n_pix, self.max_wavelength +
-                                   self.linearity_thresh),
-                                  (self.n_pix, self.max_wavelength - self.linearity_thresh)])
+        valid_area_lower = plt.Polygon([(0, self.min_wavelength + self.range_tolerance),
+                                  (0, self.min_wavelength - self.range_tolerance),
+                                  (self.n_pix, self.min_wavelength +
+                                        self.min_slope*self.n_pix),
+                                  (self.n_pix, self.min_wavelength +
+                                        self.max_slope*self.n_pix)])
+        
+        valid_area_upper = plt.Polygon([(self.n_pix, self.max_wavelength - self.range_tolerance),
+                         (self.n_pix, self.max_wavelength + self.range_tolerance),
+                         (0, self.max_wavelength - self.min_slope*self.n_pix),
+                         (0, self.max_wavelength - self.max_slope*self.n_pix)])
+                                        
 
         self.pairs = np.array(
-            [pair for pair in pairs if valid_area.contains_point(pair)])
+            [pair for pair in pairs if valid_area_lower.contains_point(pair) and valid_area_upper.contains_point(pair)])
 
     def _hough_points(self, x, y, num_slopes):
         """
@@ -196,6 +201,15 @@ class Calibrator:
                           yedges[b[1]] + ybin_width))
 
         return hist, lines
+
+    def _merge_candidates(self, candidate_lists):
+        merged = []
+
+        for pairs in candidate_lists:
+            for pair in np.array(pairs).T:
+                merged.append(pair)
+            
+        return np.sort(np.array(merged))
 
     def _combine_linear_estimates(self, candidates):
         peaks = []
@@ -387,13 +401,11 @@ class Calibrator:
             # Discard out-of-bounds fits
             if ((fit_coeffs[-1] < self.min_intercept) |
                 (fit_coeffs[-1] > self.max_intercept) |
-                (fit_coeffs[-2] < self.min_slope) |
-                    (fit_coeffs[-2] > self.max_slope)):
+                (self.polyval(fit_coeffs, 0) < self.min_wavelength) |
+                    (self.polyval(fit_coeffs, self.n_pix) > self.max_wavelength)):
                 continue
 
-            max_wavelength = self.polyval(fit_coeffs, max(x))
-            if max_wavelength > self.max_wavelength:
-                continue
+            #TODO use point-in-polygon to check entire solution space (not just tails)
 
             # M-SAC Estimator (Torr and Zisserman, 1996)
             fit = self.polyval(fit_coeffs, x)
@@ -422,7 +434,7 @@ class Calibrator:
 
                 if tdqm_imported & progress:
                     sampler_list.set_description(
-                        "Most inliers: {:d}, best error: {:1.2f}".format(n_inliers, best_err))
+                        "Most inliers: {:d}, best error: {:1.4f}".format(n_inliers, best_err))
 
                 # Perfect fit, break early
                 if best_inliers == len(x):
@@ -462,11 +474,11 @@ class Calibrator:
 
         '''
 
-        x, y = self._combine_linear_estimates(candidates)
+        self.candidate_peak , self.candidate_arc = self._combine_linear_estimates(candidates)
 
-        p, err, n_inliers, valid = self._solve_candidate_ransac(
-            x,
-            y,
+        p, err, _, valid = self._solve_candidate_ransac(
+            self.candidate_peak,
+            self.candidate_arc,
             polydeg=polydeg,
             sample_size=sample_size,
             max_tries=max_tries,
@@ -526,7 +538,7 @@ class Calibrator:
                             fit_tolerance=10.,
                             polydeg=4,
                             candidate_thresh=15.,
-                            linearity_thresh=500,
+                            linearity_thresh=3,
                             ransac_thresh=1,
                             xbins=50,
                             ybins=50,
@@ -573,10 +585,11 @@ class Calibrator:
         self.min_intercept = self.min_wavelength - self.range_tolerance
         self.max_intercept = self.min_wavelength + self.range_tolerance
 
-        self.min_slope = (self.max_wavelength -
-                          self.max_intercept - self.range_tolerance) / self.n_pix
-        self.max_slope = (self.max_wavelength -
-                          self.min_intercept + self.range_tolerance) / self.n_pix
+        self.min_slope =  ((self.max_wavelength - self.range_tolerance) - self.max_intercept) / self.n_pix
+        self.min_slope /= self.linearity_thresh
+
+        self.max_slope = ((self.max_wavelength + self.range_tolerance ) - self.min_intercept) / self.n_pix
+        self.max_slope *= self.linearity_thresh
 
         self.fit_tolerance = fit_tolerance
         self.polydeg = polydeg
@@ -753,25 +766,37 @@ class Calibrator:
         plt.figure(figsize=(16, 9))
 
         self._get_candidates()
-
-        plt.scatter(*self.pairs.T, s=2)
+        
+        plt.scatter(*self._merge_candidates(self.candidates).T, alpha=0.2)
 
         plt.hlines(self.min_intercept, 0, self.n_pix)
         plt.hlines(self.max_intercept, 0, self.n_pix,
                    linestyle='dashed', alpha=0.5)
+
         plt.hlines(self.max_intercept + self.n_pix *
                    self.max_slope, 0, self.n_pix)
         plt.hlines(self.min_wavelength + self.n_pix*self.min_slope,
                    0, self.n_pix, linestyle='dashed', alpha=0.5)
 
-        r = plt.Polygon([(0, self.min_wavelength - self.linearity_thresh),
-                         (0, self.min_wavelength + self.linearity_thresh),
-                         (self.n_pix, self.max_wavelength + self.linearity_thresh),
-                         (self.n_pix, self.max_wavelength - self.linearity_thresh)],
+        r = plt.Polygon([(0, self.min_wavelength + self.range_tolerance),
+                         (0, self.min_wavelength - self.range_tolerance),
+                         (self.n_pix, self.min_wavelength + self.min_slope*self.n_pix),
+                         (self.n_pix, self.min_wavelength + self.max_slope*self.n_pix)],
                         alpha=0.3)
+
+        r2 = plt.Polygon([(self.n_pix, self.max_wavelength - self.range_tolerance),
+                         (self.n_pix, self.max_wavelength + self.range_tolerance),
+                         (0, self.max_wavelength - self.min_slope*self.n_pix),
+                         (0, self.max_wavelength - self.max_slope*self.n_pix)],
+                        alpha=0.3)
+
+        plt.plot((0, self.n_pix),(self.min_wavelength, self.max_wavelength))
+        plt.plot((0, self.n_pix),(self.min_intercept, self.min_intercept + self.min_slope*self.n_pix))
+        plt.plot((0, self.n_pix),(self.max_intercept, self.max_intercept + self.max_slope*self.n_pix))
 
         ax = plt.gca()
         ax.add_patch(r)
+        ax.add_patch(r2)
 
         if best_p is not None:
             plt.scatter(self.peaks, self.polyval(
