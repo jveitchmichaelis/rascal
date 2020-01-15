@@ -623,7 +623,7 @@ class Calibrator:
         for element in elements:
 
             line_elements, lines, intensities = load_calibration_lines(
-                element, min_wavelength, max_wavelength, include_second_order)
+                element, min_wavelength, max_wavelength)
 
             self.atlas_elements.extend(line_elements)
             self.atlas.extend(lines)
