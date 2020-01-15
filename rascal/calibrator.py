@@ -589,7 +589,7 @@ class Calibrator:
             warnings.warn(
                 'matplotlib package is not available.')
 
-    def add_atlas(self, elements, min_wavelength=None, max_wavelength=None, min_intensity=None, min_distance=None, include_second_order=False):
+    def add_atlas(self, elements, min_wavelength=None, max_wavelength=None, min_intensity=None, min_distance=None):
         '''
         Provider the chemical symbol(s) to add arc lines to the Calibrator.
 
