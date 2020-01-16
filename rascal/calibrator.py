@@ -81,6 +81,33 @@ class Calibrator:
         # Configuring default fitting constraints
         self.set_fit_constraints()
 
+    def _get_atlas(self,
+                   elements,
+                   min_wavelength,
+                   max_wavelength,
+                   min_intensity,
+                   min_distance):
+        '''
+        Load lines.
+
+        Parameters
+        ----------
+        elements: string or list of string
+            element name in form of chemical symbol. Case insensitive.
+        min_wavelength: float
+
+        max_wavelength: float
+
+        min_intensity: float
+
+        min_distance: float
+
+        '''
+        self.atlas_elements, self.atlas, self.atlas_intensities = \
+            load_calibration_lines(elements,
+                                   min_wavelength,
+                                   max_wavelength)
+
     def _set_peaks(self, peaks):
         '''
         Gather all the randomly matched and user-supplied pixel-wavelength pairs.
@@ -184,9 +211,9 @@ class Calibrator:
 
         Returns
         -------
-        hist : 
+        hist :
 
-        lines : 
+        lines :
 
         '''
 
@@ -259,7 +286,7 @@ class Calibrator:
         dispersion: float
             In observational astronomy term, the R value
         min_wavelength: float
-            
+
         thresh: float
 
         Returns
@@ -357,7 +384,7 @@ class Calibrator:
         y: 1D numpy array
             Array of wavelengths from atlas.
         polydeg: int
-            The order of polynomial (the polynomial type is definted in the 
+            The order of polynomial (the polynomial type is definted in the
             set_fit_constraints).
         sample_size: int
             Number of lines to be fitted.
@@ -623,7 +650,7 @@ class Calibrator:
         for element in elements:
 
             line_elements, lines, intensities = load_calibration_lines(
-                element, min_wavelength, max_wavelength)
+                element, min_wavelength, max_wavelength, include_second_order)
 
             self.atlas_elements.extend(line_elements)
             self.atlas.extend(lines)
@@ -931,8 +958,8 @@ class Calibrator:
         Parameters
         ----------
         spectrum : 1D numpy array (N)
-            Array of length N pixels 
-        fit : 
+            Array of length N pixels
+        fit :
             Best fit polynomail coefficients
         tolerance : float (default: 0.5)
             Absolute difference between model and fitted wavelengths in unit of nm.
