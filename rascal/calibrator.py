@@ -4,8 +4,8 @@ import numpy as np
 import astropy.units as u
 from collections import Counter
 
-from . util import load_calibration_lines
-from . synthetic import SyntheticSpectrum
+from .util import load_calibration_lines
+from .synthetic import SyntheticSpectrum
 from . import models
 
 plotly_imported = False
@@ -15,8 +15,7 @@ try:
     import matplotlib.pyplot as plt
     matplotlib_imported = True
 except:
-    warnings.warn(
-        'matplotlib package not available.')
+    warnings.warn('matplotlib package not available.')
     matplotlib_imported = False
 
 try:
@@ -25,12 +24,9 @@ try:
     plotly_imported = True
 except ImportError:
     if matplotlib_imported:
-        warnings.warn(
-            'plotly is not present, only matplotlib can be used.')
+        warnings.warn('plotly is not present, only matplotlib can be used.')
     else:
-        warnings.warn(
-            'Plot cannot be generated.')
-
+        warnings.warn('Plot cannot be generated.')
 
 try:
     from tqdm.autonotebook import tqdm
@@ -49,7 +45,7 @@ class Calibrator:
                  max_wavelength=10000,
                  silence=False):
         '''
-        Initialise the calibrator object with 
+        Initialise the calibrator object with
 
         Parameters
         ----------
@@ -81,12 +77,8 @@ class Calibrator:
         # Configuring default fitting constraints
         self.set_fit_constraints()
 
-    def _get_atlas(self,
-                   elements,
-                   min_wavelength,
-                   max_wavelength,
-                   min_intensity,
-                   min_distance):
+    def _get_atlas(self, elements, min_wavelength, max_wavelength,
+                   min_intensity, min_distance):
         '''
         Load lines.
 
@@ -131,21 +123,24 @@ class Calibrator:
         pairs = [pair for pair in itertools.product(self.peaks, self.atlas)]
 
         # Remove pairs outside polygon
-        valid_area_lower = plt.Polygon([(0, self.min_wavelength + self.range_tolerance),
-                                  (0, self.min_wavelength - self.range_tolerance),
-                                  (self.n_pix, self.min_wavelength +
-                                        self.min_slope*self.n_pix),
-                                  (self.n_pix, self.min_wavelength +
-                                        self.max_slope*self.n_pix)])
-        
-        valid_area_upper = plt.Polygon([(self.n_pix, self.max_wavelength - self.range_tolerance),
-                         (self.n_pix, self.max_wavelength + self.range_tolerance),
-                         (0, self.max_wavelength - self.min_slope*self.n_pix),
-                         (0, self.max_wavelength - self.max_slope*self.n_pix)])
-                                        
+        valid_area_lower = plt.Polygon([
+            (0, self.min_wavelength + self.range_tolerance),
+            (0, self.min_wavelength - self.range_tolerance),
+            (self.n_pix, self.min_wavelength + self.min_slope * self.n_pix),
+            (self.n_pix, self.min_wavelength + self.max_slope * self.n_pix)
+        ])
 
-        self.pairs = np.array(
-            [pair for pair in pairs if valid_area_lower.contains_point(pair) and valid_area_upper.contains_point(pair)])
+        valid_area_upper = plt.Polygon([
+            (self.n_pix, self.max_wavelength - self.range_tolerance),
+            (self.n_pix, self.max_wavelength + self.range_tolerance),
+            (0, self.max_wavelength - self.min_slope * self.n_pix),
+            (0, self.max_wavelength - self.max_slope * self.n_pix)
+        ])
+
+        self.pairs = np.array([
+            pair for pair in pairs if valid_area_lower.contains_point(pair)
+            and valid_area_upper.contains_point(pair)
+        ])
 
     def _hough_points(self, x, y, num_slopes):
         """
@@ -191,8 +186,9 @@ class Calibrator:
         '''
         Bin up data by using a 2D histogram method.
         '''
-        return np.histogram2d(
-            accumulator[:, 0], accumulator[:, 1], bins=(xbins, ybins))
+        return np.histogram2d(accumulator[:, 0],
+                              accumulator[:, 1],
+                              bins=(xbins, ybins))
 
     def _get_top_lines(self, accumulator, top_n, xbins, ybins):
         '''
@@ -224,12 +220,13 @@ class Calibrator:
         ybin_width = (yedges[1] - yedges[0]) / 2
 
         top_bins = np.dstack(
-            np.unravel_index(np.argsort(hist.ravel())[::-1][:top_n], hist.shape))[0]
+            np.unravel_index(
+                np.argsort(hist.ravel())[::-1][:top_n], hist.shape))[0]
 
         lines = []
         for b in top_bins:
-            lines.append((xedges[b[0]] + xbin_width,
-                          yedges[b[1]] + ybin_width))
+            lines.append(
+                (xedges[b[0]] + xbin_width, yedges[b[1]] + ybin_width))
 
         return hist, lines
 
@@ -239,7 +236,7 @@ class Calibrator:
         for pairs in candidate_lists:
             for pair in np.array(pairs).T:
                 merged.append(pair)
-            
+
         return np.sort(np.array(merged))
 
     def _combine_linear_estimates(self, candidates):
@@ -349,12 +346,15 @@ class Calibrator:
         '''
 
         # Generate the accumulator from the pairs
-        self.accumulator = self._hough_points(
-            self.pairs[:, 0], self.pairs[:, 1], num_slopes=n_slope)
+        self.accumulator = self._hough_points(self.pairs[:, 0],
+                                              self.pairs[:, 1],
+                                              num_slopes=n_slope)
 
         # Get the line coeffients from the promising bins in the accumulator
-        _, lines = self._get_top_lines(
-            self.accumulator, top_n=top_n, xbins=self.xbins, ybins=self.ybins)
+        _, lines = self._get_top_lines(self.accumulator,
+                                       top_n=top_n,
+                                       xbins=self.xbins,
+                                       ybins=self.ybins)
 
         # Locate candidate points for these lines fits
         self.candidates = []
@@ -364,7 +364,9 @@ class Calibrator:
                 m, c, self.candidate_thresh)
             self.candidates.append((inliers_x, inliers_y))
 
-    def _solve_candidate_ransac(self, x, y,
+    def _solve_candidate_ransac(self,
+                                x,
+                                y,
                                 polydeg=3,
                                 sample_size=4,
                                 max_tries=1e4,
@@ -429,7 +431,7 @@ class Calibrator:
         # Filter close wavelengths
         if filter_close:
             unique_y = np.unique(y)
-            idx = np.argwhere(unique_y[1:] - unique_y[0:-1] < 3*thresh)
+            idx = np.argwhere(unique_y[1:] - unique_y[0:-1] < 3 * thresh)
             separation_mask = np.argwhere((y == unique_y[idx]).sum(0) == 0)
             y = y[separation_mask].flatten()
             x = x[separation_mask].flatten()
@@ -468,11 +470,13 @@ class Calibrator:
             else:
                 # weight the probability of choosing the sample by the inverse line density
                 hist = np.histogram(x, bins=3)
-                prob = 1. / hist[0][np.digitize(x, hist[1], right=True)-1]
+                prob = 1. / hist[0][np.digitize(x, hist[1], right=True) - 1]
                 prob = prob / np.sum(prob)
 
-                idxes = np.random.choice(
-                    idx, sample_size, replace=False, p=prob)
+                idxes = np.random.choice(idx,
+                                         sample_size,
+                                         replace=False,
+                                         p=prob)
                 x_hat = x[idxes]
                 y_hat = y[idxes]
 
@@ -495,7 +499,7 @@ class Calibrator:
             if ((fit_coeffs[-1] < self.min_intercept) |
                 (fit_coeffs[-1] > self.max_intercept) |
                 (self.polyval(fit_coeffs, 0) < self.min_wavelength) |
-                    (self.polyval(fit_coeffs, self.n_pix) > self.max_wavelength)):
+                (self.polyval(fit_coeffs, self.n_pix) > self.max_wavelength)):
                 continue
 
             #TODO use point-in-polygon to check entire solution space (not just tails)
@@ -514,8 +518,8 @@ class Calibrator:
             if cost <= best_cost:
 
                 # Now we do a robust fit
-                best_p = models.robust_polyfit(
-                    x[best_mask], y[best_mask], polydeg)
+                best_p = models.robust_polyfit(x[best_mask], y[best_mask],
+                                               polydeg)
                 best_cost = cost
 
                 # Get the residual of the fit
@@ -527,7 +531,8 @@ class Calibrator:
 
                 if tdqm_imported & progress:
                     sampler_list.set_description(
-                        "Most inliers: {:d}, best error: {:1.4f}".format(n_inliers, best_err))
+                        "Most inliers: {:d}, best error: {:1.4f}".format(
+                            n_inliers, best_err))
 
                 # Perfect fit, break early
                 if best_inliers == len(x):
@@ -569,7 +574,8 @@ class Calibrator:
 
         '''
 
-        self.candidate_peak , self.candidate_arc = self._combine_linear_estimates(candidates)
+        self.candidate_peak, self.candidate_arc = self._combine_linear_estimates(
+            candidates)
 
         p, err, _, valid = self._solve_candidate_ransac(
             self.candidate_peak,
@@ -590,7 +596,7 @@ class Calibrator:
                 warnings.warn("Error too large {} > {}".format(
                     err, self.fit_tolerance))
 
-        assert(p is not None), "Couldn't fit"
+        assert (p is not None), "Couldn't fit"
 
         return p
 
@@ -602,8 +608,7 @@ class Calibrator:
             self.matplotlib_imported = False
             self.plotly_imported = True
         else:
-            warnings.warn(
-                'plotly package is not available.')
+            warnings.warn('plotly package is not available.')
 
     def use_matplotlib(self):
         '''
@@ -613,10 +618,15 @@ class Calibrator:
             self.matplotlib_imported = True
             self.plotly_imported = False
         else:
-            warnings.warn(
-                'matplotlib package is not available.')
+            warnings.warn('matplotlib package is not available.')
 
-    def add_atlas(self, elements, min_wavelength=None, max_wavelength=None, min_intensity=None, min_distance=None):
+    def add_atlas(self,
+                  elements,
+                  min_wavelength=None,
+                  max_wavelength=None,
+                  min_intensity=None,
+                  min_distance=None,
+                  include_second_order=None):
         '''
         Provider the chemical symbol(s) to add arc lines to the Calibrator.
 
@@ -780,10 +790,12 @@ class Calibrator:
         self.min_intercept = self.min_wavelength - self.range_tolerance
         self.max_intercept = self.min_wavelength + self.range_tolerance
 
-        self.min_slope =  ((self.max_wavelength - self.range_tolerance) - self.max_intercept) / self.n_pix
+        self.min_slope = ((self.max_wavelength - self.range_tolerance) -
+                          self.max_intercept) / self.n_pix
         self.min_slope /= self.linearity_thresh
 
-        self.max_slope = ((self.max_wavelength + self.range_tolerance ) - self.min_intercept) / self.n_pix
+        self.max_slope = ((self.max_wavelength + self.range_tolerance) -
+                          self.min_intercept) / self.n_pix
         self.max_slope *= self.linearity_thresh
 
         self.fit_tolerance = fit_tolerance
@@ -807,8 +819,14 @@ class Calibrator:
             raise ValueError(
                 'fittype must be: (1) poly, (2) legendre or (3) chebyshev')
 
-    def fit(self, sample_size=5, max_tries=1000, top_n=20, n_slope=3000,
-            mode='manual', progress=True, coeff=None):
+    def fit(self,
+            sample_size=5,
+            max_tries=1000,
+            top_n=20,
+            n_slope=3000,
+            mode='manual',
+            progress=True,
+            coeff=None):
         '''
         Solve for the wavelength calibration polynomial.
 
@@ -861,8 +879,8 @@ class Calibrator:
         self._get_candidates(n_slope)
 
         return self._get_best_model(self.candidates, self.polydeg, sample_size,
-                                    max_tries, self.ransac_thresh, self.brute_force,
-                                    coeff, progress)
+                                    max_tries, self.ransac_thresh,
+                                    self.brute_force, coeff, progress)
 
     def match_peaks_to_atlas(self, fit, tolerance=1., polydeg=5):
         '''
@@ -903,48 +921,61 @@ class Calibrator:
         coeff = models.robust_polyfit(x_match, y_match, polydeg)
         return coeff, x_match, y_match
 
-    def plot_search_space(self,  best_p=None):
+    def plot_search_space(self, best_p=None):
         '''
         ???
         '''
         plt.figure(figsize=(16, 9))
 
         self._get_candidates()
-        
+
         plt.scatter(*self._merge_candidates(self.candidates).T, alpha=0.2)
 
         plt.hlines(self.min_intercept, 0, self.n_pix)
-        plt.hlines(self.max_intercept, 0, self.n_pix,
-                   linestyle='dashed', alpha=0.5)
+        plt.hlines(self.max_intercept,
+                   0,
+                   self.n_pix,
+                   linestyle='dashed',
+                   alpha=0.5)
 
-        plt.hlines(self.max_intercept + self.n_pix *
-                   self.max_slope, 0, self.n_pix)
-        plt.hlines(self.min_wavelength + self.n_pix*self.min_slope,
-                   0, self.n_pix, linestyle='dashed', alpha=0.5)
+        plt.hlines(self.max_intercept + self.n_pix * self.max_slope, 0,
+                   self.n_pix)
+        plt.hlines(self.min_wavelength + self.n_pix * self.min_slope,
+                   0,
+                   self.n_pix,
+                   linestyle='dashed',
+                   alpha=0.5)
 
-        r = plt.Polygon([(0, self.min_wavelength + self.range_tolerance),
-                         (0, self.min_wavelength - self.range_tolerance),
-                         (self.n_pix, self.min_wavelength + self.min_slope*self.n_pix),
-                         (self.n_pix, self.min_wavelength + self.max_slope*self.n_pix)],
-                        alpha=0.3)
+        r = plt.Polygon(
+            [(0, self.min_wavelength + self.range_tolerance),
+             (0, self.min_wavelength - self.range_tolerance),
+             (self.n_pix, self.min_wavelength + self.min_slope * self.n_pix),
+             (self.n_pix, self.min_wavelength + self.max_slope * self.n_pix)],
+            alpha=0.3)
 
-        r2 = plt.Polygon([(self.n_pix, self.max_wavelength - self.range_tolerance),
-                         (self.n_pix, self.max_wavelength + self.range_tolerance),
-                         (0, self.max_wavelength - self.min_slope*self.n_pix),
-                         (0, self.max_wavelength - self.max_slope*self.n_pix)],
-                        alpha=0.3)
+        r2 = plt.Polygon(
+            [(self.n_pix, self.max_wavelength - self.range_tolerance),
+             (self.n_pix, self.max_wavelength + self.range_tolerance),
+             (0, self.max_wavelength - self.min_slope * self.n_pix),
+             (0, self.max_wavelength - self.max_slope * self.n_pix)],
+            alpha=0.3)
 
-        plt.plot((0, self.n_pix),(self.min_wavelength, self.max_wavelength))
-        plt.plot((0, self.n_pix),(self.min_intercept, self.min_intercept + self.min_slope*self.n_pix))
-        plt.plot((0, self.n_pix),(self.max_intercept, self.max_intercept + self.max_slope*self.n_pix))
+        plt.plot((0, self.n_pix), (self.min_wavelength, self.max_wavelength))
+        plt.plot((0, self.n_pix),
+                 (self.min_intercept,
+                  self.min_intercept + self.min_slope * self.n_pix))
+        plt.plot((0, self.n_pix),
+                 (self.max_intercept,
+                  self.max_intercept + self.max_slope * self.n_pix))
 
         ax = plt.gca()
         ax.add_patch(r)
         ax.add_patch(r2)
 
         if best_p is not None:
-            plt.scatter(self.peaks, self.polyval(
-                best_p, self.peaks), color='red')
+            plt.scatter(self.peaks,
+                        self.polyval(best_p, self.peaks),
+                        color='red')
 
         plt.xlim(0, self.n_pix)
         plt.ylim(self.min_wavelength - self.range_tolerance,
@@ -952,8 +983,16 @@ class Calibrator:
 
         plt.show()
 
-    def plot_fit(self, spectrum, fit, tolerance=5., plot_atlas=True, silence=True,
-                 output_filename=None, verbose=False, renderer='default', log_spectrum=True):
+    def plot_fit(self,
+                 spectrum,
+                 fit,
+                 tolerance=5.,
+                 plot_atlas=True,
+                 silence=True,
+                 output_filename=None,
+                 verbose=False,
+                 renderer='default',
+                 log_spectrum=True):
         '''
         Parameters
         ----------
@@ -978,31 +1017,25 @@ class Calibrator:
             pix = np.arange(len(spectrum)).astype('float')
             wave = self.polyval(fit, pix)
 
-            fig, (ax1, ax2, ax3) = plt.subplots(
-                nrows=3,
-                sharex=True,
-                gridspec_kw={'hspace': 0.},
-                figsize=(15, 9))
+            fig, (ax1, ax2, ax3) = plt.subplots(nrows=3,
+                                                sharex=True,
+                                                gridspec_kw={'hspace': 0.},
+                                                figsize=(15, 9))
             fig.tight_layout()
 
             # Plot fitted spectrum
             ax1.plot(wave, spectrum)
-            ax1.vlines(
-                self.polyval(fit, self.peaks),
-                spectrum[self.peaks.astype('int')],
-                spectrum.max() * 1.05,
-                linestyles='dashed',
-                colors='C1')
+            ax1.vlines(self.polyval(fit, self.peaks),
+                       spectrum[self.peaks.astype('int')],
+                       spectrum.max() * 1.05,
+                       linestyles='dashed',
+                       colors='C1')
 
             # Plot the atlas
             if plot_atlas:
                 #spec = SyntheticSpectrum(fit, model_type='poly', degree=len(fit)-1)
                 #x_locs = spec.get_pixels(self.atlas)
-                ax1.vlines(
-                    self.atlas,
-                    0,
-                    spectrum.max() * 1.05,
-                    colors='C2')
+                ax1.vlines(self.atlas, 0, spectrum.max() * 1.05, colors='C2')
 
             fitted_peaks = []
             fitted_diff = []
@@ -1021,19 +1054,17 @@ class Calibrator:
                     fitted_diff.append(diff[idx])
                     if not silence:
                         print("- matched to {} A".format(self.atlas[idx]))
-                    ax1.vlines(
-                        self.polyval(fit, p),
-                        spectrum[p.astype('int')],
-                        spectrum.max() * 1.05,
-                        colors='C1')
+                    ax1.vlines(self.polyval(fit, p),
+                               spectrum[p.astype('int')],
+                               spectrum.max() * 1.05,
+                               colors='C1')
 
-                    ax1.text(
-                        x - 3,
-                        0.8 * max(spectrum),
-                        s="{}:{:1.2f}".format(
-                            self.atlas_elements[idx], self.atlas[idx]),
-                        rotation=90,
-                        bbox=dict(facecolor='white', alpha=1))
+                    ax1.text(x - 3,
+                             0.8 * max(spectrum),
+                             s="{}:{:1.2f}".format(self.atlas_elements[idx],
+                                                   self.atlas[idx]),
+                             rotation=90,
+                             bbox=dict(facecolor='white', alpha=1))
 
             rms = np.sqrt(np.mean(np.array(fitted_diff)**2.))
 
@@ -1045,11 +1076,10 @@ class Calibrator:
                 ax1.set_ylim(spectrum.min(), spectrum.max() * 1.05)
 
             # Plot the residuals
-            ax2.scatter(
-                self.polyval(fit, fitted_peaks),
-                fitted_diff,
-                marker='+',
-                color='C1')
+            ax2.scatter(self.polyval(fit, fitted_peaks),
+                        fitted_diff,
+                        marker='+',
+                        color='C1')
             ax2.hlines(0, wave.min(), wave.max(), linestyles='dashed')
             ax2.grid(linestyle=':')
             ax2.set_ylabel('Residual / A')
@@ -1063,12 +1093,11 @@ class Calibrator:
             '''
 
             # Plot the polynomial
-            ax3.scatter(
-                self.polyval(fit, fitted_peaks),
-                fitted_peaks,
-                marker='+',
-                color='C1',
-                label='Peaks used for fitting')
+            ax3.scatter(self.polyval(fit, fitted_peaks),
+                        fitted_peaks,
+                        marker='+',
+                        color='C1',
+                        label='Peaks used for fitting')
             ax3.plot(wave, pix)
             ax3.grid(linestyle=':')
             ax3.set_xlabel('Wavelength / A')
@@ -1141,9 +1170,7 @@ class Calibrator:
                                    mode='markers',
                                    marker=dict(color='orange'),
                                    name='Matched peaks',
-                                   yaxis='y3'
-                                   )
-                    )
+                                   yaxis='y3'))
 
             # Middle plot - Residual plot
             rms = np.sqrt(np.mean(np.array(fitted_diff)**2.))
@@ -1153,16 +1180,13 @@ class Calibrator:
                            y=fitted_diff,
                            mode='markers',
                            marker=dict(color='orange'),
-                           yaxis='y2')
-            )
+                           yaxis='y2'))
             fig.add_trace(
                 go.Scatter(x=[wave.min(), wave.max()],
                            y=[0, 0],
                            mode='lines',
                            line=dict(color='royalblue', dash='dash'),
-                           yaxis='y2'
-                           )
-            )
+                           yaxis='y2'))
 
             # Bottom plot - Polynomial fit for Pixel to Wavelength
             fig.add_trace(
@@ -1171,46 +1195,44 @@ class Calibrator:
                            mode='markers',
                            marker=dict(color='orange'),
                            yaxis='y1',
-                           name='Peaks used for fitting')
-            )
+                           name='Peaks used for fitting'))
             fig.add_trace(
                 go.Scatter(x=wave,
                            y=pix,
                            mode='lines',
                            line=dict(color='royalblue'),
-                           yaxis='y1')
-            )
+                           yaxis='y1'))
 
             # Layout, Title, Grid config
-            fig.update_layout(autosize=True,
-                              yaxis3=dict(title='ADU',
-                                          range=[np.log10(np.percentile(
-                                              spectrum, 10)), np.log10(spec_max)],
-                                          domain=[0.67, 1.0],
-                                          showgrid=True,
-                                          type='log'
-                                          ),
-                              yaxis2=dict(title='Residual / A',
-                                          range=[min(fitted_diff),
-                                                 max(fitted_diff)],
-                                          domain=[0.33, 0.66],
-                                          showgrid=True
-                                          ),
-                              yaxis=dict(title='Pixel',
-                                         range=[0., max(pix)],
-                                         domain=[0., 0.32],
-                                         showgrid=True
-                                         ),
-                              xaxis=dict(title='Wavelength / A',
-                                         zeroline=False,
-                                         range=[min(wave), max(wave)],
-                                         showgrid=True,
-                                         ),
-                              hovermode='closest',
-                              showlegend=False,
-                              height=800,
-                              width=1000
-                              )
+            fig.update_layout(
+                autosize=True,
+                yaxis3=dict(title='ADU',
+                            range=[
+                                np.log10(np.percentile(spectrum, 10)),
+                                np.log10(spec_max)
+                            ],
+                            domain=[0.67, 1.0],
+                            showgrid=True,
+                            type='log'),
+                yaxis2=dict(title='Residual / A',
+                            range=[min(fitted_diff),
+                                   max(fitted_diff)],
+                            domain=[0.33, 0.66],
+                            showgrid=True),
+                yaxis=dict(title='Pixel',
+                           range=[0., max(pix)],
+                           domain=[0., 0.32],
+                           showgrid=True),
+                xaxis=dict(
+                    title='Wavelength / A',
+                    zeroline=False,
+                    range=[min(wave), max(wave)],
+                    showgrid=True,
+                ),
+                hovermode='closest',
+                showlegend=False,
+                height=800,
+                width=1000)
 
             if verbose:
                 return fig.to_json()
@@ -1221,7 +1243,8 @@ class Calibrator:
 
         else:
 
-            assert(self.matplotlib_imported), ('matplotlib package not available. ' +
-                                               'Plot cannot be generated.')
-            assert(self.plotly_imported), ('plotly package not available. ' +
-                                           'Plot cannot be generated.')
+            assert (self.matplotlib_imported), (
+                'matplotlib package not available. ' +
+                'Plot cannot be generated.')
+            assert (self.plotly_imported), ('plotly package not available. ' +
+                                            'Plot cannot be generated.')
