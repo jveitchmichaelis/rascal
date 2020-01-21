@@ -144,7 +144,7 @@ class Calibrator:
 
     def _hough_points(self, x, y, num_slopes):
         """
-        Calculate the Hough transform for a set of input points and teturns the
+        Calculate the Hough transform for a set of input points and returns the
         2D Hough accumulator matrix.
 
         Parameters

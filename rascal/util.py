@@ -19,7 +19,7 @@ def filter_intensity(lines, min_intensity=0):
             out.append(True)
         else:
             out.append(False)
-    
+
     return np.array(out).astype(bool)
 
 def filter_separation(wavelengths, min_separation=0):
@@ -31,9 +31,9 @@ def filter_separation(wavelengths, min_separation=0):
     distances = np.minimum(right_dists, left_dists)
     distances[0] = right_dists[0]
     distances[-1] = left_dists[-1]
-    
+
     distance_mask = np.abs(distances) >= min_separation
-    
+
     return distance_mask
 
 def load_calibration_lines(elements=[], min_wavelength=0, max_wavelength=15000, min_distance=10, min_intensity=40):
@@ -47,11 +47,11 @@ def load_calibration_lines(elements=[], min_wavelength=0, max_wavelength=15000, 
     lines = np.loadtxt(file_path,
                        delimiter=',',
                        dtype=">U12")
-    
+
     # Mask elements
     mask = [(l[0] in elements) for l in lines]
     lines = lines[mask]
-    
+
     # Filter wavelengths
     lines = filter_wavelengths(lines, min_wavelength, max_wavelength)
 
@@ -68,12 +68,12 @@ def load_calibration_lines(elements=[], min_wavelength=0, max_wavelength=15000, 
         intensity_mask = np.ones_like(lines[:,0]).astype(bool)
 
     mask = distance_mask * intensity_mask
-    
+
     elements = lines[:,0][mask]
     wavelengths = lines[:,1][mask].astype('float32')
     intensities = lines[:,2][mask].astype('float32')
 
-    # Vacuum to air conversion 
+    # Vacuum to air conversion
     # Donald Morton (2000, ApJ. Suppl., 130, 403)
     s = 10000/wavelengths
     s2 = s**2
@@ -170,4 +170,7 @@ def refine_peaks(spectrum, peaks, window_width=10):
         except RuntimeError:
             continue
 
-    return np.array(refined_peaks)
+    refined_peaks = np.array(refined_peaks)
+    mask = (refined_peaks > 0) & (refined_peaks < len(spectrum))
+
+    return refined_peaks[mask]
