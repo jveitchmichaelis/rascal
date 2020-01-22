@@ -44,18 +44,19 @@ class Calibrator:
         '''
 
         self.peaks = peaks
+        self.n_pix = num_pixels
+        self.min_wavelength = min_wavelength
+        self.max_wavelength = max_wavelength
         self.silence = silence
+        self.plotting_library = plotting_library
         self.matplotlib_imported = False
         self.plotly_imported = False
-        self.plotting_library = plotting_library
-        self.n_pix = num_pixels
+        self.plot_with_matplotlib = False
+        self.plot_with_plotly = False
 
         self.atlas_elements = []
         self.atlas = []
         self.atlas_intensities = []
-
-        self.min_wavelength = min_wavelength
-        self.max_wavelength = max_wavelength
 
         # Configuring default fitting constraints
         self.set_fit_constraints()
@@ -601,8 +602,8 @@ class Calibrator:
             global plt
             import matplotlib.pyplot as plt
             self.matplotlib_imported = True
-        except:
-            warnings.warn('matplotlib package not available.')
+        except ImportError:
+            print('matplotlib package not available.')
 
     def _import_plotly(self):
         '''
@@ -614,30 +615,32 @@ class Calibrator:
             import plotly.graph_objects as go
             import plotly.io as pio
             self.plotly_imported = True
-        except:
-            warnings.warn('plotly package not available.')
+        except ImportError:
+            print('plotly package not available.')
 
     def use_matplotlib(self):
         '''
         Call to switch to matplotlib.
         '''
-        if self.matplotlib_imported == False:
+        if not self.matplotlib_imported:
             self._import_matplotlib()
+            self.plot_with_matplotlib = True
+            self.plot_with_plotly = False
         else:
-            if self.plot_with_plotly:
-                self.plot_with_plotly = False
-                self.plot_with_matplotlib = True
+            self.plot_with_matplotlib = True
+            self.plot_with_plotly = False
 
     def use_plotly(self):
         '''
         Call to switch to plotly.
         '''
-        if self.plotly_imported == False:
+        if not self.plotly_imported:
             self._import_plotly()
+            self.plot_with_plotly = True
+            self.plot_with_matplotlib = False
         else:
-            if self.plot_with_matplotlib:
-                self.plot_with_matplotlib = False
-                self.plot_with_plotly = True
+            self.plot_with_plotly = True
+            self.plot_with_matplotlib = False
 
     def add_atlas(self,
                   elements,
@@ -1031,7 +1034,7 @@ class Calibrator:
         if log_spectrum:
             spectrum = np.log(spectrum)
 
-        if self.matplotlib_imported:
+        if self.plot_with_matplotlib:
 
             pix = np.arange(len(spectrum)).astype('float')
             wave = self.polyval(fit, pix)
@@ -1129,7 +1132,7 @@ class Calibrator:
             if output_filename is not None:
                 fig.savefig(output_filename)
 
-        elif self.plotly_imported:
+        elif self.plot_with_plotly:
 
             pix = np.arange(len(spectrum)).astype('float')
             wave = self.polyval(fit, pix)
