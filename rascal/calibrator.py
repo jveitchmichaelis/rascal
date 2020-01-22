@@ -9,9 +9,6 @@ from .util import load_calibration_lines
 from .synthetic import SyntheticSpectrum
 from . import models
 
-plotly_imported = False
-matplotlib_imported = False
-
 try:
     from tqdm.autonotebook import tqdm
     tdqm_imported = True
@@ -48,8 +45,8 @@ class Calibrator:
 
         self.peaks = peaks
         self.silence = silence
-        self.matplotlib_imported = matplotlib_imported
-        self.plotly_imported = plotly_imported
+        self.matplotlib_imported = False
+        self.plotly_imported = False
         self.plotting_library = plotting_library
         self.n_pix = num_pixels
 
@@ -601,8 +598,9 @@ class Calibrator:
         Call to import plotly.
         '''
         try:
+            global plt
             import matplotlib.pyplot as plt
-            matplotlib_imported = True
+            self.matplotlib_imported = True
         except:
             warnings.warn('matplotlib package not available.')
 
@@ -611,9 +609,11 @@ class Calibrator:
         Call to import plotly.
         '''
         try:
+            global go
+            global pio
             import plotly.graph_objects as go
             import plotly.io as pio
-            plotly_imported = True
+            self.plotly_imported = True
         except:
             warnings.warn('plotly package not available.')
 
@@ -1031,7 +1031,7 @@ class Calibrator:
         if log_spectrum:
             spectrum = np.log(spectrum)
 
-        if matplotlib_imported:
+        if self.matplotlib_imported:
 
             pix = np.arange(len(spectrum)).astype('float')
             wave = self.polyval(fit, pix)
