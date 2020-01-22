@@ -75,17 +75,21 @@ def load_calibration_lines(elements=[], min_wavelength=0, max_wavelength=15000, 
 
     # Vacuum to air conversion
     # Donald Morton (2000, ApJ. Suppl., 130, 403)
-    s = 10000/wavelengths
-    s2 = s**2
-
-    n = 1 + 0.0000834254 + 0.02406147 / (130 - s2) + 0.00015998 / (38.9 - s2)
-    wavelengths /= n
+    
 
     return elements, wavelengths, intensities
 
 
 """
 
+def vacuum_to_air(wavelengths):
+    s = 10000/wavelengths
+    s2 = s**2
+
+    n = 1 + 0.0000834254 + 0.02406147 / (130 - s2) + 0.00015998 / (38.9 - s2)
+    wavelengths /= n
+
+    return 
 
 def load_calibration_lines(elements,
                            min_wavelength=1000.,
