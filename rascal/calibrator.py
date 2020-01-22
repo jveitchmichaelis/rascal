@@ -3,6 +3,7 @@ import itertools
 import numpy as np
 import astropy.units as u
 from collections import Counter
+from scipy.spatial import Delaunay
 
 from .util import load_calibration_lines
 from .synthetic import SyntheticSpectrum
@@ -10,23 +11,6 @@ from . import models
 
 plotly_imported = False
 matplotlib_imported = False
-
-try:
-    import matplotlib.pyplot as plt
-    matplotlib_imported = True
-except:
-    warnings.warn('matplotlib package not available.')
-    matplotlib_imported = False
-
-try:
-    import plotly.graph_objects as go
-    import plotly.io as pio
-    plotly_imported = True
-except ImportError:
-    if matplotlib_imported:
-        warnings.warn('plotly is not present, only matplotlib can be used.')
-    else:
-        warnings.warn('Plot cannot be generated.')
 
 try:
     from tqdm.autonotebook import tqdm
@@ -43,7 +27,8 @@ class Calibrator:
                  num_pixels,
                  min_wavelength=1000,
                  max_wavelength=10000,
-                 silence=False):
+                 silence=False,
+                 plotting_library='matplotlib'):
         '''
         Initialise the calibrator object with
 
@@ -65,6 +50,7 @@ class Calibrator:
         self.silence = silence
         self.matplotlib_imported = matplotlib_imported
         self.plotly_imported = plotly_imported
+        self.plotting_library = plotting_library
         self.n_pix = num_pixels
 
         self.atlas_elements = []
@@ -76,6 +62,17 @@ class Calibrator:
 
         # Configuring default fitting constraints
         self.set_fit_constraints()
+
+        if self.plotting_library == 'matplotlib':
+            self.use_matplotlib()
+        elif self.plotting_library == 'plotly':
+            self.use_plotly()
+        elif self.plotting_library == 'none':
+            pass
+        else:
+            warnings('Unknown plotting_library, please choose from '
+                     'matplotlib or plotly. Execute use_matplotlib() or '
+                     'use_plotly() to manually select the library.')
 
     def _get_atlas(self, elements, min_wavelength, max_wavelength,
                    min_intensity, min_distance):
@@ -123,24 +120,23 @@ class Calibrator:
         pairs = [pair for pair in itertools.product(self.peaks, self.atlas)]
 
         # Remove pairs outside polygon
-        valid_area_lower = plt.Polygon([
+        valid_area_lower = Delaunay([
             (0, self.min_wavelength + self.range_tolerance),
             (0, self.min_wavelength - self.range_tolerance),
             (self.n_pix, self.min_wavelength + self.min_slope * self.n_pix),
             (self.n_pix, self.min_wavelength + self.max_slope * self.n_pix)
         ])
 
-        valid_area_upper = plt.Polygon([
+        valid_area_upper = Delaunay([
             (self.n_pix, self.max_wavelength - self.range_tolerance),
             (self.n_pix, self.max_wavelength + self.range_tolerance),
             (0, self.max_wavelength - self.min_slope * self.n_pix),
             (0, self.max_wavelength - self.max_slope * self.n_pix)
         ])
 
-        self.pairs = np.array([
-            pair for pair in pairs if valid_area_lower.contains_point(pair)
-            and valid_area_upper.contains_point(pair)
-        ])
+        mask = ((valid_area_lower.find_simplex(pairs) >= 0) &
+                (valid_area_upper.find_simplex(pairs) >= 0))
+        self.pairs = np.array(pairs)[mask]
 
     def _hough_points(self, x, y, num_slopes):
         """
@@ -600,25 +596,48 @@ class Calibrator:
 
         return p
 
-    def use_plotly(self):
+    def _import_matplotlib(self):
         '''
-        Call to switch to plotly.
+        Call to import plotly.
         '''
-        if plt:
-            self.matplotlib_imported = False
-            self.plotly_imported = True
-        else:
-            warnings.warn('plotly package is not available.')
+        try:
+            import matplotlib.pyplot as plt
+            matplotlib_imported = True
+        except:
+            warnings.warn('matplotlib package not available.')
+
+    def _import_plotly(self):
+        '''
+        Call to import plotly.
+        '''
+        try:
+            import plotly.graph_objects as go
+            import plotly.io as pio
+            plotly_imported = True
+        except:
+            warnings.warn('plotly package not available.')
 
     def use_matplotlib(self):
         '''
         Call to switch to matplotlib.
         '''
-        if plt:
-            self.matplotlib_imported = True
-            self.plotly_imported = False
+        if self.matplotlib_imported == False:
+            self._import_matplotlib()
         else:
-            warnings.warn('matplotlib package is not available.')
+            if self.plot_with_plotly:
+                self.plot_with_plotly = False
+                self.plot_with_matplotlib = True
+
+    def use_plotly(self):
+        '''
+        Call to switch to plotly.
+        '''
+        if self.plotly_imported == False:
+            self._import_plotly()
+        else:
+            if self.plot_with_matplotlib:
+                self.plot_with_matplotlib = False
+                self.plot_with_plotly = True
 
     def add_atlas(self,
                   elements,

@@ -33,7 +33,8 @@ release = __version__
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = ['sphinx.ext.todo', 'sphinx.ext.viewcode', 'sphinx.ext.autodoc',
-    'sphinx.ext.autosectionlabel', 'sphinx.ext.coverage', 'autoapi.extension'
+    'sphinx.ext.autosectionlabel', 'sphinx.ext.coverage', 'autoapi.extension',
+    'sphinx.ext.mathjax'
     ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -50,6 +51,8 @@ autodoc_default_flags = ['members', 'undoc-members', 'private-members'
     ]
 autoclass_content = 'both'
 autoapi_python_class_content = 'both'
+
+mathjax_path="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"
 
 # -- Options for HTML output -------------------------------------------------
 
