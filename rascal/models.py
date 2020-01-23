@@ -5,12 +5,6 @@ import numpy as np
 Model functions for spectral fitting
 """
 
-
-def poly_cost_function(a, x, y, degree):
-    f = polynomial(a, degree)
-    return y - f(x)
-
-
 def linear(a):
     """
     Returns a lambda function which computes:
@@ -74,6 +68,11 @@ def polynomial(a, degree=3):
     return poly
 
 
+def poly_cost_function(a, x, y, degree):
+    f = polynomial(a, degree)
+    return y - f(x)
+
+
 def normalise_input(x, y):
     """
     Transforms inputs to have unit variance
@@ -111,7 +110,8 @@ def robust_polyfit(x, y, degree=3, x0=None, bounds=None):
 
     p *= y.std()
 
+    # highest order first
     for i in range(0, degree):
-        p[i] /= x.std() ** (degree-i)
+        p[i] /= x.std()**(degree-i)
 
-    return p
+    return p[::-1]

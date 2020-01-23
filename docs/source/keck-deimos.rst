@@ -1,4 +1,4 @@
-Example - DEIMOS (Keck Telescope)
-=================================
+Example - DEIMOS
+================
 
-Something here.
+Keck Telescope

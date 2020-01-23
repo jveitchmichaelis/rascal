@@ -1,4 +1,4 @@
-Example - SPRAT (Liverpool Telescope)
-=====================================
+Example - SPRAT
+===============
 
-Something here.
+Liverpool Telescope

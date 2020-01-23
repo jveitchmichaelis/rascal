@@ -1,4 +1,4 @@
-Random sample consensus (RANSAC)
-================================
+RANSAC
+======
 
 Something here.

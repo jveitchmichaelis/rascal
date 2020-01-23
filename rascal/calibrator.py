@@ -322,7 +322,7 @@ class Calibrator:
         y_match = []
 
         for p in self.peaks:
-            x = self.polyval(fit, p)
+            x = self.polyval(p, fit)
             diff = np.abs(self.atlas - x)
 
             for y in self.atlas[diff < tolerance]:
@@ -431,7 +431,7 @@ class Calibrator:
             x = x[separation_mask].flatten()
 
         if coeff is not None:
-            fit = self.polyval(coeff, x)
+            fit = self.polyval(x, coeff)
             err = np.abs(fit - y)
             best_cost = sum(err)
             best_err = np.sqrt(np.mean(err**.2))
@@ -490,16 +490,24 @@ class Calibrator:
             fit_coeffs = self.polyfit(x_hat, y_hat, polydeg)
 
             # Discard out-of-bounds fits
-            if ((fit_coeffs[-1] < self.min_intercept) |
-                (fit_coeffs[-1] > self.max_intercept) |
-                (self.polyval(fit_coeffs, 0) < self.min_wavelength) |
-                (self.polyval(fit_coeffs, self.n_pix) > self.max_wavelength)):
-                continue
+            if self.fittype=='poly':
+                if ((fit_coeffs[-1] < self.min_intercept) |
+                    (fit_coeffs[-1] > self.max_intercept) |
+                    (self.polyval(0, fit_coeffs) < self.min_wavelength) |
+                    (self.polyval(self.n_pix, fit_coeffs) > self.max_wavelength)):
+                    continue
+            elif self.fittype=='chebyshev':
+                pass
+            elif self.fittype=='legendre':
+                pass
+            else:
+                warnings.warn('Unknown fittype: ' + str(self.fittype) + ', boundary'
+                    'conditions are not tested.')
 
             #TODO use point-in-polygon to check entire solution space (not just tails)
 
             # M-SAC Estimator (Torr and Zisserman, 1996)
-            fit = self.polyval(fit_coeffs, x)
+            fit = self.polyval(x, fit_coeffs)
             err = np.abs(fit - y)
             err[err > thresh] = thresh
             cost = sum(err)
@@ -514,10 +522,11 @@ class Calibrator:
                 # Now we do a robust fit
                 best_p = models.robust_polyfit(x[best_mask], y[best_mask],
                                                polydeg)
+
                 best_cost = cost
 
                 # Get the residual of the fit
-                err = np.abs(self.polyval(best_p, x[best_mask]) - y[best_mask])
+                err = np.abs(self.polyval(x[best_mask], best_p) - y[best_mask])
                 err[err > thresh] = thresh
                 #best_cost = sum(err)
                 best_err = np.sqrt(np.mean(err**2))
@@ -827,10 +836,11 @@ class Calibrator:
         self.xbins = xbins
         self.ybins = ybins
         self.brute_force = brute_force
+        self.fittype = fittype
 
         if fittype == 'poly':
-            self.polyfit = np.polyfit
-            self.polyval = np.polyval
+            self.polyfit = np.polynomial.polynomial.polyfit
+            self.polyval = np.polynomial.polynomial.polyval
         elif fittype == 'legendre':
             self.polyfit = np.polynomial.legendre.legfit
             self.polyval = np.polynomial.legendre.legval
@@ -929,7 +939,7 @@ class Calibrator:
         y_match = []
 
         for p in self.peaks:
-            x = self.polyval(fit, p)
+            x = self.polyval(p, fit)
             diff = np.abs(self.atlas - x)
             idx = np.argmin(diff)
 
@@ -996,7 +1006,7 @@ class Calibrator:
 
         if best_p is not None:
             plt.scatter(self.peaks,
-                        self.polyval(best_p, self.peaks),
+                        self.polyval(self.peaks, best_p),
                         color='red')
 
         plt.xlim(0, self.n_pix)
@@ -1037,7 +1047,7 @@ class Calibrator:
         if self.plot_with_matplotlib:
 
             pix = np.arange(len(spectrum)).astype('float')
-            wave = self.polyval(fit, pix)
+            wave = self.polyval(pix, fit)
 
             fig, (ax1, ax2, ax3) = plt.subplots(nrows=3,
                                                 sharex=True,
@@ -1047,7 +1057,7 @@ class Calibrator:
 
             # Plot fitted spectrum
             ax1.plot(wave, spectrum)
-            ax1.vlines(self.polyval(fit, self.peaks),
+            ax1.vlines(self.polyval(self.peaks, fit),
                        spectrum[self.peaks.astype('int')],
                        spectrum.max() * 1.05,
                        linestyles='dashed',
@@ -1063,7 +1073,7 @@ class Calibrator:
             fitted_diff = []
             all_diff = []
             for p in self.peaks:
-                x = self.polyval(fit, p)
+                x = self.polyval(p, fit)
                 diff = self.atlas - x
                 idx = np.argmin(np.abs(diff))
                 all_diff.append(diff[idx])
@@ -1076,7 +1086,7 @@ class Calibrator:
                     fitted_diff.append(diff[idx])
                     if not silence:
                         print("- matched to {} A".format(self.atlas[idx]))
-                    ax1.vlines(self.polyval(fit, p),
+                    ax1.vlines(self.polyval(p, fit),
                                spectrum[p.astype('int')],
                                spectrum.max() * 1.05,
                                colors='C1')
@@ -1098,7 +1108,7 @@ class Calibrator:
                 ax1.set_ylim(spectrum.min(), spectrum.max() * 1.05)
 
             # Plot the residuals
-            ax2.scatter(self.polyval(fit, fitted_peaks),
+            ax2.scatter(self.polyval(fitted_peaks, fit),
                         fitted_diff,
                         marker='+',
                         color='C1')
@@ -1115,7 +1125,7 @@ class Calibrator:
             '''
 
             # Plot the polynomial
-            ax3.scatter(self.polyval(fit, fitted_peaks),
+            ax3.scatter(self.polyval(fitted_peaks, fit),
                         fitted_peaks,
                         marker='+',
                         color='C1',
@@ -1135,7 +1145,7 @@ class Calibrator:
         elif self.plot_with_plotly:
 
             pix = np.arange(len(spectrum)).astype('float')
-            wave = self.polyval(fit, pix)
+            wave = self.polyval(pix, fit)
 
             fig = go.Figure()
 
@@ -1152,7 +1162,7 @@ class Calibrator:
             p_x = []
             p_y = []
             for i, p in enumerate(self.peaks):
-                p_x.append(self.polyval(fit, p))
+                p_x.append(self.polyval(p, fit))
                 p_y.append(spectrum[int(p)])
 
             fig.add_trace(
@@ -1167,7 +1177,7 @@ class Calibrator:
             all_diff = []
 
             for p in self.peaks:
-                x = self.polyval(fit, p)
+                x = self.polyval(p, fit)
                 diff = self.atlas - x
                 idx = np.argmin(np.abs(diff))
                 all_diff.append(diff[idx])
@@ -1184,7 +1194,7 @@ class Calibrator:
                     p_x_matched = []
                     p_y_matched = []
                     for i, p in enumerate(self.peaks):
-                        p_x_matched.append(self.polyval(fit, p))
+                        p_x_matched.append(self.polyval(p, fit))
                         p_y_matched.append(spectrum[int(p)])
                     fig.add_trace(
                         go.Scatter(x=p_x_matched,
@@ -1196,7 +1206,7 @@ class Calibrator:
 
             # Middle plot - Residual plot
             rms = np.sqrt(np.mean(np.array(fitted_diff)**2.))
-            x_fitted = self.polyval(fit, fitted_peaks)
+            x_fitted = self.polyval(fitted_peaks, fit)
             fig.add_trace(
                 go.Scatter(x=x_fitted,
                            y=fitted_diff,

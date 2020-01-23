@@ -1,4 +1,4 @@
-Example - EFOSC (New Technology Telescope)
-==========================================
+Example - EFOSC
+===============
 
-Something here.
+New Technology Telescope
