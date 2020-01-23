@@ -703,7 +703,7 @@ class Calibrator:
         '''
         List all the arc lines loaded to the Calibrator.
         '''
-        print(self.elements)
+        print(self.atlas_elements)
 
     def clear_calibration_lines(self):
         '''
