@@ -678,12 +678,10 @@ class Calibrator:
         '''
 
         if min_wavelength is None:
-            min_wavelength = self.min_wavelength - \
-                max(self.range_tolerance, self.linearity_thresh)
+            min_wavelength = self.min_wavelength - self.range_tolerance
 
         if max_wavelength is None:
-            max_wavelength = self.max_wavelength + \
-                max(self.range_tolerance, self.linearity_thresh)
+            max_wavelength = self.max_wavelength + self.range_tolerance
 
         if isinstance(elements, str):
             elements = [elements]
@@ -953,9 +951,18 @@ class Calibrator:
         coeff = models.robust_polyfit(x_match, y_match, polydeg)
         return coeff, x_match, y_match
 
-    def plot_search_space(self, best_p=None):
+    def plot_search_space(self, coeff=None):
         '''
-        ???
+        Plots the peak/arc line pairs that are considered as potential match
+        candidates.
+
+        If fit coefficients are provided, the model solution will be
+        overplotted.
+
+        Parameters
+        ----------
+        best_p : list
+            List of best polynomial coefficients
         '''
         plt.figure(figsize=(16, 9))
 
