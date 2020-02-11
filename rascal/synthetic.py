@@ -9,13 +9,17 @@ class SyntheticSpectrum:
         Creates a synthetic spectrum generator which, given a suitable model,
         outputs the expected pixel locations of input wavelengths.
 
-        Args:
-            coefficients - list, coefficients for the model
-            model_type - str, model type (linear, quadratic, cubic or poly)
-            degree = int, if using a general poly model, its degree, default None
+        Parameters
+        ----------
+        coefficients:
+          list, coefficients for the model
+        model_type:
+           str, model type (linear, quadratic, cubic or poly)
+        degree:
+           int, if using a general poly model, its degree, default None
 
         It is
-        expected that this will be used mainly for model testing, but 
+        expected that this will be used mainly for model testing, but
         you can alsus
         """
         self.model = None

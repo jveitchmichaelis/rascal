@@ -68,9 +68,9 @@ class Calibrator:
         elif self.plotting_library == 'none':
             pass
         else:
-            warnings('Unknown plotting_library, please choose from '
-                     'matplotlib or plotly. Execute use_matplotlib() or '
-                     'use_plotly() to manually select the library.')
+            warnings.warn('Unknown plotting_library, please choose from '
+                          'matplotlib or plotly. Execute use_matplotlib() or '
+                          'use_plotly() to manually select the library.')
 
     def _get_atlas(self, elements, min_wavelength, max_wavelength,
                    min_intensity, min_distance):
@@ -456,8 +456,8 @@ class Calibrator:
             sampler_list = tqdm(sampler)
         else:
             sampler_list = sampler
-        for sample in sampler_list:
 
+        for sample in sampler_list:
             if brute_force:
                 x_hat = x[[sample]]
                 y_hat = y[[sample]]
@@ -490,19 +490,21 @@ class Calibrator:
             fit_coeffs = self.polyfit(x_hat, y_hat, polydeg)
 
             # Discard out-of-bounds fits
-            if self.fittype=='poly':
-                if ((fit_coeffs[-1] < self.min_intercept) |
-                    (fit_coeffs[-1] > self.max_intercept) |
+            if self.fittype == 'poly':
+                if ((fit_coeffs[0] < self.min_intercept) |
+                    (fit_coeffs[0] > self.max_intercept) |
                     (self.polyval(0, fit_coeffs) < self.min_wavelength) |
-                    (self.polyval(self.n_pix, fit_coeffs) > self.max_wavelength)):
+                    (self.polyval(self.n_pix, fit_coeffs) >
+                     self.max_wavelength)):
                     continue
-            elif self.fittype=='chebyshev':
+            elif self.fittype == 'chebyshev':
                 pass
-            elif self.fittype=='legendre':
+            elif self.fittype == 'legendre':
                 pass
             else:
-                warnings.warn('Unknown fittype: ' + str(self.fittype) + ', boundary'
-                    'conditions are not tested.')
+                warnings.warn('Unknown fittype: ' + str(self.fittype) +
+                              ', boundary'
+                              'conditions are not tested.')
 
             #TODO use point-in-polygon to check entire solution space (not just tails)
 
@@ -949,6 +951,12 @@ class Calibrator:
         y_match = np.array(y_match)
 
         coeff = models.robust_polyfit(x_match, y_match, polydeg)
+
+        if np.any(np.isnan(coeff)):
+            warnings.warn('robust_polyfit() returns None. '
+                          'Input solution is returned.')
+            return fit, None, None
+
         return coeff, x_match, y_match
 
     def plot_search_space(self, coeff=None):
