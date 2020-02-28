@@ -233,7 +233,7 @@ class Calibrator:
 
         return np.sort(np.array(merged))
 
-    def _combine_linear_estimates(self, candidates):
+    def _combine_linear_estimates(self, candidates, top_n=2):
         '''
         Takes a number of candidate pair sets and returns the most common pair for each wavelength
 
@@ -258,8 +258,9 @@ class Calibrator:
 
         for peak in np.unique(peaks):
             out_peaks.append(peak)
-            out_wavelengths.append(
-                Counter(wavelengths[peaks == peak]).most_common(1)[0][0])
+
+            wavelengths = [match[0] for match in Counter(wavelengths[peaks == peak]).most_common(top_n)
+            out_wavelengths.append(wavelengths)
 
         return out_peaks, out_wavelengths
 
@@ -976,7 +977,7 @@ class Calibrator:
 
         self._get_candidates()
 
-        plt.scatter(*self._merge_candidates(self.candidates).T, alpha=0.2)
+        plt.scatter(*self._merge_candidates(self.candidates).T, alpha=0.2, s=4)
 
         plt.hlines(self.min_intercept, 0, self.n_pix)
         plt.hlines(self.max_intercept,
