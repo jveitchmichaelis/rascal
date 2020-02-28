@@ -166,7 +166,7 @@ def refine_peaks(spectrum, peaks, window_width=10):
 
         try:
             popt, _ = curve_fit(gauss, x, y, p0=[1, mean, sigma])
-            height, centre, width = popt
+            height, centre, _ = popt
 
             if height < 0:
                 continue
