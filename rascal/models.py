@@ -75,3 +75,15 @@ def robust_polyfit(x, y, degree=3, x0=None, bounds=None):
         p[i] /= x.std()**(degree - i)
 
     return p[::-1]
+
+def pprint_coefficients(coeffs):
+    expr = "{} ".format(round(coeffs[0], 3))
+
+    if len(coeffs) > 1:
+        for i, c in enumerate(coeffs[1:]):
+            if i == 0:
+                expr += "+ {}*x".format(round(c, 3))
+            else:
+                expr += "+ {}*x^{}".format(round(c, 3), i+1)
+
+    return expr
