@@ -967,7 +967,7 @@ class Calibrator:
 
         return coeff, x_match, y_match
 
-    def plot_search_space(self, coeff=None):
+    def plot_search_space(self, constrain_poly=False, coeff=None, top_n_candidates=3):
         '''
         Plots the peak/arc line pairs that are considered as potential match
         candidates.
@@ -977,66 +977,72 @@ class Calibrator:
 
         Parameters
         ----------
-        best_p : list
+        coeff : list
             List of best polynomial coefficients
         '''
         plt.figure(figsize=(16, 9))
 
-        self._get_candidates()
+        self._generate_pairs(constrain_poly=constrain_poly)
 
-        plt.scatter(*self._merge_candidates(self.candidates).T, alpha=0.2, s=4)
+        # Plot all-pairs
+        plt.scatter(*self.pairs.T, alpha=0.2, c='red')
 
+        # Get candidates
+        self._get_candidates(n_slope=self.num_slopes, top_n=self.num_candidates)
+
+        plt.scatter(*self._merge_candidates(self.candidates).T, alpha=0.2)
+
+        """
         plt.hlines(self.min_intercept, 0, self.n_pix)
         plt.hlines(self.max_intercept,
                    0,
                    self.n_pix,
                    linestyle='dashed',
                    alpha=0.5)
+        """
 
-        plt.hlines(self.max_intercept + self.n_pix * self.max_slope, 0,
-                   self.n_pix)
-        plt.hlines(self.min_wavelength + self.n_pix * self.min_slope,
-                   0,
+        plt.text(5, self.min_wavelength+100, "Min wavelength (user-supplied)")
+        plt.hlines(self.min_wavelength, 0, self.n_pix)
+        plt.hlines(self.min_wavelength + self.range_tolerance,0,
                    self.n_pix,
                    linestyle='dashed',
                    alpha=0.5)
 
-        r = plt.Polygon(
-            [(0, self.min_wavelength + self.range_tolerance),
-             (0, self.min_wavelength - self.range_tolerance),
-             (self.n_pix, self.min_wavelength + self.min_slope * self.n_pix),
-             (self.n_pix, self.min_wavelength + self.max_slope * self.n_pix)],
-            alpha=0.3)
 
-        r2 = plt.Polygon(
-            [(self.n_pix, self.max_wavelength - self.range_tolerance),
-             (self.n_pix, self.max_wavelength + self.range_tolerance),
-             (0, self.max_wavelength - self.min_slope * self.n_pix),
-             (0, self.max_wavelength - self.max_slope * self.n_pix)],
-            alpha=0.3)
+        plt.text(5, self.max_wavelength+100, "Max wavelength (user-supplied)")
+        plt.hlines(self.max_wavelength, 0, self.n_pix)
+        plt.hlines(self.max_wavelength - self.range_tolerance, 0, self.n_pix,
+                   linestyle='dashed',
+                   alpha=0.5)
 
-        plt.plot((0, self.n_pix), (self.min_wavelength, self.max_wavelength))
-        plt.plot((0, self.n_pix),
-                 (self.min_intercept,
-                  self.min_intercept + self.min_slope * self.n_pix))
-        plt.plot((0, self.n_pix),
-                 (self.max_intercept,
-                  self.max_intercept + self.max_slope * self.n_pix))
+        x_1 = np.arange(0, self.n_pix)
+        m_1 = (self.max_wavelength-self.min_wavelength)/self.n_pix
+        y_1 = m_1*x_1 + self.min_wavelength
+        plt.plot(x_1, y_1, label="Nominal linear fit")
 
-        ax = plt.gca()
-        ax.add_patch(r)
-        ax.add_patch(r2)
+        m_1 = (self.max_wavelength+self.range_tolerance-(self.min_wavelength+self.range_tolerance))/self.n_pix
+        y_1 = m_1*x_1 + self.min_wavelength+self.range_tolerance
+        plt.plot(x_1, y_1, c='black', linestyle='dashed')
 
-        if best_p is not None:
+        m_1 = (self.max_wavelength-self.range_tolerance-(self.min_wavelength-self.range_tolerance))/self.n_pix
+        y_1 = m_1*x_1 + (self.min_wavelength-self.range_tolerance)
+        plt.plot(x_1, y_1, c='black', linestyle='dashed')
+
+        if coeff is not None:
             plt.scatter(self.peaks,
-                        self.polyval(self.peaks, best_p),
+                        self.polyval(self.peaks, coeff),
                         color='red')
 
         plt.xlim(0, self.n_pix)
         plt.ylim(self.min_wavelength - self.range_tolerance,
                  self.max_wavelength + self.range_tolerance)
 
-        plt.show()
+        self.candidate_peak, self.candidate_arc = self._combine_linear_estimates(
+            self.candidates, top_n=top_n_candidates)
+
+        plt.scatter(self.candidate_peak, self.candidate_arc, s=20, c='purple')
+
+        return plt.gca()
 
     def plot_fit(self,
                  spectrum,
