@@ -581,7 +581,7 @@ class Calibrator:
         '''
 
         self.candidate_peak, self.candidate_arc = self._combine_linear_estimates(
-            candidates)
+            candidates, top_n=3)
 
         p, err, _, valid = self._solve_candidate_ransac(
             self.candidate_peak,
