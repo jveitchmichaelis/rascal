@@ -766,11 +766,12 @@ class Calibrator:
 
     def set_fit_constraints(self,
                             num_slopes=1000,
+                            top_n_matches=3,
                             range_tolerance=500,
                             fit_tolerance=10.,
                             polydeg=4,
                             candidate_thresh=15.,
-                            linearity_thresh=3,
+                            linearity_thresh=1.5,
                             ransac_thresh=1,
                             xbins=50,
                             ybins=50,
@@ -822,13 +823,17 @@ class Calibrator:
         self.min_intercept = self.min_wavelength - self.range_tolerance
         self.max_intercept = self.min_wavelength + self.range_tolerance
 
+        # TODO: This has problems if you reduce range tolerance.
         self.min_slope = ((self.max_wavelength - self.range_tolerance) -
-                          self.max_intercept) / self.n_pix
-        self.min_slope /= self.linearity_thresh
+                          (self.min_intercept + self.range_tolerance)) / self.n_pix
 
         self.max_slope = ((self.max_wavelength + self.range_tolerance) -
-                          self.min_intercept) / self.n_pix
-        self.max_slope *= self.linearity_thresh
+                          (self.min_intercept - self.range_tolerance)) / self.n_pix
+
+
+        # This seems wrong.
+        #self.min_slope /= self.linearity_thresh
+        #self.max_slope *= self.linearity_thresh
 
         self.fit_tolerance = fit_tolerance
         self.polydeg = polydeg
@@ -838,6 +843,8 @@ class Calibrator:
         self.ybins = ybins
         self.brute_force = brute_force
         self.fittype = fittype
+        self.num_candidates = 25
+        self.top_n_matches = top_n_matches
 
         if fittype == 'poly':
             self.polyfit = np.polynomial.polynomial.polyfit
