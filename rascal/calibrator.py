@@ -496,7 +496,7 @@ class Calibrator:
                     (fit_coeffs[0] > self.max_intercept) |
                     (self.polyval(0, fit_coeffs) < self.min_wavelength) |
                     (self.polyval(self.n_pix, fit_coeffs) >
-                     self.max_wavelength)):
+                     self.max_wavelength+self.range_tolerance)):
                     continue
             elif self.fittype == 'chebyshev':
                 pass
