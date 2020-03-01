@@ -281,16 +281,18 @@ class Calibrator:
 
         Returns
         -------
-        ?
+        peaks: np.array
+            Filtered list of peaks which match this line
+        atlas_line: np.array
+            Atlas wavelength corresponding to these peaks (within tolerance)
 
-        ?
 
         '''
 
         predicted = (dispersion * self.pairs[:, 0] + min_wavelength)
         actual = self.pairs[:, 1]
         err = np.abs(predicted - actual)
-        mask = (err < thresh)
+        mask = (err <= thresh)
 
         return self.pairs[:, 0][mask], actual[mask]
 
