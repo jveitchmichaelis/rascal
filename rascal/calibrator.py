@@ -335,9 +335,9 @@ class Calibrator:
 
         return x_match, y_match
 
-    def _get_candidates(self, n_slope=1000, top_n=50):
+    def _get_candidates(self, n_slope, top_n):
         '''
-        Get the best trail pairs from the Hough space
+        Get the best trial pairs from the Hough space
         '''
 
         # Generate the accumulator from the pairs
@@ -346,14 +346,14 @@ class Calibrator:
                                               num_slopes=n_slope)
 
         # Get the line coeffients from the promising bins in the accumulator
-        _, lines = self._get_top_lines(self.accumulator,
+        _, self.hough_lines = self._get_top_lines(self.accumulator,
                                        top_n=top_n,
                                        xbins=self.xbins,
                                        ybins=self.ybins)
 
         # Locate candidate points for these lines fits
         self.candidates = []
-        for line in lines:
+        for line in self.hough_lines:
             m, c = line
             inliers_x, inliers_y = self._get_candidate_points_linear(
                 m, c, self.candidate_thresh)
