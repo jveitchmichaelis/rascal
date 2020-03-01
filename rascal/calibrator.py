@@ -365,7 +365,7 @@ class Calibrator:
                                 polydeg=3,
                                 sample_size=4,
                                 max_tries=1e4,
-                                thresh=15,
+                                thresh=2,
                                 brute_force=False,
                                 coeff=None,
                                 progress=False,
