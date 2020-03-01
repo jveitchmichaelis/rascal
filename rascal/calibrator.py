@@ -109,7 +109,7 @@ class Calibrator:
         # Include user supplied pairs that are always fitted as given
         self.set_known_pairs()
 
-    def _generate_pairs(self):
+    def _generate_pairs(self, constrain_poly=True):
         '''
         Generate pixel-wavelength pairs without the allowed regions set by the
         linearity limit. This assumes a relatively linear spectrograph.
@@ -117,24 +117,20 @@ class Calibrator:
 
         pairs = [pair for pair in itertools.product(self.peaks, self.atlas)]
 
+        if constrain_poly:
         # Remove pairs outside polygon
-        valid_area_lower = Delaunay([
-            (0, self.min_wavelength + self.range_tolerance),
-            (0, self.min_wavelength - self.range_tolerance),
-            (self.n_pix, self.min_wavelength + self.min_slope * self.n_pix),
-            (self.n_pix, self.min_wavelength + self.max_slope * self.n_pix)
+            valid_area = Delaunay([
+                (0, self.min_wavelength + self.range_tolerance + self.candidate_thresh),
+                (0, self.min_wavelength - self.range_tolerance - self.candidate_thresh),
+                (self.n_pix, self.max_wavelength - self.range_tolerance - self.candidate_thresh),
+                (self.n_pix, self.max_wavelength + self.range_tolerance + self.candidate_thresh)
         ])
 
-        valid_area_upper = Delaunay([
-            (self.n_pix, self.max_wavelength - self.range_tolerance),
-            (self.n_pix, self.max_wavelength + self.range_tolerance),
-            (0, self.max_wavelength - self.min_slope * self.n_pix),
-            (0, self.max_wavelength - self.max_slope * self.n_pix)
-        ])
+            mask = (valid_area.find_simplex(pairs) >= 0)
 
-        mask = ((valid_area_lower.find_simplex(pairs) >= 0) &
-                (valid_area_upper.find_simplex(pairs) >= 0))
         self.pairs = np.array(pairs)[mask]
+        else:
+            self.pairs = np.array(pairs)
 
     def _hough_points(self, x, y, num_slopes):
         """
