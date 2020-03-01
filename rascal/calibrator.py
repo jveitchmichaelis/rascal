@@ -725,7 +725,7 @@ class Calibrator:
         '''
         Add arc lines to the Calibrator.
         '''
-        self.atlas = np.concatenate(self.atlas, lines)
+        self.atlas.extend(lines)
 
     def load_user_calibration_lines(self, lines):
         '''
