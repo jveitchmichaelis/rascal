@@ -369,7 +369,7 @@ class Calibrator:
                                 brute_force=False,
                                 coeff=None,
                                 progress=False,
-                                filter_close=True):
+                                filter_close=False):
         '''
         Use RANSAC to sample the parameter space and give best guess
 
