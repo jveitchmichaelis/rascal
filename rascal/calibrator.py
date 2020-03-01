@@ -916,7 +916,7 @@ class Calibrator:
         if sample_size > len(self.atlas):
             sample_size = len(self.atlas)
 
-        self._get_candidates(n_slope)
+        self._get_candidates(self.num_slopes, self.num_candidates)
 
         return self._get_best_model(self.candidates, self.polydeg, sample_size,
                                     max_tries, self.ransac_thresh,
