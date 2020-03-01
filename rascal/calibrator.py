@@ -253,10 +253,12 @@ class Calibrator:
         out_wavelengths = []
 
         for peak in np.unique(peaks):
-            out_peaks.append(peak)
+            peak_matches = wavelengths[peaks == peak]
 
-            wavelengths = [match[0] for match in Counter(wavelengths[peaks == peak]).most_common(top_n)
-            out_wavelengths.append(wavelengths)
+            if len(peak_matches) > 0:
+                for match in Counter(peak_matches).most_common(min(top_n, len(peak_matches))):
+            out_peaks.append(peak)
+                    out_wavelengths.append(match[0])
 
         return out_peaks, out_wavelengths
 
