@@ -458,28 +458,38 @@ class Calibrator:
         else:
             sampler_list = sampler
 
+        peaks = np.unique(x)
+        idx = range(len(peaks))
+
+        # Clean up:
+        candidates = {}
+        for p in np.unique(x):
+            candidates[p] = y[x == p]
+
         for sample in sampler_list:
             if brute_force:
                 x_hat = x[[sample]]
                 y_hat = y[[sample]]
             else:
                 # weight the probability of choosing the sample by the inverse line density
-                hist = np.histogram(x, bins=3)
-                prob = 1. / hist[0][np.digitize(x, hist[1], right=True) - 1]
+                hist = np.histogram(peaks, bins=3)
+                prob = 1. / hist[0][np.digitize(peaks, hist[1], right=True) - 1]
                 prob = prob / np.sum(prob)
 
+                # Pick some random peaks
                 idxes = np.random.choice(idx,
                                          sample_size,
                                          replace=False,
                                          p=prob)
-                x_hat = x[idxes]
-                y_hat = y[idxes]
+                x_hat = peaks[idxes]
+                y_hat = []
 
-            # Ignore samples with duplicate x/y coordinates
-            if (len(x_hat) > len(np.unique(x_hat))):
-                continue
+                # Pick a random wavelength for this x
+                for _x in x_hat:
+                    y_hat.append(np.random.choice(candidates[_x]))
 
             if (len(y_hat) > len(np.unique(y_hat))):
+                #print("dupe y - impossible?")
                 continue
 
             # insert user given known pairs
@@ -492,11 +502,10 @@ class Calibrator:
 
             # Discard out-of-bounds fits
             if self.fittype == 'poly':
-                if ((fit_coeffs[0] < self.min_intercept) |
-                    (fit_coeffs[0] > self.max_intercept) |
-                    (self.polyval(0, fit_coeffs) < self.min_wavelength) |
-                    (self.polyval(self.n_pix, fit_coeffs) >
-                     self.max_wavelength+self.range_tolerance)):
+                if ((self.polyval(0, fit_coeffs) < self.min_wavelength-self.range_tolerance) |
+                    (self.polyval(0, fit_coeffs) > self.min_wavelength+self.range_tolerance) |
+                    (self.polyval(self.n_pix, fit_coeffs) > self.max_wavelength+self.range_tolerance) |
+                    (self.polyval(self.n_pix, fit_coeffs) < self.max_wavelength-self.range_tolerance)):
                     continue
             elif self.fittype == 'chebyshev':
                 pass
