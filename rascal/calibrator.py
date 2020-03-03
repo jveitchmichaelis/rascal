@@ -118,17 +118,20 @@ class Calibrator:
         pairs = [pair for pair in itertools.product(self.peaks, self.atlas)]
 
         if constrain_poly:
-        # Remove pairs outside polygon
+            # Remove pairs outside polygon
             valid_area = Delaunay([
-                (0, self.min_wavelength + self.range_tolerance + self.candidate_thresh),
-                (0, self.min_wavelength - self.range_tolerance - self.candidate_thresh),
-                (self.n_pix, self.max_wavelength - self.range_tolerance - self.candidate_thresh),
-                (self.n_pix, self.max_wavelength + self.range_tolerance + self.candidate_thresh)
-        ])
+                (0, self.min_wavelength + self.range_tolerance +
+                 self.candidate_thresh),
+                (0, self.min_wavelength - self.range_tolerance -
+                 self.candidate_thresh),
+                (self.n_pix, self.max_wavelength - self.range_tolerance -
+                 self.candidate_thresh),
+                (self.n_pix, self.max_wavelength + self.range_tolerance +
+                 self.candidate_thresh)
+            ])
 
             mask = (valid_area.find_simplex(pairs) >= 0)
-
-        self.pairs = np.array(pairs)[mask]
+            self.pairs = np.array(pairs)[mask]
         else:
             self.pairs = np.array(pairs)
 
@@ -256,8 +259,9 @@ class Calibrator:
             peak_matches = wavelengths[peaks == peak]
 
             if len(peak_matches) > 0:
-                for match in Counter(peak_matches).most_common(min(top_n, len(peak_matches))):
-            out_peaks.append(peak)
+                for match in Counter(peak_matches).most_common(
+                        min(top_n, len(peak_matches))):
+                    out_peaks.append(peak)
                     out_wavelengths.append(match[0])
 
         return out_peaks, out_wavelengths
@@ -347,9 +351,9 @@ class Calibrator:
 
         # Get the line coeffients from the promising bins in the accumulator
         _, self.hough_lines = self._get_top_lines(self.accumulator,
-                                       top_n=top_n,
-                                       xbins=self.xbins,
-                                       ybins=self.ybins)
+                                                  top_n=top_n,
+                                                  xbins=self.xbins,
+                                                  ybins=self.ybins)
 
         # Locate candidate points for these lines fits
         self.candidates = []
@@ -473,7 +477,8 @@ class Calibrator:
             else:
                 # weight the probability of choosing the sample by the inverse line density
                 hist = np.histogram(peaks, bins=3)
-                prob = 1. / hist[0][np.digitize(peaks, hist[1], right=True) - 1]
+                prob = 1. / hist[0][np.digitize(peaks, hist[1], right=True) -
+                                    1]
                 prob = prob / np.sum(prob)
 
                 # Pick some random peaks
@@ -493,8 +498,9 @@ class Calibrator:
                 continue
 
             # insert user given known pairs
-            x_hat = np.concatenate((x_hat, self.pix))
-            y_hat = np.concatenate((y_hat, self.wave))
+            if self.pix is not None:
+                x_hat = np.concatenate((x_hat, self.pix))
+                y_hat = np.concatenate((y_hat, self.wave))
 
             # Try to fit the data.
             # This doesn't need to be robust, it's an exact fit.
@@ -502,10 +508,14 @@ class Calibrator:
 
             # Discard out-of-bounds fits
             if self.fittype == 'poly':
-                if ((self.polyval(0, fit_coeffs) < self.min_wavelength-self.range_tolerance) |
-                    (self.polyval(0, fit_coeffs) > self.min_wavelength+self.range_tolerance) |
-                    (self.polyval(self.n_pix, fit_coeffs) > self.max_wavelength+self.range_tolerance) |
-                    (self.polyval(self.n_pix, fit_coeffs) < self.max_wavelength-self.range_tolerance)):
+                if ((self.polyval(0, fit_coeffs) <
+                     self.min_wavelength - self.range_tolerance) |
+                    (self.polyval(0, fit_coeffs) >
+                     self.min_wavelength + self.range_tolerance) |
+                    (self.polyval(self.n_pix, fit_coeffs) >
+                     self.max_wavelength + self.range_tolerance) |
+                    (self.polyval(self.n_pix, fit_coeffs) <
+                     self.max_wavelength - self.range_tolerance)):
                     continue
             elif self.fittype == 'chebyshev':
                 pass
@@ -538,10 +548,11 @@ class Calibrator:
                 best_cost = cost
 
                 # Get the residual of the fit
-                err = np.abs(self.polyval(x[best_mask], best_p) - y[best_mask])
-                err[err > thresh] = thresh
+                err = self.polyval(x[best_mask], best_p) - y[best_mask]
+                err[np.abs(err) > thresh] = thresh
                 #best_cost = sum(err)
                 best_err = np.sqrt(np.mean(err**2))
+                best_residual = err
                 best_inliers = n_inliers
 
                 if tdqm_imported & progress:
@@ -559,7 +570,7 @@ class Calibrator:
         else:
             valid_solution = True
 
-        return (best_p, best_err, best_inliers, valid_solution)
+        return (best_p, best_err, best_residual, best_inliers, valid_solution)
 
     def _get_best_model(self, candidates, polydeg, sample_size, max_tries,
                         thresh, brute_force, coeff, progress):
@@ -584,15 +595,19 @@ class Calibrator:
             Show the progress bar with tdqm if set to True.
         Returns
         -------
-        coeff : list
+        coeff: list
             List of best fit polynomial coefficient.
+        rms: float
+            RMS
+        residual: float
+            Residual from the best fit
 
         '''
 
         self.candidate_peak, self.candidate_arc = self._combine_linear_estimates(
             candidates, top_n=3)
 
-        p, err, _, valid = self._solve_candidate_ransac(
+        p, rms, residual, _, valid = self._solve_candidate_ransac(
             self.candidate_peak,
             self.candidate_arc,
             polydeg=polydeg,
@@ -603,17 +618,18 @@ class Calibrator:
             coeff=coeff,
             progress=progress)
 
+        peak_utilisation = len(residual) / len(self.peaks)
+
         if not self.silence:
             if not valid:
                 warnings.warn("Invalid fit")
 
-            if err > self.fit_tolerance:
+            if rms > self.fit_tolerance:
                 warnings.warn("Error too large {} > {}".format(
                     err, self.fit_tolerance))
-
         assert (p is not None), "Couldn't fit"
 
-        return p
+        return p, rms, residual, peak_utilisation
 
     def _import_matplotlib(self):
         '''
@@ -833,12 +849,13 @@ class Calibrator:
         self.max_intercept = self.min_wavelength + self.range_tolerance
 
         # TODO: This has problems if you reduce range tolerance.
-        self.min_slope = ((self.max_wavelength - self.range_tolerance) -
-                          (self.min_intercept + self.range_tolerance)) / self.n_pix
+        self.min_slope = (
+            (self.max_wavelength - self.range_tolerance) -
+            (self.min_intercept + self.range_tolerance)) / self.n_pix
 
-        self.max_slope = ((self.max_wavelength + self.range_tolerance) -
-                          (self.min_intercept - self.range_tolerance)) / self.n_pix
-
+        self.max_slope = (
+            (self.max_wavelength + self.range_tolerance) -
+            (self.min_intercept - self.range_tolerance)) / self.n_pix
 
         # This seems wrong.
         #self.min_slope /= self.linearity_thresh
@@ -947,26 +964,39 @@ class Calibrator:
 
         Returns
         -------
-        coeff : list
+        coeff: list
             List of best fit polynomial coefficient.
+        x_match: np.array
+
+        y_match: np.array
+
+        residual: np.array
+
+        peak_utilisation: float
+            Fraction of detected peaks used for calibration [0-1].
 
         '''
 
         x_match = []
         y_match = []
+        residual = []
 
         for p in self.peaks:
             x = self.polyval(p, fit)
-            diff = np.abs(self.atlas - x)
-            idx = np.argmin(diff)
+            diff = self.atlas - x
+            diff_abs = np.abs(diff)
+            idx = np.argmin(diff_abs)
 
-            if diff[idx] < tolerance:
+            if diff_abs[idx] < tolerance:
                 x_match.append(p)
                 y_match.append(self.atlas[idx])
+                residual.append(diff[idx])
 
         x_match = np.array(x_match)
         y_match = np.array(y_match)
+        residual = np.array(residual)
 
+        peak_utilisation = len(x_match) / len(self.peaks)
         coeff = models.robust_polyfit(x_match, y_match, polydeg)
 
         if np.any(np.isnan(coeff)):
@@ -974,9 +1004,12 @@ class Calibrator:
                           'Input solution is returned.')
             return fit, None, None
 
-        return coeff, x_match, y_match
+        return coeff, x_match, y_match, residual, peak_utilisation
 
-    def plot_search_space(self, constrain_poly=False, coeff=None, top_n_candidates=3):
+    def plot_search_space(self,
+                          constrain_poly=False,
+                          coeff=None,
+                          top_n_candidates=3):
         '''
         Plots the peak/arc line pairs that are considered as potential match
         candidates.
@@ -997,10 +1030,10 @@ class Calibrator:
         plt.scatter(*self.pairs.T, alpha=0.2, c='red')
 
         # Get candidates
-        self._get_candidates(n_slope=self.num_slopes, top_n=self.num_candidates)
+        self._get_candidates(n_slope=self.num_slopes,
+                             top_n=self.num_candidates)
 
         plt.scatter(*self._merge_candidates(self.candidates).T, alpha=0.2)
-
         """
         plt.hlines(self.min_intercept, 0, self.n_pix)
         plt.hlines(self.max_intercept,
@@ -1010,31 +1043,37 @@ class Calibrator:
                    alpha=0.5)
         """
 
-        plt.text(5, self.min_wavelength+100, "Min wavelength (user-supplied)")
+        plt.text(5, self.min_wavelength + 100,
+                 "Min wavelength (user-supplied)")
         plt.hlines(self.min_wavelength, 0, self.n_pix)
-        plt.hlines(self.min_wavelength + self.range_tolerance,0,
+        plt.hlines(self.min_wavelength + self.range_tolerance,
+                   0,
                    self.n_pix,
                    linestyle='dashed',
                    alpha=0.5)
 
-
-        plt.text(5, self.max_wavelength+100, "Max wavelength (user-supplied)")
+        plt.text(5, self.max_wavelength + 100,
+                 "Max wavelength (user-supplied)")
         plt.hlines(self.max_wavelength, 0, self.n_pix)
-        plt.hlines(self.max_wavelength - self.range_tolerance, 0, self.n_pix,
+        plt.hlines(self.max_wavelength - self.range_tolerance,
+                   0,
+                   self.n_pix,
                    linestyle='dashed',
                    alpha=0.5)
 
         x_1 = np.arange(0, self.n_pix)
-        m_1 = (self.max_wavelength-self.min_wavelength)/self.n_pix
-        y_1 = m_1*x_1 + self.min_wavelength
+        m_1 = (self.max_wavelength - self.min_wavelength) / self.n_pix
+        y_1 = m_1 * x_1 + self.min_wavelength
         plt.plot(x_1, y_1, label="Nominal linear fit")
 
-        m_1 = (self.max_wavelength+self.range_tolerance-(self.min_wavelength+self.range_tolerance))/self.n_pix
-        y_1 = m_1*x_1 + self.min_wavelength+self.range_tolerance
+        m_1 = (self.max_wavelength + self.range_tolerance -
+               (self.min_wavelength + self.range_tolerance)) / self.n_pix
+        y_1 = m_1 * x_1 + self.min_wavelength + self.range_tolerance
         plt.plot(x_1, y_1, c='black', linestyle='dashed')
 
-        m_1 = (self.max_wavelength-self.range_tolerance-(self.min_wavelength-self.range_tolerance))/self.n_pix
-        y_1 = m_1*x_1 + (self.min_wavelength-self.range_tolerance)
+        m_1 = (self.max_wavelength - self.range_tolerance -
+               (self.min_wavelength - self.range_tolerance)) / self.n_pix
+        y_1 = m_1 * x_1 + (self.min_wavelength - self.range_tolerance)
         plt.plot(x_1, y_1, c='black', linestyle='dashed')
 
         if coeff is not None:
@@ -1207,10 +1246,11 @@ class Calibrator:
                 go.Scatter(x=p_x,
                            y=p_y,
                            mode='markers',
-                           marker=dict(color='firebrick'),
+                           marker=dict(color='orange'),
                            yaxis='y3'))
 
             fitted_peaks = []
+            fitted_peaks_adu = []
             fitted_diff = []
             all_diff = []
 
@@ -1225,31 +1265,27 @@ class Calibrator:
 
                 if np.abs(diff[idx]) < tolerance:
                     fitted_peaks.append(p)
+                    fitted_peaks_adu.append(spectrum[int(p)])
                     fitted_diff.append(diff[idx])
                     if not silence:
                         print("- matched to {} A".format(self.atlas[idx]))
 
-                    p_x_matched = []
-                    p_y_matched = []
-                    for i, p in enumerate(self.peaks):
-                        p_x_matched.append(self.polyval(p, fit))
-                        p_y_matched.append(spectrum[int(p)])
-                    fig.add_trace(
-                        go.Scatter(x=p_x_matched,
-                                   y=p_y_matched,
-                                   mode='markers',
-                                   marker=dict(color='orange'),
-                                   name='Matched peaks',
-                                   yaxis='y3'))
+            x_fitted = self.polyval(fitted_peaks, fit)
+
+            fig.add_trace(
+                go.Scatter(x=x_fitted,
+                           y=fitted_peaks_adu,
+                           mode='markers',
+                           marker=dict(color='firebrick'),
+                           yaxis='y3'))
 
             # Middle plot - Residual plot
             rms = np.sqrt(np.mean(np.array(fitted_diff)**2.))
-            x_fitted = self.polyval(fitted_peaks, fit)
             fig.add_trace(
                 go.Scatter(x=x_fitted,
                            y=fitted_diff,
                            mode='markers',
-                           marker=dict(color='orange'),
+                           marker=dict(color='firebrick'),
                            yaxis='y2'))
             fig.add_trace(
                 go.Scatter(x=[wave.min(), wave.max()],
@@ -1263,7 +1299,7 @@ class Calibrator:
                 go.Scatter(x=x_fitted,
                            y=fitted_peaks,
                            mode='markers',
-                           marker=dict(color='orange'),
+                           marker=dict(color='firebrick'),
                            yaxis='y1',
                            name='Peaks used for fitting'))
             fig.add_trace(
