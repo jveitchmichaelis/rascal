@@ -419,6 +419,7 @@ class Calibrator:
         best_cost = 1e50
         best_err = 1e50
         best_mask = [False]
+        best_residual = None
         best_inliers = 0
 
         if sample_size <= polydeg:
@@ -889,7 +890,6 @@ class Calibrator:
             sample_size=5,
             max_tries=1000,
             top_n=20,
-            n_slope=3000,
             mode='manual',
             progress=True,
             coeff=None):
@@ -1119,7 +1119,13 @@ class Calibrator:
         '''
 
         if log_spectrum:
-            spectrum = np.log(spectrum)
+            spectrum[spectrum < 0] = 1e-100
+            spectrum = np.log10(spectrum)
+            vline_max = np.nanmax(spectrum) * 2.0
+            text_box_pos = 1.2 * max(spectrum)
+        else:
+            vline_max = np.nanmax(spectrum) * 1.05
+            text_box_pos = 0.8 * max(spectrum)
 
         if self.plot_with_matplotlib:
 
@@ -1136,7 +1142,7 @@ class Calibrator:
             ax1.plot(wave, spectrum)
             ax1.vlines(self.polyval(self.peaks, fit),
                        spectrum[self.peaks.astype('int')],
-                       spectrum.max() * 1.05,
+                       vline_max,
                        linestyles='dashed',
                        colors='C1')
 
@@ -1144,7 +1150,7 @@ class Calibrator:
             if plot_atlas:
                 #spec = SyntheticSpectrum(fit, model_type='poly', degree=len(fit)-1)
                 #x_locs = spec.get_pixels(self.atlas)
-                ax1.vlines(self.atlas, 0, spectrum.max() * 1.05, colors='C2')
+                ax1.vlines(self.atlas, 0, vline_max, colors='C2')
 
             fitted_peaks = []
             fitted_diff = []
@@ -1165,11 +1171,11 @@ class Calibrator:
                         print("- matched to {} A".format(self.atlas[idx]))
                     ax1.vlines(self.polyval(p, fit),
                                spectrum[p.astype('int')],
-                               spectrum.max() * 1.05,
+                               vline_max,
                                colors='C1')
 
                     ax1.text(x - 3,
-                             0.8 * max(spectrum),
+                             text_box_pos,
                              s="{}:{:1.2f}".format(self.atlas_elements[idx],
                                                    self.atlas[idx]),
                              rotation=90,
@@ -1180,9 +1186,9 @@ class Calibrator:
             ax1.grid(linestyle=':')
             ax1.set_ylabel('ADU')
             if log_spectrum:
-                ax1.set_ylim(0, spectrum.max() * 1.05)
+                ax1.set_ylim(0, vline_max)
             else:
-                ax1.set_ylim(spectrum.min(), spectrum.max() * 1.05)
+                ax1.set_ylim(np.nanmin(spectrum), vline_max)
 
             # Plot the residuals
             ax2.scatter(self.polyval(fitted_peaks, fit),
@@ -1234,7 +1240,7 @@ class Calibrator:
                            line=dict(color='royalblue'),
                            yaxis='y3'))
 
-            spec_max = spectrum.max() * 1.05
+            spec_max = np.nanmax(spectrum) * 1.05
 
             p_x = []
             p_y = []
