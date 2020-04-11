@@ -14,7 +14,7 @@ spectrum2D = fits.open('data_lt_sprat/v_a_20190516_57_1_0_1.fits')[0].data
 spectrum = np.median(spectrum2D[110:120], axis=0)
 
 plt.figure()
-plt.plot(spectrum/spectrum.max())
+plt.plot(spectrum / spectrum.max())
 plt.title('Number of pixels: ' + str(spectrum.shape[0]))
 plt.xlabel("Pixel (Spectral Direction)")
 plt.ylabel("Normalised Count")
@@ -26,8 +26,14 @@ plt.tight_layout()
 peaks, _ = find_peaks(spectrum, height=500, distance=5, threshold=None)
 
 # Initialise the calibrator
-c = Calibrator(peaks, num_pixels=1024, min_wavelength=3800., max_wavelength=8200.)
-c.set_fit_constraints(num_slopes=5000, top_n_matches=5, range_tolerance=500., xbins=100, ybins=100)
+c = Calibrator(peaks,
+               num_pix=1024,
+               min_wavelength=3800.,
+               max_wavelength=8200.)
+c.set_fit_constraints(num_slopes=5000,
+                      range_tolerance=500.,
+                      xbins=200,
+                      ybins=200)
 c.add_atlas(elements='Xe')
 
 # Show the parameter space for searching possible solution
@@ -37,7 +43,8 @@ c.plot_search_space()
 best_p, rms, residual, peak_utilisation = c.fit(max_tries=10000)
 
 # Refine solution
-best_p, x_fit, y_fit, residual, peak_utilisation = c.match_peaks_to_atlas(best_p, polydeg=4, tolerance=3)
+best_p, x_fit, y_fit, residual, peak_utilisation = c.match_peaks_to_atlas(
+    best_p, polydeg=4, tolerance=3)
 
 # Plot the solution
 c.plot_fit(spectrum, best_p, plot_atlas=True, log_spectrum=False, tolerance=3)
@@ -46,4 +53,4 @@ fit_diff = c.polyval(x_fit, best_p) - y_fit
 rms = np.sqrt(np.sum(fit_diff**2 / len(x_fit)))
 
 print("Stdev error: {} A".format(fit_diff.std()))
-print("Peaks utilisation rate: {}%".format(peak_utilisation*100))
+print("Peaks utilisation rate: {}%".format(peak_utilisation * 100))

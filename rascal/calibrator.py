@@ -1,8 +1,9 @@
 import warnings
 import itertools
-import numpy as np
-import astropy.units as u
 from collections import Counter
+
+import astropy.units as u
+import numpy as np
 from scipy.spatial import Delaunay
 
 from .util import load_calibration_lines
@@ -21,30 +22,33 @@ except:
 class Calibrator:
     def __init__(self,
                  peaks,
-                 num_pixels,
-                 min_wavelength=1000,
-                 max_wavelength=10000,
+                 num_pix,
+                 min_wavelength=3000,
+                 max_wavelength=9000,
                  silence=False,
                  plotting_library='matplotlib'):
         '''
-        Initialise the calibrator object with
+        Initialise the calibrator object.
 
         Parameters
         ----------
         peaks: list
             List of identified arc line pixel values.
-        num_pixels: int
+        num_pix: int
             Number of pixels in the spectral axis.
-        min_wavelength: float
+        min_wavelength: float (default: 3000)
             Minimum wavelength of the arc lines.
-        max_wavelength: float
+        max_wavelength: float (default: 9000)
             Maximum wavelength of the arc lines.
-        silence:
+        silence : boolean (default: False)
             Suppress all verbose output if set to True.
+        plotting_library : string (default: 'matplotlib')
+            Choose between matplotlib and plotly.
+
         '''
 
         self.peaks = peaks
-        self.n_pix = num_pixels
+        self.num_pix = num_pix
         self.min_wavelength = min_wavelength
         self.max_wavelength = max_wavelength
         self.silence = silence
@@ -80,28 +84,37 @@ class Calibrator:
         Parameters
         ----------
         elements: string or list of string
-            element name in form of chemical symbol. Case insensitive.
+            Element name in form of chemical symbol. Case insensitive.
         min_wavelength: float
-
+            Minimum wavelength of the arc lines.
         max_wavelength: float
-
+            Maximum wavelength of the arc lines.
         min_intensity: float
-
+            Minimum intensity of the lines.
         min_distance: float
+            Minimum separation between neighbouring lines.
 
         '''
+
         self.atlas_elements, self.atlas, self.atlas_intensities = \
             load_calibration_lines(elements,
                                    min_wavelength,
                                    max_wavelength)
 
-    def _set_peaks(self, peaks):
+    def _set_peaks(self, peaks, constrain_poly):
         '''
         Gather all the randomly matched and user-supplied pixel-wavelength pairs.
+
+        Parameters
+        ----------
+        peaks :
+            €£$
+        constrain_poly : boolean
+            €£$
         '''
 
         # Create a list of all possible pairs of detected peaks and lines from atlas
-        self._generate_pairs()
+        self._generate_pairs(constrain_poly)
 
         # Include user supplied pairs that are always fitted to within a tolerance
         self.set_guess_pairs()
@@ -109,10 +122,15 @@ class Calibrator:
         # Include user supplied pairs that are always fitted as given
         self.set_known_pairs()
 
-    def _generate_pairs(self, constrain_poly=True):
+    def _generate_pairs(self, constrain_poly):
         '''
         Generate pixel-wavelength pairs without the allowed regions set by the
         linearity limit. This assumes a relatively linear spectrograph.
+
+        Parameters
+        ----------
+        constrain_poly : boolean
+            €£$
         '''
 
         pairs = [pair for pair in itertools.product(self.peaks, self.atlas)]
@@ -124,9 +142,9 @@ class Calibrator:
                  self.candidate_thresh),
                 (0, self.min_wavelength - self.range_tolerance -
                  self.candidate_thresh),
-                (self.n_pix, self.max_wavelength - self.range_tolerance -
+                (self.num_pix, self.max_wavelength - self.range_tolerance -
                  self.candidate_thresh),
-                (self.n_pix, self.max_wavelength + self.range_tolerance +
+                (self.num_pix, self.max_wavelength + self.range_tolerance +
                  self.candidate_thresh)
             ])
 
@@ -178,10 +196,32 @@ class Calibrator:
     def _bin_accumulator(self, accumulator, xbins, ybins):
         '''
         Bin up data by using a 2D histogram method.
+
+        Parameters
+        ----------
+        accumulator : 2D numpy array
+            A 2D Hough accumulator array.
+        xbins : int
+            The number of bins in the pixel direction.
+        ybins : int
+            The number of bins in the wavelength direction.
+
+        Returns
+        -------
+        hist : 2D numpy array (M*N)
+            Height of the 2D histogram
+        xedges : 1D numpy array (M)
+            Centres of the y-bins
+        yedges : 1D numpy array (N)
+            Centres of the y-bins
+
         '''
-        return np.histogram2d(accumulator[:, 0],
+
+        hist, xedges, yedges = np.histogram2d(accumulator[:, 0],
                               accumulator[:, 1],
                               bins=(xbins, ybins))
+
+        return hist, xedges, yedges
 
     def _get_top_lines(self, accumulator, top_n, xbins, ybins):
         '''
@@ -201,9 +241,9 @@ class Calibrator:
         Returns
         -------
         hist :
-
+            €£$
         lines :
-
+            €£$
         '''
 
         # Find the top bins
@@ -223,16 +263,25 @@ class Calibrator:
 
         return hist, lines
 
-    def _merge_candidates(self, candidate_lists):
+    def _merge_candidates(self, candidates):
+        '''
+        Merge two candidate lists.
+
+        Parameters
+        ----------
+        candidates : list
+            €£$
+        '''
+
         merged = []
 
-        for pairs in candidate_lists:
+        for pairs in candidates:
             for pair in np.array(pairs).T:
                 merged.append(pair)
 
         return np.sort(np.array(merged))
 
-    def _combine_linear_estimates(self, candidates, top_n=2):
+    def _combine_linear_estimates(self, candidates, top_n):
         '''
         Takes a number of candidate pair sets and returns the most common pair for each wavelength
 
@@ -240,6 +289,9 @@ class Calibrator:
         ----------
         candidates: list of list(float, float)
             a list of list of peak/line pairs
+        top_n : int
+            Top ranked lines to be fitted.
+
         '''
 
         peaks = []
@@ -280,7 +332,7 @@ class Calibrator:
         dispersion: float
             In observational astronomy term, the R value
         min_wavelength: float
-
+            Minimum wavelength of the arc lines.
         thresh: float
 
         Returns
@@ -289,7 +341,6 @@ class Calibrator:
             Filtered list of peaks which match this line
         atlas_line: np.array
             Atlas wavelength corresponding to these peaks (within tolerance)
-
 
         '''
 
@@ -300,7 +351,7 @@ class Calibrator:
 
         return self.pairs[:, 0][mask], actual[mask]
 
-    def _get_candidate_points_poly(self, fit, tolerance=5):
+    def _get_candidate_points_poly(self, fit, tolerance):
         '''
         Returns a list of peak/wavelengths pairs which agree with the fit
 
@@ -318,8 +369,9 @@ class Calibrator:
         Returns
         -------
         x_match:
-
+            €£$
         y_match:
+            €£$
 
         '''
 
@@ -339,15 +391,22 @@ class Calibrator:
 
         return x_match, y_match
 
-    def _get_candidates(self, n_slope, top_n):
+    def _get_candidates(self, num_slope, top_n):
         '''
         Get the best trial pairs from the Hough space
+
+        Parameters
+        ----------
+        num_slope : int
+            €£$
+        top_n : int
+            Top ranked lines to be fitted.
         '''
 
         # Generate the accumulator from the pairs
         self.accumulator = self._hough_points(self.pairs[:, 0],
                                               self.pairs[:, 1],
-                                              num_slopes=n_slope)
+                                              num_slopes=num_slope)
 
         # Get the line coeffients from the promising bins in the accumulator
         _, self.hough_lines = self._get_top_lines(self.accumulator,
@@ -363,17 +422,9 @@ class Calibrator:
                 m, c, self.candidate_thresh)
             self.candidates.append((inliers_x, inliers_y))
 
-    def _solve_candidate_ransac(self,
-                                x,
-                                y,
-                                polydeg=3,
-                                sample_size=4,
-                                max_tries=1e4,
-                                thresh=2,
-                                brute_force=False,
-                                coeff=None,
-                                progress=False,
-                                filter_close=False):
+    def _solve_candidate_ransac(self, x, y, polydeg, sample_size, max_tries,
+                                thresh, brute_force, coeff, progress,
+                                filter_close):
         '''
         Use RANSAC to sample the parameter space and give best guess
 
@@ -393,14 +444,15 @@ class Calibrator:
             Number of trials of polynomial fitting.
         thresh:
             Threshold for considering a point an inlier
-        brute_force: tuple
+        brute_force: boolean
             Solve all pixel-wavelength combinations with set to True.
         coeff: None or 1D numpy array
             Initial polynomial fit coefficients.
-        progress: tuple
+        progress: boolean
             Show the progress bar with tdqm if set to True.
-        filter_close: tuple
-            ?
+        filter_close: boolean
+            €£$
+
         Returns
         -------
         best_p : list
@@ -409,7 +461,7 @@ class Calibrator:
             Arithmetic mean of the residuals.
         sum(best_inliers) : int
             Number of lines fitted within the thresh.
-        valid_solution : tuple
+        valid_solution : boolean
             False if overfitted.
 
         '''
@@ -442,8 +494,8 @@ class Calibrator:
             best_cost = sum(err)
             best_err = np.sqrt(np.mean(err**.2))
 
-        # If the number of lines is smaller than the number of degree of polynomial
-        # fit, return failed fit.
+        # If the number of lines is smaller than the number of degree of
+        # polynomial fit, return failed fit.
         if len(np.unique(x)) <= polydeg:
             return (best_p, best_err, sum(best_mask), False)
 
@@ -476,7 +528,8 @@ class Calibrator:
                 x_hat = x[[sample]]
                 y_hat = y[[sample]]
             else:
-                # weight the probability of choosing the sample by the inverse line density
+                # weight the probability of choosing the sample by the inverse
+                # line density
                 hist = np.histogram(peaks, bins=3)
                 prob = 1. / hist[0][np.digitize(peaks, hist[1], right=True) -
                                     1]
@@ -513,9 +566,9 @@ class Calibrator:
                      self.min_wavelength - self.range_tolerance) |
                     (self.polyval(0, fit_coeffs) >
                      self.min_wavelength + self.range_tolerance) |
-                    (self.polyval(self.n_pix, fit_coeffs) >
+                    (self.polyval(self.num_pix, fit_coeffs) >
                      self.max_wavelength + self.range_tolerance) |
-                    (self.polyval(self.n_pix, fit_coeffs) <
+                    (self.polyval(self.num_pix, fit_coeffs) <
                      self.max_wavelength - self.range_tolerance)):
                     continue
             elif self.fittype == 'chebyshev':
@@ -527,7 +580,8 @@ class Calibrator:
                               ', boundary'
                               'conditions are not tested.')
 
-            #TODO use point-in-polygon to check entire solution space (not just tails)
+            # TODO use point-in-polygon to check entire solution space
+            # (not just tails)
 
             # M-SAC Estimator (Torr and Zisserman, 1996)
             fit = self.polyval(x, fit_coeffs)
@@ -571,44 +625,51 @@ class Calibrator:
         else:
             valid_solution = True
 
-        return (best_p, best_err, best_residual, best_inliers, valid_solution)
+        return best_p, best_err, best_residual, best_inliers, valid_solution
 
     def _get_best_model(self, candidates, polydeg, sample_size, max_tries,
-                        thresh, brute_force, coeff, progress):
+                        thresh, brute_force, coeff, progress, filter_close):
         '''
         Get the most likely solution with RANSAC
 
         Parameters
         ----------
         candidates :
-        polydeg :
+            €£$
+        polydeg : int
+            The degree of the polynomial to be fitted.
         sample_size : int
             Number of lines to be fitted.
         max_tries : int
             Number of trials of polynomial fitting.
-        thresh :
-
-        brute_force : tuple
+        thresh : float
+            €£$
+        brute_force : boolean
             Solve all pixel-wavelength combinations with set to True.
         coeff : None or 1D numpy array
-            Intial polynomial fit coefficient
-        progress : tuple
+            Intial guess of the set of polynomial fit co-efficients.
+        progress : boolean
             Show the progress bar with tdqm if set to True.
+        filter_close : boolean
+            €£$
+
         Returns
         -------
         coeff: list
             List of best fit polynomial coefficient.
         rms: float
-            RMS
+            Root mean square.
         residual: float
-            Residual from the best fit
+            Residual from the best fit.
+        peak_utilisation: float
+            Fraction of detected peaks used for calibration [0-1].
 
         '''
 
-        self.candidate_peak, self.candidate_arc = self._combine_linear_estimates(
-            candidates, top_n=3)
+        self.candidate_peak, self.candidate_arc =\
+            self._combine_linear_estimates(candidates, top_n=3)
 
-        p, rms, residual, _, valid = self._solve_candidate_ransac(
+        coeff, rms, residual, _, valid = self._solve_candidate_ransac(
             self.candidate_peak,
             self.candidate_arc,
             polydeg=polydeg,
@@ -617,7 +678,8 @@ class Calibrator:
             thresh=thresh,
             brute_force=brute_force,
             coeff=coeff,
-            progress=progress)
+            progress=progress,
+            filter_close=filter_close)
 
         peak_utilisation = len(residual) / len(self.peaks)
 
@@ -628,14 +690,16 @@ class Calibrator:
             if rms > self.fit_tolerance:
                 warnings.warn("Error too large {} > {}".format(
                     err, self.fit_tolerance))
-        assert (p is not None), "Couldn't fit"
+        assert (coeff is not None), "Couldn't fit"
 
-        return p, rms, residual, peak_utilisation
+        return coeff, rms, residual, peak_utilisation
 
     def _import_matplotlib(self):
         '''
         Call to import plotly.
+
         '''
+
         try:
             global plt
             import matplotlib.pyplot as plt
@@ -646,7 +710,9 @@ class Calibrator:
     def _import_plotly(self):
         '''
         Call to import plotly.
+
         '''
+
         try:
             global go
             global pio
@@ -656,10 +722,25 @@ class Calibrator:
         except ImportError:
             print('plotly package not available.')
 
+    def which_plotting_library(self):
+        '''
+        Call to show if the Calibrator is using matplotlib or plotly library
+        (or neither).
+
+        '''
+        if self.plot_with_matplotlib:
+            print('Using matplotlib.')
+        elif self.plot_with_plotly:
+            print('Using plotly.')
+        else:
+            print('Both maplotlib and plotly are not imported.')
+
     def use_matplotlib(self):
         '''
         Call to switch to matplotlib.
+
         '''
+
         if not self.matplotlib_imported:
             self._import_matplotlib()
             self.plot_with_matplotlib = True
@@ -671,7 +752,9 @@ class Calibrator:
     def use_plotly(self):
         '''
         Call to switch to plotly.
+
         '''
+
         if not self.plotly_imported:
             self._import_plotly()
             self.plot_with_plotly = True
@@ -686,7 +769,8 @@ class Calibrator:
                   max_wavelength=None,
                   min_intensity=None,
                   min_distance=None,
-                  include_second_order=None):
+                  include_second_order=None,
+                  constrain_poly=False):
         '''
         Provider the chemical symbol(s) to add arc lines to the Calibrator.
 
@@ -694,16 +778,19 @@ class Calibrator:
         ----------
         elements: string or list of strings
             Chemical symbol, case insensitive
-        min_wavelength: float
-
-        max_wavelength: float
-
-        min_intensity: float
+        min_wavelength: float (default: None)
+            Minimum wavelength of the arc lines.
+        max_wavelength: float (default: None)
+            Maximum wavelength of the arc lines.
+        min_intensity: float (default: None)
             Minimum intensity of the arc lines. Refer to NIST for the intensity.
-        min_distance: float
+        min_distance: float (default: None)
             Minimum separation between neighbouring arc lines.
-        include_second_order: tuple
+        include_second_order: boolean (default: None)
             Set to True to include second order arc lines.
+        constrain_poly: boolean (default: False)
+            €£$
+
         '''
 
         if min_wavelength is None:
@@ -717,56 +804,101 @@ class Calibrator:
 
         for element in elements:
 
-            line_elements, lines, intensities = load_calibration_lines(
-                element, min_wavelength, max_wavelength, include_second_order)
+            atlas_elements_tmp, atlas_tmp, atlas_intensities_tmp =\
+                load_calibration_lines(
+                    element, min_wavelength, max_wavelength,
+                    include_second_order)
 
-            self.atlas_elements.extend(line_elements)
-            self.atlas.extend(lines)
-            self.atlas_intensities.extend(intensities)
+            self.atlas_elements.extend(atlas_elements_tmp)
+            self.atlas.extend(atlas_tmp)
+            self.atlas_intensities.extend(atlas_intensities_tmp)
 
-        self._set_peaks(self.peaks)
+        self._set_peaks(self.peaks, constrain_poly)
 
-    def list_lines(self):
+    def list_atlas(self):
         '''
-        List all the arc lines loaded to the Calibrator.
-        '''
-        print(self.atlas_elements)
+        List all the lines loaded to the Calibrator.
 
-    def clear_calibration_lines(self):
         '''
-        Remove all the arc lines loaded to the Calibrator.
+
+        for i in range(len(self.atlas)):
+            print("Element " + str(self.atlas_elements[i]) + " at " +
+                  str(self.atlas[i]) + " with intensity " +
+                  str(self.atlas_intensities[i]))
+
+    def clear_atlas(self):
         '''
+        Remove all the lines loaded to the Calibrator.
+
+        '''
+
         self.atlas = None
 
-    def append_calibration_lines(self, lines):
+    def append_atlas(self, elements, atlas, intensity):
         '''
         Add arc lines to the Calibrator.
-        '''
-        self.atlas.extend(lines)
-
-    def load_user_calibration_lines(self, lines):
-        '''
-        Remove all the arc lines loaded to the Calibrator and use the user provided
-        arc lines instead.
-        '''
-        self.atlas = lines
-
-    def set_guess_pairs(self, pix_guess=(), wave_guess=(), margin=5.):
-        '''
-        Provide manual pixel-wavelength pair(s), good guess values with a margin
-        of error.
 
         Parameters
         ----------
-        pix_guess : numeric value, list or numpy 1D array (N)
-            Any pixel value; can be outside the detector chip and
-            serve purely as anchor points.
-        wave_guess : numeric value, list or numpy 1D array (N)
-            The matching wavelength for each of the pix_guess.
-        margin : float
-            Tolerance in the wavelength value of the pixel-to-wavelength mappping.
+        elements : list
+           Element name in form of chemical symbol. Case insensitive.
+        atlas : list
+           Wavelengths of the lines in Angstrom.
+        intensity : list
+           Intensities of the lines in Angstrom.
 
         '''
+
+        assert (len(elements) == len(atlas) == len(intensity),
+                ValueError('Please check the length of the input lists.'))
+
+        self.atlas_elements.extend(elements)
+        self.atlas.extend(atlas)
+        self.atlas_intensities.extend(intensity)
+
+    def load_user_atlas(self, elements, atlas, intensity):
+        '''
+        Remove all the arc lines loaded to the Calibrator and use the user
+        provided arc lines instead.
+
+        Parameters
+        ----------
+        elements : list
+           Element name in form of chemical symbol. Case insensitive.
+        atlas : list
+           Wavelengths of the lines in Angstrom.
+        intensity : list
+           Intensities of the lines in Angstrom.
+
+        '''
+
+        assert (len(elements) == len(atlas) == len(intensity),
+                ValueError('Please check the length of the input lists.'))
+
+        self.atlas_elements = elements
+        self.atlas = atlas
+        self.atlas_intensities = intensity
+
+    def set_guess_pairs(self, pix_guess=(), wave_guess=(), margin=5.):
+        '''
+        Provide manual pixel-wavelength pair(s), good guess values with a
+        margin of error.
+
+        Parameters
+        ----------
+        pix_guess : numeric value, list or numpy 1D array (N) (default: ())
+            Any pixel value; can be outside the detector chip and
+            serve purely as anchor points.
+        wave_guess : numeric value, list or numpy 1D array (N) (default: ())
+            The matching wavelength for each of the pix_guess.
+        margin : float (default: 5)
+            Tolerance in the wavelength value of the pixel-to-wavelength
+            mappping.
+
+        '''
+
+        assert (len(pix_guess) == len(wave_guess),
+                ValueError('Please check the length of the input lists.'))
 
         self.pix_guess = np.asarray(pix_guess, dtype='float')
         self.wave_guess = np.asarray(wave_guess, dtype='float')
@@ -787,60 +919,71 @@ class Calibrator:
 
         '''
 
+        assert (len(pix) == len(wave),
+                ValueError('Please check the length of the input lists.'))
+
         self.pix = np.asarray(pix, dtype='float')
         self.wave = np.asarray(wave, dtype='float')
 
     def set_fit_constraints(self,
-                            num_slopes=1000,
-                            top_n_matches=3,
+                            num_slopes=5000,
                             range_tolerance=500,
                             fit_tolerance=10.,
                             polydeg=4,
                             candidate_thresh=15.,
                             linearity_thresh=1.5,
                             ransac_thresh=1,
-                            xbins=50,
-                            ybins=50,
+                            num_candidates=25,
+                            xbins=200,
+                            ybins=200,
                             brute_force=False,
                             fittype='poly'):
         '''
-        Configure the Calibrator. This requires some manual twiddling before the
-        calibrator can work efficiently. However, in theory, a larg max_tries in
-        fit() should provide a good solution in the expense of performance
-        (minutes instead of seconds).
+        Configure the Calibrator. This requires some manual twiddling before
+        the calibrator can work efficiently. However, in theory, a large
+        max_tries in fit() should provide a good solution in the expense of
+        performance (minutes instead of seconds).
 
         Parameters
         ----------
-        num_slopes : float
+        num_slopes : int (default: 1000)
             Number of slopes to consider during Hough transform
-        range_tolerance : float
+        range_tolerance : float (default: 500)
             Estimation of the error on the provided spectral range
             e.g. 3000-5000 with tolerance 500 will search for
             solutions that may satisfy 2500-5500
-        fit_tolerance : float
-            Sets a tolerance on whether a fit found by RANSAC is considered acceptable
-        polydeg : int
+        fit_tolerance : float (default: 10)
+            Sets a tolerance on whether a fit found by RANSAC is considered
+            acceptable
+        polydeg : int (default: 4)
             Degree of the polynomial fit.
-        candidate_thresh : float
-            Threshold  (Angstroms) for considering a point to be an inlier during candidate peak/line
-            selection. This should be reasonable small as we want to search for candidate points which
-            are *locally* linear.
-        linearity_thresh : float
-            A threshold (Angstroms) that expresses how non-linear the solution can be. This mostly affects
-            which atlas points are included and should be reasonably large, e.g. 500A.
-        ransac_thresh : float
-            The distance criteria  (Angstroms) to be considered an inlier to a fit. This should be close
-            to the size of the expected residuals on the final fit (e.g. 1A is typical)
-        xbins : int
+        candidate_thresh : float (default: 15)
+            Threshold  (Angstroms) for considering a point to be an inlier
+            during candidate peak/line selection. This should be reasonable
+            small as we want to search for candidate points which are
+            *locally* linear.
+        linearity_thresh : float (default: 1.5)
+            A threshold (Angstroms) that expresses how non-linear the solution
+            can be. This mostly affects which atlas points are included and
+            should be reasonably large, e.g. 500A.
+        ransac_thresh : float (default: 1)
+            The distance criteria  (Angstroms) to be considered an inlier to a
+            fit. This should be close to the size of the expected residuals on
+            the final fit (e.g. 1A is typical)
+        num_candidates: int (default: 25)
+            Number of best trial Hough pairs.
+        xbins : int (default: 50)
             Number of bins for Hough accumulation
-        ybins : int
+        ybins : int (default: 50)
             Number of bins for Hough accumulation
-        brute_force : tuple
-            Set to True to try all possible combination in the given parameter space
-        fittype : string
+        brute_force : boolean (default: False)
+            Set to True to try all possible combination in the given parameter
+            space
+        fittype : string (default: 'poly')
             One of 'poly', 'legendre' or 'chebyshev'
 
         '''
+
         self.num_slopes = num_slopes
         self.range_tolerance = range_tolerance
         self.linearity_thresh = linearity_thresh
@@ -852,11 +995,11 @@ class Calibrator:
         # TODO: This has problems if you reduce range tolerance.
         self.min_slope = (
             (self.max_wavelength - self.range_tolerance) -
-            (self.min_intercept + self.range_tolerance)) / self.n_pix
+            (self.min_intercept + self.range_tolerance)) / self.num_pix
 
         self.max_slope = (
             (self.max_wavelength + self.range_tolerance) -
-            (self.min_intercept - self.range_tolerance)) / self.n_pix
+            (self.min_intercept - self.range_tolerance)) / self.num_pix
 
         # This seems wrong.
         #self.min_slope /= self.linearity_thresh
@@ -870,8 +1013,7 @@ class Calibrator:
         self.ybins = ybins
         self.brute_force = brute_force
         self.fittype = fittype
-        self.num_candidates = 25
-        self.top_n_matches = top_n_matches
+        self.num_candidates = num_candidates
 
         if fittype == 'poly':
             self.polyfit = np.polynomial.polynomial.polyfit
@@ -888,76 +1030,68 @@ class Calibrator:
 
     def fit(self,
             sample_size=5,
-            max_tries=1000,
-            top_n=20,
-            mode='manual',
+            top_n=10,
+            max_tries=5000,
             progress=True,
-            coeff=None):
+            coeff=None,
+            filter_close=False):
         '''
         Solve for the wavelength calibration polynomial.
 
         Parameters
         ----------
         sample_size : int (default: 5)
-
-        max_tries : int (default: 1000)
-
+            €£$
         top_n : int (default: 10)
-
-        mode : String
-            Preset modes 'fast', 'normal', 'slow' and 'veryslow'. They override
-            supplied sample_size, max_tries and top_n. 'slow' should be fairly
-            reliable.
-        progress : tuple
+            Top ranked lines to be fitted.
+        max_tries : int (default: 5000)
+            Maximum number of iteration.
+        progress : boolean (default: True)
             True to show progress with tdqm. It is overrid if tdqm cannot be
             imported.
+        coeff : list (default: None)
+            €£$ how is this used???
+        filter_close : boolean (default: False)
+            €£$
+
+        Returns
+        -------
+        coeff: list
+            List of best fit polynomial coefficient.
+        rms: float
+            RMS
+        residual: float
+            Residual from the best fit
+        peak_utilisation: float
+            Fraction of detected peaks used for calibration [0-1].
 
         '''
 
-        # Presets for fast, normal, slow and veryslow
-        if mode == 'fast':
-            sample_size = 3
-            max_tries = 100
-            top_n = 50
-            n_slope = 500
-        elif mode == 'normal':
-            sample_size = 5
-            max_tries = 500
-            top_n = 100
-            n_slope = 1000
-        elif mode == 'slow':
-            sample_size = 5
-            max_tries = 1000
-            top_n = 100
-            n_slope = 5000
-        elif mode == 'manual':
-            pass
-        else:
-            raise NameError('Unknown mode. Please choose from '
-                            '(1) fast,'
-                            '(2) normal,'
-                            '(3) slow, or'
-                            '(4) normal')
-
         if sample_size > len(self.atlas):
+            print("Size of sample_size is larger than the size of atlas, " +
+                  "the sample_size is set to match the size of atlas = " +
+                  str(len(self.atlas)) + ".")
             sample_size = len(self.atlas)
 
         self._get_candidates(self.num_slopes, self.num_candidates)
 
-        return self._get_best_model(self.candidates, self.polydeg, sample_size,
-                                    max_tries, self.ransac_thresh,
-                                    self.brute_force, coeff, progress)
+        p, rms, residual, peak_utilisation = self._get_best_model(
+            self.candidates, self.polydeg, sample_size, max_tries,
+            self.ransac_thresh, self.brute_force, coeff, progress,
+            filter_close)
 
-    def match_peaks_to_atlas(self, fit, tolerance=1., polydeg=5):
+        return p, rms, residual, peak_utilisation
+
+    def match_peaks_to_atlas(self, fit, tolerance=1., polydeg=4):
         '''
-        Fitting all the detected peaks with the given polynomail solution for
+        Fitting all the detected peaks with the given polynomial solution for
         a fit using maximal information.
 
         Parameters
         ----------
         fit : list
             List of polynomial fit coefficients
-        tolerance : float (default: 0.5)
+        tolerance : float (default: 1.)
             Absolute difference between fit and model in the unit of nm.
         polydeg : int (default: 4)
             Order of polynomial fit with all the detected peaks
@@ -966,12 +1100,13 @@ class Calibrator:
         -------
         coeff: list
             List of best fit polynomial coefficient.
-        x_match: np.array
-
-        y_match: np.array
-
-        residual: np.array
-
+        x_match: numpy 1D array
+            €£$
+        y_match: numpy 1D array
+            €£$
+        residual: numpy 1D array
+            The difference (NOT absolute) between the data and the best-fit
+            solution.
         peak_utilisation: float
             Fraction of detected peaks used for calibration [0-1].
 
@@ -1006,10 +1141,7 @@ class Calibrator:
 
         return coeff, x_match, y_match, residual, peak_utilisation
 
-    def plot_search_space(self,
-                          constrain_poly=False,
-                          coeff=None,
-                          top_n_candidates=3):
+    def plot_search_space(self, constrain_poly=False, coeff=None, top_n=3):
         '''
         Plots the peak/arc line pairs that are considered as potential match
         candidates.
@@ -1019,9 +1151,19 @@ class Calibrator:
 
         Parameters
         ----------
-        coeff : list
+        constrain_poly : boolean (default: False)
+            €£$
+        coeff : list (default: None)
             List of best polynomial coefficients
+        top_n : int (default: 3)
+            Top ranked lines to be fitted.
+
+        Return
+        ------
+        matplotlib.pyplot.gca() object
+
         '''
+
         plt.figure(figsize=(16, 9))
 
         self._generate_pairs(constrain_poly=constrain_poly)
@@ -1030,49 +1172,49 @@ class Calibrator:
         plt.scatter(*self.pairs.T, alpha=0.2, c='red')
 
         # Get candidates
-        self._get_candidates(n_slope=self.num_slopes,
+        self._get_candidates(num_slope=self.num_slopes,
                              top_n=self.num_candidates)
 
         plt.scatter(*self._merge_candidates(self.candidates).T, alpha=0.2)
         """
-        plt.hlines(self.min_intercept, 0, self.n_pix)
+        plt.hlines(self.min_intercept, 0, self.num_pix)
         plt.hlines(self.max_intercept,
                    0,
-                   self.n_pix,
+                   self.num_pix,
                    linestyle='dashed',
                    alpha=0.5)
         """
 
         plt.text(5, self.min_wavelength + 100,
                  "Min wavelength (user-supplied)")
-        plt.hlines(self.min_wavelength, 0, self.n_pix)
+        plt.hlines(self.min_wavelength, 0, self.num_pix)
         plt.hlines(self.min_wavelength + self.range_tolerance,
                    0,
-                   self.n_pix,
+                   self.num_pix,
                    linestyle='dashed',
                    alpha=0.5)
 
         plt.text(5, self.max_wavelength + 100,
                  "Max wavelength (user-supplied)")
-        plt.hlines(self.max_wavelength, 0, self.n_pix)
+        plt.hlines(self.max_wavelength, 0, self.num_pix)
         plt.hlines(self.max_wavelength - self.range_tolerance,
                    0,
-                   self.n_pix,
+                   self.num_pix,
                    linestyle='dashed',
                    alpha=0.5)
 
-        x_1 = np.arange(0, self.n_pix)
-        m_1 = (self.max_wavelength - self.min_wavelength) / self.n_pix
+        x_1 = np.arange(0, self.num_pix)
+        m_1 = (self.max_wavelength - self.min_wavelength) / self.num_pix
         y_1 = m_1 * x_1 + self.min_wavelength
         plt.plot(x_1, y_1, label="Nominal linear fit")
 
         m_1 = (self.max_wavelength + self.range_tolerance -
-               (self.min_wavelength + self.range_tolerance)) / self.n_pix
+               (self.min_wavelength + self.range_tolerance)) / self.num_pix
         y_1 = m_1 * x_1 + self.min_wavelength + self.range_tolerance
         plt.plot(x_1, y_1, c='black', linestyle='dashed')
 
         m_1 = (self.max_wavelength - self.range_tolerance -
-               (self.min_wavelength - self.range_tolerance)) / self.n_pix
+               (self.min_wavelength - self.range_tolerance)) / self.num_pix
         y_1 = m_1 * x_1 + (self.min_wavelength - self.range_tolerance)
         plt.plot(x_1, y_1, c='black', linestyle='dashed')
 
@@ -1081,12 +1223,12 @@ class Calibrator:
                         self.polyval(self.peaks, coeff),
                         color='red')
 
-        plt.xlim(0, self.n_pix)
+        plt.xlim(0, self.num_pix)
         plt.ylim(self.min_wavelength - self.range_tolerance,
                  self.max_wavelength + self.range_tolerance)
 
-        self.candidate_peak, self.candidate_arc = self._combine_linear_estimates(
-            self.candidates, top_n=top_n_candidates)
+        self.candidate_peak, self.candidate_arc =\
+            self._combine_linear_estimates(self.candidates, top_n=top_n)
 
         plt.scatter(self.candidate_peak, self.candidate_arc, s=20, c='purple')
 
@@ -1097,24 +1239,43 @@ class Calibrator:
                  fit,
                  tolerance=5.,
                  plot_atlas=True,
-                 silence=True,
-                 output_filename=None,
-                 verbose=False,
-                 renderer='default',
-                 log_spectrum=True):
+                 log_spectrum=False,
+                 savefig=False,
+                 filename=None,
+                 json=False,
+                 renderer='default'):
         '''
         Parameters
         ----------
         spectrum : 1D numpy array (N)
             Array of length N pixels
-        fit :
+        fit : 1D numpy array or list
             Best fit polynomail coefficients
-        tolerance : float (default: 0.5)
-            Absolute difference between model and fitted wavelengths in unit of nm.
+        tolerance : float (default: 5)
+            Absolute difference between model and fitted wavelengths in unit
+            of angstrom.
+        plot_atlas : boolean (default: True)
+            Display all the relavent lines available in the atlas library.
+        log_spectrum : boolean (default: False)
+            Display the arc in log-space if set to True.
+        savefig : boolean (default: False)
+            Save a png image if set to True. Other matplotlib.pyplot.savefig()
+            support format type are possible through providing the extension
+            in the filename.
+        filename : string (default: None)
+            Provide a filename or full path. If the extension is not provided
+            it is defaulted to png.
+        json : boolean (default: False)
+            Return json strings if using plotly as the plotting library and
+            this is set to True.
+        renderer : string (default: 'default')
+            Indicate the Plotly renderer. Nothing gets displayed if json is
+            set to True.
 
         Returns
         -------
-        Return json strings if verbose is True
+        Return json strings if using plotly as the plotting library and json
+        is True.
 
         '''
 
@@ -1148,7 +1309,8 @@ class Calibrator:
 
             # Plot the atlas
             if plot_atlas:
-                #spec = SyntheticSpectrum(fit, model_type='poly', degree=len(fit)-1)
+                #spec = SyntheticSpectrum(
+                #    fit, model_type='poly', degree=len(fit)-1)
                 #x_locs = spec.get_pixels(self.atlas)
                 ax1.vlines(self.atlas, 0, vline_max, colors='C2')
 
@@ -1161,13 +1323,13 @@ class Calibrator:
                 idx = np.argmin(np.abs(diff))
                 all_diff.append(diff[idx])
 
-                if not silence:
+                if not self.silence:
                     print("Peak at: {} A".format(x))
 
                 if np.abs(diff[idx]) < tolerance:
                     fitted_peaks.append(p)
                     fitted_diff.append(diff[idx])
-                    if not silence:
+                    if not self.silence:
                         print("- matched to {} A".format(self.atlas[idx]))
                     ax1.vlines(self.polyval(p, fit),
                                spectrum[p.astype('int')],
@@ -1222,8 +1384,11 @@ class Calibrator:
 
             plt.show()
 
-            if output_filename is not None:
-                fig.savefig(output_filename)
+            if savefig:
+                if filename is not None:
+                    fig.savefig(output)
+                else:
+                    fig.savefig()
 
         elif self.plot_with_plotly:
 
@@ -1266,14 +1431,14 @@ class Calibrator:
                 idx = np.argmin(np.abs(diff))
                 all_diff.append(diff[idx])
 
-                if not silence:
+                if not self.silence:
                     print("Peak at: {} A".format(x))
 
                 if np.abs(diff[idx]) < tolerance:
                     fitted_peaks.append(p)
                     fitted_peaks_adu.append(spectrum[int(p)])
                     fitted_diff.append(diff[idx])
-                    if not silence:
+                    if not self.silence:
                         print("- matched to {} A".format(self.atlas[idx]))
 
             x_fitted = self.polyval(fitted_peaks, fit)
@@ -1346,7 +1511,7 @@ class Calibrator:
                 height=800,
                 width=1000)
 
-            if verbose:
+            if json:
                 return fig.to_json()
             if renderer == 'default':
                 fig.show()
@@ -1358,5 +1523,6 @@ class Calibrator:
             assert (self.matplotlib_imported), (
                 'matplotlib package not available. ' +
                 'Plot cannot be generated.')
-            assert (self.plotly_imported), ('plotly package not available. ' +
-                                            'Plot cannot be generated.')
+            assert (
+                self.plotly_imported), ('plotly package is not available. ' +
+                                        'Plot cannot be generated.')

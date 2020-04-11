@@ -14,7 +14,6 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath('../..'))
 
-
 # -- Project information -----------------------------------------------------
 
 project = 'RASCAL'
@@ -26,16 +25,16 @@ __version__ = '0.0.1'
 version = __version__
 release = __version__
 
-
 # -- General configuration ---------------------------------------------------
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['sphinx.ext.todo', 'sphinx.ext.viewcode', 'sphinx.ext.autodoc',
+extensions = [
+    'sphinx.ext.todo', 'sphinx.ext.viewcode', 'sphinx.ext.autodoc',
     'sphinx.ext.autosectionlabel', 'sphinx.ext.coverage', 'autoapi.extension',
     'sphinx.ext.mathjax'
-    ]
+]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -47,12 +46,11 @@ exclude_patterns = []
 
 # Produce API reference automatically for every public and private methods
 autoapi_dirs = ['../../rascal']
-autodoc_default_flags = ['members', 'undoc-members', 'private-members'
-    ]
+autodoc_default_flags = ['members', 'undoc-members', 'private-members']
 autoclass_content = 'both'
 autoapi_python_class_content = 'both'
 
-mathjax_path="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"
+mathjax_path = "https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"
 
 # -- Options for HTML output -------------------------------------------------
 
@@ -65,5 +63,11 @@ if on_rtd:  # only import and set the theme if we're building docs locally
     html_theme = 'sphinx_rtd_theme'
     html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 else:
-    html_theme = 'alabaster'
-    html_static_path = ["_static"]
+    try:
+        import sphinx_rtd_theme
+        html_theme = 'sphinx_rtd_theme'
+        html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
+        html_static_path = ["_static"]
+    except:
+        html_theme = 'alabaster'
+        html_static_path = ["_static"]

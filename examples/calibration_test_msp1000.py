@@ -9,10 +9,10 @@ from rascal.util import refine_peaks
 from rascal import models
 
 # Load the 1D spectrum
-spectrum = np.loadtxt("data_msp1000/A620EBA HgCal.mspec", delimiter=',')[:,1]
+spectrum = np.loadtxt("data_msp1000/A620EBA HgCal.mspec", delimiter=',')[:, 1]
 
 plt.figure()
-plt.plot(spectrum/spectrum.max())
+plt.plot(spectrum / spectrum.max())
 plt.title('Number of pixels: ' + str(spectrum.shape[0]))
 plt.xlabel("Pixel (Spectral Direction)")
 plt.ylabel("Normalised Count")
@@ -26,7 +26,7 @@ peaks_refined = refine_peaks(spectrum, peaks, window_width=3)
 
 # Initialise the calibrator
 c = Calibrator(peaks,
-               num_pixels=len(spectrum),
+               num_pix=len(spectrum),
                min_wavelength=4000.,
                max_wavelength=8750.)
 
@@ -41,7 +41,8 @@ c.plot_search_space()
 best_p, rms, residual, peak_utilisation = c.fit(max_tries=10000)
 
 # Refine solution
-best_p, x_fit, y_fit, residual, peak_utilisation = c.match_peaks_to_atlas(best_p, tolerance=5)
+best_p, x_fit, y_fit, residual, peak_utilisation = c.match_peaks_to_atlas(
+    best_p, tolerance=5)
 
 # Plot the solution
 c.plot_fit(spectrum, best_p, plot_atlas=True, log_spectrum=False, tolerance=5)
@@ -50,4 +51,4 @@ fit_diff = c.polyval(x_fit, best_p) - y_fit
 rms = np.sqrt(np.sum(fit_diff**2 / len(x_fit)))
 
 print("Stdev error: {} A".format(fit_diff.std()))
-print("Peaks utilisation rate: {}%".format(peak_utilisation*100))
+print("Peaks utilisation rate: {}%".format(peak_utilisation * 100))
