@@ -879,6 +879,28 @@ class Calibrator:
         self.atlas = atlas
         self.atlas_intensities = intensity
 
+    def remove_atlas_lines_range(self, wavelength, tolerance=10):
+        """
+        Remove arc lines within a certain wavelength range.
+
+        Parameters
+        ----------
+        wavelength : float
+            Wavelength to remove
+        tolerance : float
+            Tolerance around this wavelength where atlas lines will be removed
+
+        """
+
+        for i, line in enumerate(self.atlas):
+            if abs(line - wavelength) < tolerance:
+                removed_element = self.atlas_elements.pop(i)
+                removed_peak = self.atlas.pop(i)
+                self.atlas_intensities.pop(i)
+
+                if not self.silence:
+                    print("Removed {} line : {} A".format(removed_element, removed_peak)) 
+
     def set_guess_pairs(self, pix_guess=(), wave_guess=(), margin=5.):
         '''
         Provide manual pixel-wavelength pair(s), good guess values with a
@@ -1139,9 +1161,8 @@ class Calibrator:
         else:
             x0 = None
 
-        print(fit)
         coeff = models.robust_polyfit(x_match, y_match, polydeg, x0=x0)
-        print(coeff)
+
         if np.any(np.isnan(coeff)):
             warnings.warn('robust_polyfit() returns None. '
                           'Input solution is returned.')
