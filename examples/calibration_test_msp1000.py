@@ -3,13 +3,15 @@ from astropy.io import fits
 from scipy.signal import find_peaks
 from matplotlib import pyplot as plt
 from tqdm.autonotebook import tqdm
+import os
 
 from rascal.calibrator import Calibrator
 from rascal.util import refine_peaks
 from rascal import models
 
 # Load the 1D spectrum
-spectrum = np.loadtxt("data_msp1000/A620EBA HgCal.mspec", delimiter=',')[:, 1]
+base_dir = os.path.dirname(__file__)
+spectrum = np.loadtxt(os.path.join(base_dir,'data_msp1000/A620EBA HgCal.mspec'), delimiter=',')[:, 1]
 
 plt.figure()
 plt.plot(spectrum / spectrum.max())
@@ -31,7 +33,7 @@ c = Calibrator(peaks,
                max_wavelength=8750.)
 
 # Ignore bluer Argon lines
-c.add_atlas("Hg")
+c.add_atlas("Hg", include_second_order=True)
 c.add_atlas("Ar", min_wavelength=6500)
 
 # Show the parameter space for searching possible solution

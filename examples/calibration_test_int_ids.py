@@ -1,4 +1,5 @@
 import numpy as np
+import os
 from astropy.io import fits
 from scipy.signal import find_peaks
 from matplotlib import pyplot as plt
@@ -8,7 +9,8 @@ from rascal.calibrator import Calibrator
 from rascal import models
 
 # Load the LT SPRAT data
-spectrum2D = fits.open('data_int_ids/int20180101_01355922.fits.fz')[1].data
+base_dir = os.path.dirname(__file__)
+spectrum2D = fits.open(os.path.join(base_dir, 'data_int_ids/int20180101_01355922.fits.fz'))[1].data
 
 # Collapse into 1D spectrum between row 110 and 120
 spectrum = np.flip(spectrum2D.mean(1), 0)
