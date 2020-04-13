@@ -886,7 +886,7 @@ class Calibrator:
         Parameters
         ----------
         wavelength : float
-            Wavelength to remove
+            Wavelength to remove (Angstrom)
         tolerance : float
             Tolerance around this wavelength where atlas lines will be removed
 
@@ -900,6 +900,25 @@ class Calibrator:
 
                 if not self.silence:
                     print("Removed {} line : {} A".format(removed_element, removed_peak)) 
+
+    def add_atlas_line(self, element, wavelength, intensity=0):
+        """
+        Add a single line with optional intensity
+
+        Parameters
+        ----------
+        element : str
+            Element (required). Preferably a standard (i.e. periodic table) name
+            for convenience with built-in atlases
+        wavelength : float
+            Wavelength to add (Angstrom)
+        intensity : float
+            Relative line intensity (NIST value)
+
+        """
+        self.atlas_elements.append(element)
+        self.atlas.append(wavelength)
+        self.atlas_intensities.append(intensity)
 
     def set_guess_pairs(self, pix_guess=(), wave_guess=(), margin=5.):
         '''
