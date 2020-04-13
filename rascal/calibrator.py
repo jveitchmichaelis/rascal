@@ -1082,7 +1082,7 @@ class Calibrator:
 
         return p, rms, residual, peak_utilisation
 
-    def match_peaks_to_atlas(self, fit, tolerance=1., polydeg=4):
+    def match_peaks_to_atlas(self, fit, tolerance=1., polydeg=4, initial_guess=True):
         '''
         Fitting all the detected peaks with the given polynomial solution for
         a fit using maximal information.
@@ -1095,6 +1095,8 @@ class Calibrator:
             Absolute difference between fit and model in the unit of nm.
         polydeg : int (default: 4)
             Order of polynomial fit with all the detected peaks
+        initial_guess : bool
+            Initialise minimisation with supplied coefficients
 
         Returns
         -------
@@ -1132,8 +1134,14 @@ class Calibrator:
         residual = np.array(residual)
 
         peak_utilisation = len(x_match) / len(self.peaks)
-        coeff = models.robust_polyfit(x_match, y_match, polydeg)
+        if initial_guess:
+            x0 = fit
+        else:
+            x0 = None
 
+        print(fit)
+        coeff = models.robust_polyfit(x_match, y_match, polydeg, x0=x0)
+        print(coeff)
         if np.any(np.isnan(coeff)):
             warnings.warn('robust_polyfit() returns None. '
                           'Input solution is returned.')
