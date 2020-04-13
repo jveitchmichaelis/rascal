@@ -50,7 +50,7 @@ def robust_polyfit(x, y, degree=3, x0=None, bounds=None):
     # Need to normalise the fit function too
     if x0 is not None:
         for i in range(0, degree):
-            x0[i] *= x.std()**(degree - 1)
+            x0[i] *= x.std()**(i)
 
         x0 /= y.std()
     else:
