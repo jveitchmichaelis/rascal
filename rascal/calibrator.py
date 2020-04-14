@@ -40,8 +40,6 @@ class Calibrator:
             Minimum wavelength of the arc lines.
         max_wavelength: float (default: 9000)
             Maximum wavelength of the arc lines.
-        silence : boolean (default: False)
-            Suppress all verbose output if set to True.
         plotting_library : string (default: 'matplotlib')
             Choose between matplotlib and plotly.
 
@@ -51,7 +49,6 @@ class Calibrator:
         self.num_pix = num_pix
         self.min_wavelength = min_wavelength
         self.max_wavelength = max_wavelength
-        self.silence = silence
         self.plotting_library = plotting_library
         self.matplotlib_imported = False
         self.plotly_imported = False
@@ -105,16 +102,15 @@ class Calibrator:
                                    min_wavelength,
                                    max_wavelength)
 
-    def _set_peaks(self, peaks, constrain_poly):
+    def _set_peaks(self, constrain_poly):
         '''
         Gather all the randomly matched and user-supplied pixel-wavelength pairs.
 
         Parameters
         ----------
-        peaks :
-            €£$
         constrain_poly : boolean
-            €£$
+            Apply a polygonal constraint on possible peak/atlas pairs
+            
         '''
 
         # Create a list of all possible pairs of detected peaks and lines from atlas
@@ -134,7 +130,8 @@ class Calibrator:
         Parameters
         ----------
         constrain_poly : boolean
-            €£$
+            Apply a polygonal constraint on possible peak/atlas pairs
+
         '''
 
         pairs = [pair for pair in itertools.product(self.peaks, self.atlas)]
@@ -687,12 +684,12 @@ class Calibrator:
 
         peak_utilisation = len(residual) / len(self.peaks)
 
-            if not valid:
+        if not valid:
             self.logger.warn("Invalid fit")
 
-            if rms > self.fit_tolerance:
+        if rms > self.fit_tolerance:
             self.logger.warn("Error too large {} > {}".format(
-                    err, self.fit_tolerance))
+                err, self.fit_tolerance))
 
         assert (coeff is not None), "Couldn't fit"
 
@@ -817,7 +814,7 @@ class Calibrator:
             self.atlas.extend(atlas_tmp)
             self.atlas_intensities.extend(atlas_intensities_tmp)
 
-        self._set_peaks(self.peaks, constrain_poly)
+        self._set_peaks(constrain_poly)
 
     def list_atlas(self):
         '''
