@@ -1,7 +1,7 @@
 import warnings
 import itertools
 from collections import Counter
-
+import logging
 import astropy.units as u
 import numpy as np
 from scipy.spatial import Delaunay
@@ -25,8 +25,8 @@ class Calibrator:
                  num_pix,
                  min_wavelength=3000,
                  max_wavelength=9000,
-                 silence=False,
-                 plotting_library='matplotlib'):
+                 plotting_library='matplotlib',
+                 log_level='info'):
         '''
         Initialise the calibrator object.
 
@@ -57,6 +57,10 @@ class Calibrator:
         self.plotly_imported = False
         self.plot_with_matplotlib = False
         self.plot_with_plotly = False
+
+        self.logger = logging.getLogger(__name__)
+        level = logging.getLevelName(log_level.upper())
+        logging.basicConfig(level=level)
 
         self.atlas_elements = []
         self.atlas = []
@@ -683,13 +687,13 @@ class Calibrator:
 
         peak_utilisation = len(residual) / len(self.peaks)
 
-        if not self.silence:
             if not valid:
-                warnings.warn("Invalid fit")
+            self.logger.warn("Invalid fit")
 
             if rms > self.fit_tolerance:
-                warnings.warn("Error too large {} > {}".format(
+            self.logger.warn("Error too large {} > {}".format(
                     err, self.fit_tolerance))
+
         assert (coeff is not None), "Couldn't fit"
 
         return coeff, rms, residual, peak_utilisation
@@ -705,7 +709,7 @@ class Calibrator:
             import matplotlib.pyplot as plt
             self.matplotlib_imported = True
         except ImportError:
-            print('matplotlib package not available.')
+            self.logger.error('matplotlib package not available.')
 
     def _import_plotly(self):
         '''
@@ -720,7 +724,7 @@ class Calibrator:
             import plotly.io as pio
             self.plotly_imported = True
         except ImportError:
-            print('plotly package not available.')
+            self.logger.error('plotly package not available.')
 
     def which_plotting_library(self):
         '''
@@ -729,11 +733,11 @@ class Calibrator:
 
         '''
         if self.plot_with_matplotlib:
-            print('Using matplotlib.')
+            self.logger.info('Using matplotlib.')
         elif self.plot_with_plotly:
-            print('Using plotly.')
+            self.logger.info('Using plotly.')
         else:
-            print('Both maplotlib and plotly are not imported.')
+            self.logger.warn('Neither maplotlib nor plotly are imported.')
 
     def use_matplotlib(self):
         '''
@@ -898,8 +902,7 @@ class Calibrator:
                 removed_peak = self.atlas.pop(i)
                 self.atlas_intensities.pop(i)
 
-                if not self.silence:
-                    print("Removed {} line : {} A".format(removed_element, removed_peak)) 
+                self.logger.info("Removed {} line : {} A".format(removed_element, removed_peak))
 
     def add_atlas_line(self, element, wavelength, intensity=0):
         """
@@ -1109,7 +1112,7 @@ class Calibrator:
         '''
 
         if sample_size > len(self.atlas):
-            print("Size of sample_size is larger than the size of atlas, " +
+            self.logger.warn("Size of sample_size is larger than the size of atlas, " +
                   "the sample_size is set to match the size of atlas = " +
                   str(len(self.atlas)) + ".")
             sample_size = len(self.atlas)
@@ -1371,14 +1374,12 @@ class Calibrator:
                 idx = np.argmin(np.abs(diff))
                 all_diff.append(diff[idx])
 
-                if not self.silence:
-                    print("Peak at: {} A".format(x))
+                self.logger.info("Peak at: {} A".format(x))
 
                 if np.abs(diff[idx]) < tolerance:
                     fitted_peaks.append(p)
                     fitted_diff.append(diff[idx])
-                    if not self.silence:
-                        print("- matched to {} A".format(self.atlas[idx]))
+                    self.logger.info("- matched to {} A".format(self.atlas[idx]))
                     ax1.vlines(self.polyval(p, fit),
                                spectrum[p.astype('int')],
                                vline_max,
@@ -1479,15 +1480,13 @@ class Calibrator:
                 idx = np.argmin(np.abs(diff))
                 all_diff.append(diff[idx])
 
-                if not self.silence:
-                    print("Peak at: {} A".format(x))
+                self.logger.info("Peak at: {} A".format(x))
 
                 if np.abs(diff[idx]) < tolerance:
                     fitted_peaks.append(p)
                     fitted_peaks_adu.append(spectrum[int(p)])
                     fitted_diff.append(diff[idx])
-                    if not self.silence:
-                        print("- matched to {} A".format(self.atlas[idx]))
+                    self.logger.info("- matched to {} A".format(self.atlas[idx]))
 
             x_fitted = self.polyval(fitted_peaks, fit)
 
