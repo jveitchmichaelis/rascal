@@ -5,6 +5,7 @@ from collections import Counter
 import astropy.units as u
 import numpy as np
 from scipy.spatial import Delaunay
+from scipy.optimize import minimize
 
 from .util import load_calibration_lines
 from .synthetic import SyntheticSpectrum
@@ -218,8 +219,8 @@ class Calibrator:
         '''
 
         hist, xedges, yedges = np.histogram2d(accumulator[:, 0],
-                              accumulator[:, 1],
-                              bins=(xbins, ybins))
+                                              accumulator[:, 1],
+                                              bins=(xbins, ybins))
 
         return hist, xedges, yedges
 
@@ -934,8 +935,8 @@ class Calibrator:
                             linearity_thresh=1.5,
                             ransac_thresh=1,
                             num_candidates=25,
-                            xbins=200,
-                            ybins=200,
+                            xbins=100,
+                            ybins=100,
                             brute_force=False,
                             fittype='poly'):
         '''
@@ -1082,23 +1083,82 @@ class Calibrator:
 
         return p, rms, residual, peak_utilisation
 
-    def match_peaks_to_atlas(self, fit, tolerance=1., polydeg=4):
+    def _adjust_polyfit(self, delta, fit, tolerance):
+
+        # x is wavelength
+        # x_matched is pixel
+        # y_matched is wavelength
+        x_match = []
+        y_match = []
+        fit_new = fit.copy()
+
+        for i, d in enumerate(delta):
+            fit_new[i] += d
+
+        for p in self.peaks:
+            x = self.polyval(p, fit_new)
+            if x < 0:
+                return np.inf
+            diff = self.atlas - x
+            diff_abs = np.abs(diff)
+            idx = np.argmin(diff_abs)
+
+            if diff_abs[idx] < tolerance:
+                x_match.append(p)
+                y_match.append(self.atlas[idx])
+
+        x_match = np.array(x_match)
+        y_match = np.array(y_match)
+
+        if len(x_match) < 5:
+            return np.inf
+
+        lsq = np.sum((y_match - self.polyval(x_match, fit))**2.) / len(x_match)
+
+        return lsq
+
+    def refine_fit(self,
+                   fit,
+                   delta,
+                   tolerance=10.,
+                   method='Nelder-Mead',
+                   convergence=1e-6,
+                   robust_refit=True,
+                   polydeg=4):
         '''
-        Fitting all the detected peaks with the given polynomial solution for
-        a fit using maximal information.
+        Refine the polynomial fit coefficients. Recomended to use in it
+        multiple calls to first refine the lowest order and gradually increase
+        the order of coefficients to be included for refinement. This is be
+        achieved by providing delta in the length matching the number of the
+        lowest degrees to be refined.
+
+        Setting robust_refit to True will fit all the detected peaks with the
+        given polynomial solution for a fit using maximal information, with
+        the degree of polynomial = polydeg.
 
         Parameters
         ----------
         fit : list
-            List of polynomial fit coefficients
-        tolerance : float (default: 1.)
+            List of polynomial fit coefficients.
+        delta : list
+            List of delta(fit) as a starting condition for refining the
+            solution. The length has to be less than or equal to the length
+            of fit.
+        tolerance : float (default: 10.)
             Absolute difference between fit and model in the unit of nm.
+        method : string (default: 'Nelder-Mead')
+            scipy.optimize.minimize method.
+        convergence : float (default: 1e-6)
+            scipy.optimize.minimize tol.
+        robust_refit : boolean (default: True)
+            Set to True to fit all the detected peaks with the given polynomial
+            solution.
         polydeg : int (default: 4)
-            Order of polynomial fit with all the detected peaks
+            Order of polynomial fit with all the detected peaks.
 
         Returns
         -------
-        coeff: list
+        fit_new/coeff: list
             List of best fit polynomial coefficient.
         x_match: numpy 1D array
             €£$
@@ -1112,12 +1172,32 @@ class Calibrator:
 
         '''
 
+        fit_delta = minimize(self._adjust_polyfit,
+                             delta,
+                             args=(fit, tolerance),
+                             method=method,
+                             tol=convergence,
+                             options={
+                                 'maxiter': 10000
+                             }).x
+        fit_new = fit.copy()
+
+        for i, d in enumerate(fit_delta):
+            fit_new[i] += d
+
+        if np.any(np.isnan(fit_new)):
+            warnings.warn('_adjust_polyfit() returns None. '
+                          'Input solution is returned.')
+            return fit, None, None, None, None
+
         x_match = []
         y_match = []
         residual = []
 
         for p in self.peaks:
-            x = self.polyval(p, fit)
+            x = self.polyval(p, fit_new)
+            if x < 0:
+                return np.inf
             diff = self.atlas - x
             diff_abs = np.abs(diff)
             idx = np.argmin(diff_abs)
@@ -1132,14 +1212,21 @@ class Calibrator:
         residual = np.array(residual)
 
         peak_utilisation = len(x_match) / len(self.peaks)
-        coeff = models.robust_polyfit(x_match, y_match, polydeg)
 
-        if np.any(np.isnan(coeff)):
-            warnings.warn('robust_polyfit() returns None. '
-                          'Input solution is returned.')
-            return fit, None, None
+        if robust_refit:
+            coeff = models.robust_polyfit(x_match, y_match, polydeg)
 
-        return coeff, x_match, y_match, residual, peak_utilisation
+            if np.any(np.isnan(coeff)):
+                warnings.warn('robust_polyfit() returns None. '
+                              'Input solution is returned.')
+
+                return fit_new, x_match, y_match, residual, peak_utilisation
+
+            return coeff, x_match, y_match, residual, peak_utilisation
+
+        else:
+
+            return fit_new, x_match, y_match, residual, peak_utilisation
 
     def plot_search_space(self, constrain_poly=False, coeff=None, top_n=3):
         '''

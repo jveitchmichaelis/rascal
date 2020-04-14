@@ -26,14 +26,11 @@ plt.tight_layout()
 peaks, _ = find_peaks(spectrum, height=500, distance=5, threshold=None)
 
 # Initialise the calibrator
-c = Calibrator(peaks,
-               num_pix=1024,
-               min_wavelength=3800.,
-               max_wavelength=8200.)
+c = Calibrator(peaks, num_pix=1024, min_wavelength=3800., max_wavelength=8200.)
 c.set_fit_constraints(num_slopes=5000,
                       range_tolerance=500.,
-                      xbins=200,
-                      ybins=200)
+                      xbins=100,
+                      ybins=100)
 c.add_atlas(elements='Xe')
 
 # Show the parameter space for searching possible solution
@@ -43,8 +40,13 @@ c.plot_search_space()
 best_p, rms, residual, peak_utilisation = c.fit(max_tries=10000)
 
 # Refine solution
-best_p, x_fit, y_fit, residual, peak_utilisation = c.match_peaks_to_atlas(
-    best_p, polydeg=4, tolerance=3)
+best_p, x_fit, y_fit, residual, peak_utilisation = c.refine_fit(
+    best_p,
+    delta=best_p * 0.01,
+    tolerance=10.,
+    convergence=1e-10,
+    method='Nelder-Mead',
+    robust_refit=True)
 
 # Plot the solution
 c.plot_fit(spectrum, best_p, plot_atlas=True, log_spectrum=False, tolerance=3)
