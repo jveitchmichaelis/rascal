@@ -647,7 +647,7 @@ class Calibrator:
         max_tries : int
             Number of trials of polynomial fitting.
         thresh : float
-            €£$
+            RANSAC tolerance
         brute_force : boolean
             Solve all pixel-wavelength combinations with set to True.
         coeff : None or 1D numpy array
@@ -906,7 +906,7 @@ class Calibrator:
 
     def add_atlas_line(self, element, wavelength, intensity=0):
         """
-        Add a single line with optional intensity
+        Add a single arc line
 
         Parameters
         ----------
