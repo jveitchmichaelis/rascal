@@ -1146,10 +1146,10 @@ class Calibrator:
         -------
         coeff: list
             List of best fit polynomial coefficient.
-        x_match: numpy 1D array
-            €£$
-        y_match: numpy 1D array
-            €£$
+        peak_match: numpy 1D array
+            Matched peaks
+        atlas_match: numpy 1D array
+            Corresponding atlas matches
         residual: numpy 1D array
             The difference (NOT absolute) between the data and the best-fit
             solution.
@@ -1158,8 +1158,8 @@ class Calibrator:
 
         '''
 
-        x_match = []
-        y_match = []
+        peak_match = []
+        atlas_match = []
         residual = []
 
         for p in self.peaks:
@@ -1169,28 +1169,28 @@ class Calibrator:
             idx = np.argmin(diff_abs)
 
             if diff_abs[idx] < tolerance:
-                x_match.append(p)
-                y_match.append(self.atlas[idx])
+                peak_match.append(p)
+                atlas_match.append(self.atlas[idx])
                 residual.append(diff[idx])
 
-        x_match = np.array(x_match)
-        y_match = np.array(y_match)
+        peak_match = np.array(peak_match)
+        atlas_match = np.array(atlas_match)
         residual = np.array(residual)
 
-        peak_utilisation = len(x_match) / len(self.peaks)
+        peak_utilisation = len(peak_match) / len(self.peaks)
         if initial_guess:
             x0 = fit
         else:
             x0 = None
 
-        coeff = models.robust_polyfit(x_match, y_match, polydeg, x0=x0)
+        coeff = models.robust_polyfit(peak_match, atlas_match, polydeg, x0=x0)
 
         if np.any(np.isnan(coeff)):
             warnings.warn('robust_polyfit() returns None. '
                           'Input solution is returned.')
             return fit, None, None
 
-        return coeff, x_match, y_match, residual, peak_utilisation
+        return coeff, peak_match, atlas_match, residual, peak_utilisation
 
     def plot_search_space(self, constrain_poly=False, coeff=None, top_n=3):
         '''
