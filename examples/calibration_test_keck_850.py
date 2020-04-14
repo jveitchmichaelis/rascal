@@ -53,8 +53,14 @@ c.plot_search_space()
 best_p, rms, residual, peak_utilisation = c.fit(max_tries=10000)
 
 # Refine solution
-best_p, x_fit, y_fit, residual, peak_utilisation = c.match_peaks_to_atlas(
-    best_p, polydeg=7, tolerance=3)
+best_p, x_fit, y_fit, residual, peak_utilisation = c.refine_fit(
+    best_p,
+    delta=best_p * 0.01,
+    tolerance=10.,
+    convergence=1e-10,
+    method='Nelder-Mead',
+    robust_refit=True,
+    polydeg=7)
 
 # Plot the solution
 c.plot_fit(flux, best_p, plot_atlas=True, log_spectrum=False, tolerance=3)

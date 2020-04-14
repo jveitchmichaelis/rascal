@@ -1,7 +1,7 @@
 import warnings
 import itertools
 from collections import Counter
-
+import logging
 import astropy.units as u
 import numpy as np
 from scipy.spatial import Delaunay
@@ -26,8 +26,8 @@ class Calibrator:
                  num_pix,
                  min_wavelength=3000,
                  max_wavelength=9000,
-                 silence=False,
-                 plotting_library='matplotlib'):
+                 plotting_library='matplotlib',
+                 log_level='info'):
         '''
         Initialise the calibrator object.
 
@@ -41,10 +41,10 @@ class Calibrator:
             Minimum wavelength of the arc lines.
         max_wavelength: float (default: 9000)
             Maximum wavelength of the arc lines.
-        silence : boolean (default: False)
-            Suppress all verbose output if set to True.
         plotting_library : string (default: 'matplotlib')
             Choose between matplotlib and plotly.
+        log_level : string (default: 'info')
+            Choose {critical, error, warning, info, debug, notset}.
 
         '''
 
@@ -52,12 +52,15 @@ class Calibrator:
         self.num_pix = num_pix
         self.min_wavelength = min_wavelength
         self.max_wavelength = max_wavelength
-        self.silence = silence
         self.plotting_library = plotting_library
         self.matplotlib_imported = False
         self.plotly_imported = False
         self.plot_with_matplotlib = False
         self.plot_with_plotly = False
+
+        self.logger = logging.getLogger(__name__)
+        level = logging.getLevelName(log_level.upper())
+        logging.basicConfig(level=level)
 
         self.atlas_elements = []
         self.atlas = []
@@ -102,16 +105,15 @@ class Calibrator:
                                    min_wavelength,
                                    max_wavelength)
 
-    def _set_peaks(self, peaks, constrain_poly):
+    def _set_peaks(self, constrain_poly):
         '''
         Gather all the randomly matched and user-supplied pixel-wavelength pairs.
 
         Parameters
         ----------
-        peaks :
-            €£$
         constrain_poly : boolean
-            €£$
+            Apply a polygonal constraint on possible peak/atlas pairs
+
         '''
 
         # Create a list of all possible pairs of detected peaks and lines from atlas
@@ -131,7 +133,8 @@ class Calibrator:
         Parameters
         ----------
         constrain_poly : boolean
-            €£$
+            Apply a polygonal constraint on possible peak/atlas pairs
+
         '''
 
         pairs = [pair for pair in itertools.product(self.peaks, self.atlas)]
@@ -644,7 +647,7 @@ class Calibrator:
         max_tries : int
             Number of trials of polynomial fitting.
         thresh : float
-            €£$
+            RANSAC tolerance
         brute_force : boolean
             Solve all pixel-wavelength combinations with set to True.
         coeff : None or 1D numpy array
@@ -684,13 +687,13 @@ class Calibrator:
 
         peak_utilisation = len(residual) / len(self.peaks)
 
-        if not self.silence:
-            if not valid:
-                warnings.warn("Invalid fit")
+        if not valid:
+            self.logger.warn("Invalid fit")
 
-            if rms > self.fit_tolerance:
-                warnings.warn("Error too large {} > {}".format(
-                    err, self.fit_tolerance))
+        if rms > self.fit_tolerance:
+            self.logger.warn("Error too large {} > {}".format(
+                err, self.fit_tolerance))
+
         assert (coeff is not None), "Couldn't fit"
 
         return coeff, rms, residual, peak_utilisation
@@ -706,7 +709,7 @@ class Calibrator:
             import matplotlib.pyplot as plt
             self.matplotlib_imported = True
         except ImportError:
-            print('matplotlib package not available.')
+            self.logger.error('matplotlib package not available.')
 
     def _import_plotly(self):
         '''
@@ -721,7 +724,7 @@ class Calibrator:
             import plotly.io as pio
             self.plotly_imported = True
         except ImportError:
-            print('plotly package not available.')
+            self.logger.error('plotly package not available.')
 
     def which_plotting_library(self):
         '''
@@ -730,11 +733,11 @@ class Calibrator:
 
         '''
         if self.plot_with_matplotlib:
-            print('Using matplotlib.')
+            self.logger.info('Using matplotlib.')
         elif self.plot_with_plotly:
-            print('Using plotly.')
+            self.logger.info('Using plotly.')
         else:
-            print('Both maplotlib and plotly are not imported.')
+            self.logger.warn('Neither maplotlib nor plotly are imported.')
 
     def use_matplotlib(self):
         '''
@@ -814,7 +817,7 @@ class Calibrator:
             self.atlas.extend(atlas_tmp)
             self.atlas_intensities.extend(atlas_intensities_tmp)
 
-        self._set_peaks(self.peaks, constrain_poly)
+        self._set_peaks(constrain_poly)
 
     def list_atlas(self):
         '''
@@ -879,6 +882,46 @@ class Calibrator:
         self.atlas_elements = elements
         self.atlas = atlas
         self.atlas_intensities = intensity
+
+    def remove_atlas_lines_range(self, wavelength, tolerance=10):
+        """
+        Remove arc lines within a certain wavelength range.
+
+        Parameters
+        ----------
+        wavelength : float
+            Wavelength to remove (Angstrom)
+        tolerance : float
+            Tolerance around this wavelength where atlas lines will be removed
+
+        """
+
+        for i, line in enumerate(self.atlas):
+            if abs(line - wavelength) < tolerance:
+                removed_element = self.atlas_elements.pop(i)
+                removed_peak = self.atlas.pop(i)
+                self.atlas_intensities.pop(i)
+
+                self.logger.info("Removed {} line : {} A".format(removed_element, removed_peak))
+
+    def add_atlas_line(self, element, wavelength, intensity=0):
+        """
+        Add a single arc line
+
+        Parameters
+        ----------
+        element : str
+            Element (required). Preferably a standard (i.e. periodic table) name
+            for convenience with built-in atlases
+        wavelength : float
+            Wavelength to add (Angstrom)
+        intensity : float
+            Relative line intensity (NIST value)
+
+        """
+        self.atlas_elements.append(element)
+        self.atlas.append(wavelength)
+        self.atlas_intensities.append(intensity)
 
     def set_guess_pairs(self, pix_guess=(), wave_guess=(), margin=5.):
         '''
@@ -1069,7 +1112,7 @@ class Calibrator:
         '''
 
         if sample_size > len(self.atlas):
-            print("Size of sample_size is larger than the size of atlas, " +
+            self.logger.warn("Size of sample_size is larger than the size of atlas, " +
                   "the sample_size is set to match the size of atlas = " +
                   str(len(self.atlas)) + ".")
             sample_size = len(self.atlas)
@@ -1124,7 +1167,7 @@ class Calibrator:
                    method='Nelder-Mead',
                    convergence=1e-6,
                    robust_refit=True,
-                   polydeg=4):
+                   polydeg=3):
         '''
         Refine the polynomial fit coefficients. Recomended to use in it
         multiple calls to first refine the lowest order and gradually increase
@@ -1160,10 +1203,10 @@ class Calibrator:
         -------
         fit_new/coeff: list
             List of best fit polynomial coefficient.
-        x_match: numpy 1D array
-            €£$
-        y_match: numpy 1D array
-            €£$
+        peak_match: numpy 1D array
+            Matched peaks
+        atlas_match: numpy 1D array
+            Corresponding atlas matches
         residual: numpy 1D array
             The difference (NOT absolute) between the data and the best-fit
             solution.
@@ -1190,43 +1233,41 @@ class Calibrator:
                           'Input solution is returned.')
             return fit, None, None, None, None
 
-        x_match = []
-        y_match = []
+        peak_match = []
+        atlas_match = []
         residual = []
 
         for p in self.peaks:
             x = self.polyval(p, fit_new)
-            if x < 0:
-                return np.inf
             diff = self.atlas - x
             diff_abs = np.abs(diff)
             idx = np.argmin(diff_abs)
 
             if diff_abs[idx] < tolerance:
-                x_match.append(p)
-                y_match.append(self.atlas[idx])
+                peak_match.append(p)
+                atlas_match.append(self.atlas[idx])
                 residual.append(diff[idx])
 
-        x_match = np.array(x_match)
-        y_match = np.array(y_match)
+        peak_match = np.array(peak_match)
+        atlas_match = np.array(atlas_match)
         residual = np.array(residual)
 
-        peak_utilisation = len(x_match) / len(self.peaks)
+        peak_utilisation = len(peak_match) / len(self.peaks)
 
         if robust_refit:
-            coeff = models.robust_polyfit(x_match, y_match, polydeg)
+            coeff = models.robust_polyfit(peak_match, atlas_match, polydeg)
 
             if np.any(np.isnan(coeff)):
                 warnings.warn('robust_polyfit() returns None. '
                               'Input solution is returned.')
 
-                return fit_new, x_match, y_match, residual, peak_utilisation
+                return fit_new, peak_match, atlas_match, residual, peak_utilisation
 
-            return coeff, x_match, y_match, residual, peak_utilisation
+            return coeff, peak_match, atlas_match, residual, peak_utilisation
 
         else:
 
-            return fit_new, x_match, y_match, residual, peak_utilisation
+            return fit_new, peak_match, atlas_match, residual, peak_utilisation
 
     def plot_search_space(self, constrain_poly=False, coeff=None, top_n=3):
         '''
@@ -1410,14 +1451,12 @@ class Calibrator:
                 idx = np.argmin(np.abs(diff))
                 all_diff.append(diff[idx])
 
-                if not self.silence:
-                    print("Peak at: {} A".format(x))
+                self.logger.info("Peak at: {} A".format(x))
 
                 if np.abs(diff[idx]) < tolerance:
                     fitted_peaks.append(p)
                     fitted_diff.append(diff[idx])
-                    if not self.silence:
-                        print("- matched to {} A".format(self.atlas[idx]))
+                    self.logger.info("- matched to {} A".format(self.atlas[idx]))
                     ax1.vlines(self.polyval(p, fit),
                                spectrum[p.astype('int')],
                                vline_max,
@@ -1518,15 +1557,13 @@ class Calibrator:
                 idx = np.argmin(np.abs(diff))
                 all_diff.append(diff[idx])
 
-                if not self.silence:
-                    print("Peak at: {} A".format(x))
+                self.logger.info("Peak at: {} A".format(x))
 
                 if np.abs(diff[idx]) < tolerance:
                     fitted_peaks.append(p)
                     fitted_peaks_adu.append(spectrum[int(p)])
                     fitted_diff.append(diff[idx])
-                    if not self.silence:
-                        print("- matched to {} A".format(self.atlas[idx]))
+                    self.logger.info("- matched to {} A".format(self.atlas[idx]))
 
             x_fitted = self.polyval(fitted_peaks, fit)
 

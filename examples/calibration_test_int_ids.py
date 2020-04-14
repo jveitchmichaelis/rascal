@@ -1,4 +1,5 @@
 import numpy as np
+import os
 from astropy.io import fits
 from scipy.signal import find_peaks
 from matplotlib import pyplot as plt
@@ -8,7 +9,8 @@ from rascal.calibrator import Calibrator
 from rascal import models
 
 # Load the LT SPRAT data
-spectrum2D = fits.open('data_int_ids/int20180101_01355922.fits.fz')[1].data
+base_dir = os.path.dirname(__file__)
+spectrum2D = fits.open(os.path.join(base_dir, 'data_int_ids/int20180101_01355922.fits.fz'))[1].data
 
 # Collapse into 1D spectrum between row 110 and 120
 spectrum = np.flip(spectrum2D.mean(1), 0)
@@ -44,8 +46,13 @@ c.plot_search_space()
 best_p, rms, residual, peak_utilisation = c.fit(max_tries=10000)
 
 # Refine solution
-best_p, x_fit, y_fit, residual, peak_utilisation = c.match_peaks_to_atlas(
-    best_p, polydeg=5, tolerance=5)
+best_p, x_fit, y_fit, residual, peak_utilisation = c.refine_fit(
+    best_p,
+    delta=best_p * 0.01,
+    tolerance=10.,
+    convergence=1e-10,
+    method='Nelder-Mead',
+    robust_refit=True)
 
 # Plot the solution
 c.plot_fit(spectrum, best_p, plot_atlas=True, log_spectrum=False, tolerance=3)

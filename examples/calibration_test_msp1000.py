@@ -3,13 +3,15 @@ from astropy.io import fits
 from scipy.signal import find_peaks
 from matplotlib import pyplot as plt
 from tqdm.autonotebook import tqdm
+import os
 
 from rascal.calibrator import Calibrator
 from rascal.util import refine_peaks
 from rascal import models
 
 # Load the 1D spectrum
-spectrum = np.loadtxt("data_msp1000/A620EBA HgCal.mspec", delimiter=',')[:, 1]
+base_dir = os.path.dirname(__file__)
+spectrum = np.loadtxt(os.path.join(base_dir,'data_msp1000/A620EBA HgCal.mspec'), delimiter=',')[:, 1]
 
 plt.figure()
 plt.plot(spectrum / spectrum.max())
@@ -31,7 +33,7 @@ c = Calibrator(peaks,
                max_wavelength=8750.)
 
 # Ignore bluer Argon lines
-c.add_atlas("Hg")
+c.add_atlas("Hg", include_second_order=True)
 c.add_atlas("Ar", min_wavelength=6500)
 
 # Show the parameter space for searching possible solution
@@ -41,8 +43,13 @@ c.plot_search_space()
 best_p, rms, residual, peak_utilisation = c.fit(max_tries=10000)
 
 # Refine solution
-best_p, x_fit, y_fit, residual, peak_utilisation = c.match_peaks_to_atlas(
-    best_p, tolerance=5)
+best_p, x_fit, y_fit, residual, peak_utilisation = c.refine_fit(
+    best_p,
+    delta=best_p * 0.01,
+    tolerance=10.,
+    convergence=1e-10,
+    method='Nelder-Mead',
+    robust_refit=True)
 
 # Plot the solution
 c.plot_fit(spectrum, best_p, plot_atlas=True, log_spectrum=False, tolerance=5)
