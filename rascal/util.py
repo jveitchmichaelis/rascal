@@ -5,9 +5,9 @@ from scipy import asarray as ar, exp
 import pkg_resources
 
 """
-def filter_wavelengths(lines, min_wavelength, max_wavlength):
+def filter_wavelengths(lines, min_atlas_wavelength, max_wavlength):
     wavelengths = lines[:,1].astype(np.float32)
-    wavelength_mask = (wavelengths >= min_wavelength) * (wavelengths <= max_wavlength)
+    wavelength_mask = (wavelengths >= min_atlas_wavelength) * (wavelengths <= max_wavlength)
 
     return lines[wavelength_mask]
 
@@ -36,7 +36,7 @@ def filter_separation(wavelengths, min_separation=0):
 
     return distance_mask
 
-def load_calibration_lines(elements=[], min_wavelength=0, max_wavelength=15000, min_distance=10, min_intensity=40):
+def load_calibration_lines(elements=[], min_atlas_wavelength=0, max_atlas_wavelength=15000, min_distance=10, min_intensity=40):
 
     if isinstance(elements, str):
         elements = [elements]
@@ -53,7 +53,7 @@ def load_calibration_lines(elements=[], min_wavelength=0, max_wavelength=15000, 
     lines = lines[mask]
 
     # Filter wavelengths
-    lines = filter_wavelengths(lines, min_wavelength, max_wavelength)
+    lines = filter_wavelengths(lines, min_atlas_wavelength, max_atlas_wavelength)
 
     # Calculate peak separation
     if min_distance > 0:
@@ -75,7 +75,7 @@ def load_calibration_lines(elements=[], min_wavelength=0, max_wavelength=15000, 
 
     # Vacuum to air conversion
     # Donald Morton (2000, ApJ. Suppl., 130, 403)
-    
+
 
     return elements, wavelengths, intensities
 
@@ -89,11 +89,11 @@ def vacuum_to_air(wavelengths):
     n = 1 + 0.0000834254 + 0.02406147 / (130 - s2) + 0.00015998 / (38.9 - s2)
     wavelengths /= n
 
-    return 
+    return
 
 def load_calibration_lines(elements,
-                           min_wavelength=1000.,
-                           max_wavelength=10000.,
+                           min_atlas_wavelength=1000.,
+                           max_atlas_wavelength=10000.,
                            include_second_order=False):
     '''
     https://apps.dtic.mil/dtic/tr/fulltext/u2/a105494.pdf
@@ -140,7 +140,7 @@ def load_calibration_lines(elements,
     cal_strengths = np.array(line_strengths)
 
     # Get only lines within the requested wavelength
-    mask = (cal_lines > min_wavelength) * (cal_lines < max_wavelength)
+    mask = (cal_lines > min_atlas_wavelength) * (cal_lines < max_atlas_wavelength)
     return cal_elements[mask], cal_lines[mask], cal_strengths[mask]
 
 

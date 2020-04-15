@@ -38,9 +38,9 @@ class Calibrator:
         num_pix: int
             Number of pixels in the spectral axis.
         min_wavelength: float (default: 3000)
-            Minimum wavelength of the arc lines.
+            Minimum wavelength of the spectrum.
         max_wavelength: float (default: 9000)
-            Maximum wavelength of the arc lines.
+            Maximum wavelength of the spectrum.
         plotting_library : string (default: 'matplotlib')
             Choose between matplotlib and plotly.
         log_level : string (default: 'info')
@@ -80,7 +80,7 @@ class Calibrator:
                           'matplotlib or plotly. Execute use_matplotlib() or '
                           'use_plotly() to manually select the library.')
 
-    def _get_atlas(self, elements, min_wavelength, max_wavelength,
+    def _get_atlas(self, elements, min_atlas_wavelength, max_atlas_wavelength,
                    min_intensity, min_distance):
         '''
         Load lines.
@@ -89,9 +89,9 @@ class Calibrator:
         ----------
         elements: string or list of string
             Element name in form of chemical symbol. Case insensitive.
-        min_wavelength: float
+        min_atlas_wavelength: float
             Minimum wavelength of the arc lines.
-        max_wavelength: float
+        max_atlas_wavelength: float
             Maximum wavelength of the arc lines.
         min_intensity: float
             Minimum intensity of the lines.
@@ -102,8 +102,8 @@ class Calibrator:
 
         self.atlas_elements, self.atlas, self.atlas_intensities = \
             load_calibration_lines(elements,
-                                   min_wavelength,
-                                   max_wavelength)
+                                   min_atlas_wavelength,
+                                   max_atlas_wavelength)
 
     def _set_peaks(self, constrain_poly):
         '''
@@ -326,7 +326,7 @@ class Calibrator:
         '''
         Returns a list of peak/wavelengths pairs which agree with the fit
 
-        (wavelength - dispersion*x + min_wavelength) < thresh
+        (wavelength - dispersion * x + min_wavelength) < thresh
 
         Note: depending on the threshold set, one peak may match with multiple
         wavelengths.
@@ -336,8 +336,9 @@ class Calibrator:
         dispersion: float
             In observational astronomy term, the R value
         min_wavelength: float
-            Minimum wavelength of the arc lines.
+            Wavelength of the hough line at pixel 0.
         thresh: float
+            €£$
 
         Returns
         -------
@@ -359,7 +360,7 @@ class Calibrator:
         '''
         Returns a list of peak/wavelengths pairs which agree with the fit
 
-        (wavelength - dispersion*x + min_wavelength) < thresh
+        (wavelength - dispersion * x + min_wavelength) < thresh
 
         Note: depending on the threshold set, one peak may match with multiple
         wavelengths.
@@ -369,6 +370,7 @@ class Calibrator:
         fit: integer
             order of polynomial fit.
         tolerance: float
+            €£$
 
         Returns
         -------
@@ -769,8 +771,8 @@ class Calibrator:
 
     def add_atlas(self,
                   elements,
-                  min_wavelength=None,
-                  max_wavelength=None,
+                  min_atlas_wavelength=None,
+                  max_atlas_wavelength=None,
                   min_intensity=None,
                   min_distance=None,
                   include_second_order=None,
@@ -782,9 +784,9 @@ class Calibrator:
         ----------
         elements: string or list of strings
             Chemical symbol, case insensitive
-        min_wavelength: float (default: None)
+        min_atlas_wavelength: float (default: None)
             Minimum wavelength of the arc lines.
-        max_wavelength: float (default: None)
+        max_atlas_wavelength: float (default: None)
             Maximum wavelength of the arc lines.
         min_intensity: float (default: None)
             Minimum intensity of the arc lines. Refer to NIST for the intensity.
@@ -797,11 +799,11 @@ class Calibrator:
 
         '''
 
-        if min_wavelength is None:
-            min_wavelength = self.min_wavelength - self.range_tolerance
+        if min_atlas_wavelength is None:
+            min_atlas_wavelength = self.min_wavelength - self.range_tolerance
 
-        if max_wavelength is None:
-            max_wavelength = self.max_wavelength + self.range_tolerance
+        if max_atlas_wavelength is None:
+            max_atlas_wavelength = self.max_wavelength + self.range_tolerance
 
         if isinstance(elements, str):
             elements = [elements]
@@ -810,7 +812,7 @@ class Calibrator:
 
             atlas_elements_tmp, atlas_tmp, atlas_intensities_tmp =\
                 load_calibration_lines(
-                    element, min_wavelength, max_wavelength,
+                    element, min_atlas_wavelength, max_atlas_wavelength,
                     include_second_order)
 
             self.atlas_elements.extend(atlas_elements_tmp)
@@ -902,7 +904,8 @@ class Calibrator:
                 removed_peak = self.atlas.pop(i)
                 self.atlas_intensities.pop(i)
 
-                self.logger.info("Removed {} line : {} A".format(removed_element, removed_peak))
+                self.logger.info("Removed {} line : {} A".format(
+                    removed_element, removed_peak))
 
     def add_atlas_line(self, element, wavelength, intensity=0):
         """
@@ -1112,9 +1115,10 @@ class Calibrator:
         '''
 
         if sample_size > len(self.atlas):
-            self.logger.warn("Size of sample_size is larger than the size of atlas, " +
-                  "the sample_size is set to match the size of atlas = " +
-                  str(len(self.atlas)) + ".")
+            self.logger.warn(
+                "Size of sample_size is larger than the size of atlas, " +
+                "the sample_size is set to match the size of atlas = " +
+                str(len(self.atlas)) + ".")
             sample_size = len(self.atlas)
 
         self._get_candidates(self.num_slopes, self.num_candidates)
@@ -1269,7 +1273,14 @@ class Calibrator:
 
             return fit_new, peak_match, atlas_match, residual, peak_utilisation
 
-    def plot_search_space(self, constrain_poly=False, coeff=None, top_n=3):
+    def plot_search_space(self,
+                          constrain_poly=False,
+                          coeff=None,
+                          top_n=3,
+                          savefig=False,
+                          filename=None,
+                          json=False,
+                          renderer='default'):
         '''
         Plots the peak/arc line pairs that are considered as potential match
         candidates.
@@ -1292,75 +1303,229 @@ class Calibrator:
 
         '''
 
-        plt.figure(figsize=(16, 9))
-
+        # Generate Hough pairs and only accept those within the tolerance
+        # region
         self._generate_pairs(constrain_poly=constrain_poly)
-
-        # Plot all-pairs
-        plt.scatter(*self.pairs.T, alpha=0.2, c='red')
 
         # Get candidates
         self._get_candidates(num_slope=self.num_slopes,
                              top_n=self.num_candidates)
 
-        plt.scatter(*self._merge_candidates(self.candidates).T, alpha=0.2)
-        """
-        plt.hlines(self.min_intercept, 0, self.num_pix)
-        plt.hlines(self.max_intercept,
-                   0,
-                   self.num_pix,
-                   linestyle='dashed',
-                   alpha=0.5)
-        """
-
-        plt.text(5, self.min_wavelength + 100,
-                 "Min wavelength (user-supplied)")
-        plt.hlines(self.min_wavelength, 0, self.num_pix)
-        plt.hlines(self.min_wavelength + self.range_tolerance,
-                   0,
-                   self.num_pix,
-                   linestyle='dashed',
-                   alpha=0.5)
-
-        plt.text(5, self.max_wavelength + 100,
-                 "Max wavelength (user-supplied)")
-        plt.hlines(self.max_wavelength, 0, self.num_pix)
-        plt.hlines(self.max_wavelength - self.range_tolerance,
-                   0,
-                   self.num_pix,
-                   linestyle='dashed',
-                   alpha=0.5)
-
-        x_1 = np.arange(0, self.num_pix)
-        m_1 = (self.max_wavelength - self.min_wavelength) / self.num_pix
-        y_1 = m_1 * x_1 + self.min_wavelength
-        plt.plot(x_1, y_1, label="Nominal linear fit")
-
-        m_1 = (self.max_wavelength + self.range_tolerance -
-               (self.min_wavelength + self.range_tolerance)) / self.num_pix
-        y_1 = m_1 * x_1 + self.min_wavelength + self.range_tolerance
-        plt.plot(x_1, y_1, c='black', linestyle='dashed')
-
-        m_1 = (self.max_wavelength - self.range_tolerance -
-               (self.min_wavelength - self.range_tolerance)) / self.num_pix
-        y_1 = m_1 * x_1 + (self.min_wavelength - self.range_tolerance)
-        plt.plot(x_1, y_1, c='black', linestyle='dashed')
-
-        if coeff is not None:
-            plt.scatter(self.peaks,
-                        self.polyval(self.peaks, coeff),
-                        color='red')
-
-        plt.xlim(0, self.num_pix)
-        plt.ylim(self.min_wavelength - self.range_tolerance,
-                 self.max_wavelength + self.range_tolerance)
-
+        # ?
         self.candidate_peak, self.candidate_arc =\
             self._combine_linear_estimates(self.candidates, top_n=top_n)
 
-        plt.scatter(self.candidate_peak, self.candidate_arc, s=20, c='purple')
+        # Get the search space boundaries
+        x = np.arange(0, self.num_pix)
 
-        return plt.gca()
+        m_1 = (self.max_wavelength - self.min_wavelength) / self.num_pix
+        y_1 = m_1 * x + self.min_wavelength
+
+        m_2 = (self.max_wavelength + self.range_tolerance -
+               (self.min_wavelength + self.range_tolerance)) / self.num_pix
+        y_2 = m_2 * x + self.min_wavelength + self.range_tolerance
+
+        m_3 = (self.max_wavelength - self.range_tolerance -
+               (self.min_wavelength - self.range_tolerance)) / self.num_pix
+        y_3 = m_3 * x + (self.min_wavelength - self.range_tolerance)
+
+        if self.plot_with_matplotlib:
+
+            plt.figure(figsize=(16, 9))
+
+            # Plot all-pairs
+            plt.scatter(*self.pairs.T, alpha=0.2, c='red')
+            plt.scatter(*self._merge_candidates(self.candidates).T, alpha=0.2)
+
+            # Tolerance region around the minimum wavelength
+            plt.text(5, self.min_wavelength + 100,
+                     "Min wavelength (user-supplied)")
+            plt.hlines(self.min_wavelength, 0, self.num_pix)
+            plt.hlines(self.min_wavelength + self.range_tolerance,
+                       0,
+                       self.num_pix,
+                       linestyle='dashed',
+                       alpha=0.5)
+            plt.hlines(self.min_wavelength - self.range_tolerance,
+                       0,
+                       self.num_pix,
+                       linestyle='dashed',
+                       alpha=0.5)
+
+            # Tolerance region around the maximum wavelength
+            plt.text(5, self.max_wavelength + 100,
+                     "Max wavelength (user-supplied)")
+            plt.hlines(self.max_wavelength, 0, self.num_pix)
+            plt.hlines(self.max_wavelength + self.range_tolerance,
+                       0,
+                       self.num_pix,
+                       linestyle='dashed',
+                       alpha=0.5)
+            plt.hlines(self.max_wavelength - self.range_tolerance,
+                       0,
+                       self.num_pix,
+                       linestyle='dashed',
+                       alpha=0.5)
+
+            # The line from (first pixel, minimum wavelength) to
+            # (last pixel, maximum wavelength), and the two lines defining the
+            # tolerance region.
+            plt.plot(x, y_1, label="Nominal linear fit")
+            plt.plot(x, y_2, c='black', linestyle='dashed')
+            plt.plot(x, y_3, c='black', linestyle='dashed')
+
+            if coeff is not None:
+                plt.scatter(self.peaks,
+                            self.polyval(self.peaks, coeff),
+                            color='red')
+
+            plt.scatter(self.candidate_peak,
+                        self.candidate_arc,
+                        s=20,
+                        c='purple')
+
+            plt.xlim(0, self.num_pix)
+            plt.ylim(self.min_wavelength - self.range_tolerance,
+                     self.max_wavelength + self.range_tolerance)
+
+            plt.xlabel('Pixel')
+            plt.ylabel('Wavelength / A')
+
+            return plt.gca()
+
+        elif self.plot_with_plotly:
+
+            fig = go.Figure()
+
+            # Plot all-pairs
+            fig.add_trace(
+                go.Scatter(x=self.pairs[:, 0],
+                           y=self.pairs[:, 1],
+                           mode='markers',
+                           name='All Pairs',
+                           marker=dict(color='red', opacity=0.2)))
+            fig.add_trace(
+                go.Scatter(x=self._merge_candidates(self.candidates)[:, 0],
+                           y=self._merge_candidates(self.candidates)[:, 1],
+                           mode='markers',
+                           name='Candidate Pairs',
+                           marker=dict(color='royalblue', opacity=0.2)))
+            fig.add_trace(
+                go.Scatter(x=self.candidate_peak,
+                           y=self.candidate_arc,
+                           mode='markers',
+                           name='Best Candidate Pairs',
+                           marker=dict(color='purple')))
+
+            # Tolerance region around the minimum wavelength
+            fig.add_trace(
+                go.Scatter(x=[0, self.num_pix],
+                           y=[self.min_wavelength, self.min_wavelength],
+                           name='Min/Maximum',
+                           mode='lines',
+                           line=dict(color='black')))
+            fig.add_trace(
+                go.Scatter(x=[0, self.num_pix],
+                           y=[
+                               self.min_wavelength + self.range_tolerance,
+                               self.min_wavelength + self.range_tolerance
+                           ],
+                           name='Tolerance Range',
+                           mode='lines',
+                           line=dict(color='black', dash='dash')))
+            fig.add_trace(
+                go.Scatter(x=[0, self.num_pix],
+                           y=[
+                               self.min_wavelength - self.range_tolerance,
+                               self.min_wavelength - self.range_tolerance
+                           ],
+                           showlegend=False,
+                           mode='lines',
+                           line=dict(color='black', dash='dash')))
+
+            # Tolerance region around the minimum wavelength
+            fig.add_trace(
+                go.Scatter(x=[0, self.num_pix],
+                           y=[self.max_wavelength, self.max_wavelength],
+                           showlegend=False,
+                           mode='lines',
+                           line=dict(color='black')))
+            fig.add_trace(
+                go.Scatter(x=[0, self.num_pix],
+                           y=[
+                               self.max_wavelength + self.range_tolerance,
+                               self.max_wavelength + self.range_tolerance
+                           ],
+                           showlegend=False,
+                           mode='lines',
+                           line=dict(color='black', dash='dash')))
+            fig.add_trace(
+                go.Scatter(x=[0, self.num_pix],
+                           y=[
+                               self.max_wavelength - self.range_tolerance,
+                               self.max_wavelength - self.range_tolerance
+                           ],
+                           showlegend=False,
+                           mode='lines',
+                           line=dict(color='black', dash='dash')))
+
+            # The line from (first pixel, minimum wavelength) to
+            # (last pixel, maximum wavelength), and the two lines defining the
+            # tolerance region.
+            fig.add_trace(
+                go.Scatter(x=x,
+                           y=y_1,
+                           mode='lines',
+                           name='Linear Fit',
+                           line=dict(color='blue')))
+            fig.add_trace(
+                go.Scatter(x=x,
+                           y=y_2,
+                           mode='lines',
+                           name='Tolerance Region',
+                           line=dict(color='blue', dash='dashdot')))
+            fig.add_trace(
+                go.Scatter(x=x,
+                           y=y_3,
+                           showlegend=False,
+                           mode='lines',
+                           line=dict(color='blue', dash='dashdot')))
+
+            if coeff is not None:
+                fig.add_trace(
+                    go.Scatter(x=self.peaks,
+                               y=self.polyval(self.peaks, coeff),
+                               mode='markers',
+                               name='Solution',
+                               marker=dict(color='red')))
+
+            # Layout, Title, Grid config
+            fig.update_layout(
+                autosize=True,
+                yaxis=dict(
+                    title='Pixel',
+                    range=[
+                        self.min_wavelength - self.range_tolerance * 1.1,
+                        self.max_wavelength + self.range_tolerance * 1.1
+                    ],
+                    showgrid=True),
+                xaxis=dict(
+                    title='Wavelength / A',
+                    zeroline=False,
+                    range=[0., self.num_pix],
+                    showgrid=True,
+                ),
+                hovermode='closest',
+                showlegend=True,
+                height=800,
+                width=1000)
+
+            if renderer == 'default':
+                fig.show()
+            else:
+                fig.show(renderer)
+            if json:
+                return fig.to_json()
 
     def plot_fit(self,
                  spectrum,
@@ -1456,7 +1621,8 @@ class Calibrator:
                 if np.abs(diff[idx]) < tolerance:
                     fitted_peaks.append(p)
                     fitted_diff.append(diff[idx])
-                    self.logger.info("- matched to {} A".format(self.atlas[idx]))
+                    self.logger.info("- matched to {} A".format(
+                        self.atlas[idx]))
                     ax1.vlines(self.polyval(p, fit),
                                spectrum[p.astype('int')],
                                vline_max,
@@ -1563,7 +1729,8 @@ class Calibrator:
                     fitted_peaks.append(p)
                     fitted_peaks_adu.append(spectrum[int(p)])
                     fitted_diff.append(diff[idx])
-                    self.logger.info("- matched to {} A".format(self.atlas[idx]))
+                    self.logger.info("- matched to {} A".format(
+                        self.atlas[idx]))
 
             x_fitted = self.polyval(fitted_peaks, fit)
 
@@ -1635,12 +1802,12 @@ class Calibrator:
                 height=800,
                 width=1000)
 
-            if json:
-                return fig.to_json()
             if renderer == 'default':
                 fig.show()
             else:
                 fig.show(renderer)
+            if json:
+                return fig.to_json()
 
         else:
 
