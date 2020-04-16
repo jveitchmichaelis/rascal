@@ -1166,7 +1166,8 @@ class Calibrator:
 
     def refine_fit(self,
                    fit,
-                   delta,
+                   delta=[1.],
+                   refine=True,
                    tolerance=10.,
                    method='Nelder-Mead',
                    convergence=1e-6,
@@ -1179,18 +1180,26 @@ class Calibrator:
         achieved by providing delta in the length matching the number of the
         lowest degrees to be refined.
 
-        Setting robust_refit to True will fit all the detected peaks with the
+        Set refine to True to improve on the polynomial solution.
+
+        Set robust_refit to True to fit all the detected peaks with the
         given polynomial solution for a fit using maximal information, with
         the degree of polynomial = polydeg.
+
+        Set both refine and robust_refit to False will return the list of
+        arc lines are well fitted by the current solution within the
+        tolerance limit provided.
 
         Parameters
         ----------
         fit : list
             List of polynomial fit coefficients.
-        delta : list
+        delta : list (default: [1.])
             List of delta(fit) as a starting condition for refining the
             solution. The length has to be less than or equal to the length
             of fit.
+        refine : boolean (default: True)
+            Set to True to refine solution.
         tolerance : float (default: 10.)
             Absolute difference between fit and model in the unit of nm.
         method : string (default: 'Nelder-Mead')
@@ -1219,18 +1228,20 @@ class Calibrator:
 
         '''
 
-        fit_delta = minimize(self._adjust_polyfit,
-                             delta,
-                             args=(fit, tolerance),
-                             method=method,
-                             tol=convergence,
-                             options={
-                                 'maxiter': 10000
-                             }).x
         fit_new = fit.copy()
 
-        for i, d in enumerate(fit_delta):
-            fit_new[i] += d
+        if refine:
+            fit_delta = minimize(self._adjust_polyfit,
+                                 delta,
+                                 args=(fit, tolerance),
+                                 method=method,
+                                 tol=convergence,
+                                 options={
+                                     'maxiter': 10000
+                                 }).x
+
+            for i, d in enumerate(fit_delta):
+                fit_new[i] += d
 
         if np.any(np.isnan(fit_new)):
             warnings.warn('_adjust_polyfit() returns None. '
