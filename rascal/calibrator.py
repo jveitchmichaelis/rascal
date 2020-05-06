@@ -105,7 +105,7 @@ class Calibrator:
                                    min_atlas_wavelength,
                                    max_atlas_wavelength)
 
-    def _set_peaks(self, constrain_poly):
+    def set_peaks(self, constrain_poly):
         '''
         Gather all the randomly matched and user-supplied pixel-wavelength pairs.
 
@@ -118,9 +118,6 @@ class Calibrator:
 
         # Create a list of all possible pairs of detected peaks and lines from atlas
         self._generate_pairs(constrain_poly)
-
-        # Include user supplied pairs that are always fitted to within a tolerance
-        self.set_guess_pairs()
 
         # Include user supplied pairs that are always fitted as given
         self.set_known_pairs()
@@ -566,6 +563,13 @@ class Calibrator:
             # This doesn't need to be robust, it's an exact fit.
             fit_coeffs = self.polyfit(x_hat, y_hat, polydeg)
 
+            # Check monotonicity.
+            if not np.all(
+                    np.diff(
+                        self.polyval(np.arange(0, self.num_pix), fit_coeffs)) >
+                    0):
+                continue
+
             # Discard out-of-bounds fits
             if self.fittype == 'poly':
                 if ((self.polyval(0, fit_coeffs) <
@@ -668,14 +672,16 @@ class Calibrator:
         residual: float
             Residual from the best fit.
         peak_utilisation: float
-            Fraction of detected peaks used for calibration [0-1].
+            Fraction of detected peaks used for calibration (if there are more
+            peaks than the number of atlas lines, the fraction of atlas lines
+            is returned instead).
 
         '''
 
         self.candidate_peak, self.candidate_arc =\
             self._combine_linear_estimates(candidates, top_n=3)
 
-        coeff, rms, residual, _, valid = self._solve_candidate_ransac(
+        coeff, rms, residual, n_inliers, valid = self._solve_candidate_ransac(
             self.candidate_peak,
             self.candidate_arc,
             polydeg=polydeg,
@@ -687,14 +693,17 @@ class Calibrator:
             progress=progress,
             filter_close=filter_close)
 
-        peak_utilisation = len(residual) / len(self.peaks)
+        if len(self.peaks) < len(self.atlas):
+            peak_utilisation = n_inliers / len(self.peaks)
+        else:
+            peak_utilisation = n_inliers / len(self.atlas)
 
         if not valid:
             self.logger.warn("Invalid fit")
 
         if rms > self.fit_tolerance:
-            self.logger.warn("Error too large {} > {}".format(
-                err, self.fit_tolerance))
+            self.logger.warn("RMS too large {} > {}".format(
+                rms, self.fit_tolerance))
 
         assert (coeff is not None), "Couldn't fit"
 
@@ -819,7 +828,7 @@ class Calibrator:
             self.atlas.extend(atlas_tmp)
             self.atlas_intensities.extend(atlas_intensities_tmp)
 
-        self._set_peaks(constrain_poly)
+        self.set_peaks(constrain_poly)
 
     def list_atlas(self):
         '''
@@ -838,52 +847,71 @@ class Calibrator:
 
         '''
 
-        self.atlas = None
+        self.atlas_elements = []
+        self.atlas = []
+        self.atlas_intensities = []
 
-    def append_atlas(self, elements, atlas, intensity):
+    def add_user_atlas(self, element, atlas, intensity=None):
         '''
-        Add arc lines to the Calibrator.
+        Add a single or list arc lines.
 
         Parameters
         ----------
-        elements : list
-           Element name in form of chemical symbol. Case insensitive.
-        atlas : list
-           Wavelengths of the lines in Angstrom.
-        intensity : list
-           Intensities of the lines in Angstrom.
+        elements : list/str
+            Element (required). Preferably a standard (i.e. periodic table)
+            name for convenience with built-in atlases
+        atlas : list/float
+            Wavelength to add (Angstrom)
+        intensity : list/float
+            Relative line intensity (NIST value)
 
         '''
 
-        assert (len(elements) == len(atlas) == len(intensity),
+        if not isinstance(element, list):
+            element = [element]
+
+        if not isinstance(atlas, list):
+            atlas = [atlas]
+
+        if intensity is None:
+            intensity = [0] * len(atlas)
+        else:
+            if not isinstance(intensity, list):
+                intensity = [intensity]
+
+        assert (len(element) == len(atlas) == len(intensity),
                 ValueError('Please check the length of the input lists.'))
 
-        self.atlas_elements.extend(elements)
+        self.atlas_elements.extend(element)
         self.atlas.extend(atlas)
         self.atlas_intensities.extend(intensity)
 
-    def load_user_atlas(self, elements, atlas, intensity):
+    def load_user_atlas(self, elements, wavelengths, intensities=None):
         '''
-        Remove all the arc lines loaded to the Calibrator and use the user
-        provided arc lines instead.
+        Remove all the arc lines loaded to the Calibrator and then use the user
+        supplied arc lines instead.
 
         Parameters
         ----------
         elements : list
-           Element name in form of chemical symbol. Case insensitive.
-        atlas : list
-           Wavelengths of the lines in Angstrom.
-        intensity : list
-           Intensities of the lines in Angstrom.
+            Element (required). Preferably a standard (i.e. periodic table)
+            name for convenience with built-in atlases
+        wavelenths : list
+            Wavelength to add (Angstrom)
+        intensities : list
+            Relative line intensities
 
         '''
 
-        assert (len(elements) == len(atlas) == len(intensity),
+        self.clear_atlas()
+
+        if intensities is None:
+            intensities = [0] * len(wavelengths)
+
+        assert (len(elements) == len(wavelengths) == len(intensities),
                 ValueError('Please check the length of the input lists.'))
 
-        self.atlas_elements = elements
-        self.atlas = atlas
-        self.atlas_intensities = intensity
+        self.add_user_atlas(elements, wavelengths, intensities)
 
     def remove_atlas_lines_range(self, wavelength, tolerance=10):
         """
@@ -907,50 +935,6 @@ class Calibrator:
                 self.logger.info("Removed {} line : {} A".format(
                     removed_element, removed_peak))
 
-    def add_atlas_line(self, element, wavelength, intensity=0):
-        """
-        Add a single arc line
-
-        Parameters
-        ----------
-        element : str
-            Element (required). Preferably a standard (i.e. periodic table) name
-            for convenience with built-in atlases
-        wavelength : float
-            Wavelength to add (Angstrom)
-        intensity : float
-            Relative line intensity (NIST value)
-
-        """
-        self.atlas_elements.append(element)
-        self.atlas.append(wavelength)
-        self.atlas_intensities.append(intensity)
-
-    def set_guess_pairs(self, pix_guess=(), wave_guess=(), margin=5.):
-        '''
-        Provide manual pixel-wavelength pair(s), good guess values with a
-        margin of error.
-
-        Parameters
-        ----------
-        pix_guess : numeric value, list or numpy 1D array (N) (default: ())
-            Any pixel value; can be outside the detector chip and
-            serve purely as anchor points.
-        wave_guess : numeric value, list or numpy 1D array (N) (default: ())
-            The matching wavelength for each of the pix_guess.
-        margin : float (default: 5)
-            Tolerance in the wavelength value of the pixel-to-wavelength
-            mappping.
-
-        '''
-
-        assert (len(pix_guess) == len(wave_guess),
-                ValueError('Please check the length of the input lists.'))
-
-        self.pix_guess = np.asarray(pix_guess, dtype='float')
-        self.wave_guess = np.asarray(wave_guess, dtype='float')
-        self.margin = margin
-
     def set_known_pairs(self, pix=(), wave=()):
         '''
         Provide manual pixel-wavelength pair(s), fixed values in the fit.
@@ -958,10 +942,10 @@ class Calibrator:
 
         Parameters
         ----------
-        pix : numeric value, list or numpy 1D array (N)
+        pix : numeric value, list or numpy 1D array (N) (default: ())
             Any pixel value, can be outside the detector chip and
             serve purely as anchor points.
-        wave : numeric value, list or numpy 1D array (N)
+        wave : numeric value, list or numpy 1D array (N) (default: ())
             The matching wavelength for each of the pix.
 
         '''
@@ -1144,8 +1128,6 @@ class Calibrator:
 
         for p in self.peaks:
             x = self.polyval(p, fit_new)
-            if x < 0:
-                return np.inf
             diff = self.atlas - x
             diff_abs = np.abs(diff)
             idx = np.argmin(diff_abs)
@@ -1157,22 +1139,28 @@ class Calibrator:
         x_match = np.array(x_match)
         y_match = np.array(y_match)
 
+        if not np.all(
+                np.diff(self.polyval(np.arange(0, self.num_pix), fit_new)) > 0
+        ):
+            return np.inf
+
         if len(x_match) < 5:
             return np.inf
 
-        lsq = np.sum((y_match - self.polyval(x_match, fit))**2.) / len(x_match)
+        lsq = np.sum(
+            (y_match - self.polyval(x_match, fit_new))**2.) / len(x_match)
 
         return lsq
 
-    def refine_fit(self,
-                   fit,
-                   delta=[1.],
-                   refine=True,
-                   tolerance=10.,
-                   method='Nelder-Mead',
-                   convergence=1e-6,
-                   robust_refit=True,
-                   polydeg=3):
+    def match_peaks(self,
+                    fit,
+                    delta=[1.],
+                    refine=True,
+                    tolerance=10.,
+                    method='Nelder-Mead',
+                    convergence=1e-6,
+                    robust_refit=True,
+                    polydeg=None):
         '''
         Refine the polynomial fit coefficients. Recomended to use in it
         multiple calls to first refine the lowest order and gradually increase
@@ -1209,7 +1197,7 @@ class Calibrator:
         robust_refit : boolean (default: True)
             Set to True to fit all the detected peaks with the given polynomial
             solution.
-        polydeg : int (default: 4)
+        polydeg : int (default: length of the input coefficients)
             Order of polynomial fit with all the detected peaks.
 
         Returns
@@ -1230,6 +1218,9 @@ class Calibrator:
 
         fit_new = fit.copy()
 
+        if polydeg is None:
+            polydeg = len(fit) - 1
+
         if refine:
             fit_delta = minimize(self._adjust_polyfit,
                                  delta,
@@ -1243,10 +1234,10 @@ class Calibrator:
             for i, d in enumerate(fit_delta):
                 fit_new[i] += d
 
-        if np.any(np.isnan(fit_new)):
-            warnings.warn('_adjust_polyfit() returns None. '
-                          'Input solution is returned.')
-            return fit, None, None, None, None
+            if np.any(np.isnan(fit_new)):
+                warnings.warn('_adjust_polyfit() returns None. '
+                              'Input solution is returned.')
+                return fit, None, None, None, None
 
         peak_match = []
         atlas_match = []
@@ -1267,7 +1258,10 @@ class Calibrator:
         atlas_match = np.array(atlas_match)
         residual = np.array(residual)
 
-        peak_utilisation = len(peak_match) / len(self.peaks)
+        if len(self.peaks) < len(self.atlas):
+            peak_utilisation = len(peak_match) / len(self.peaks)
+        else:
+            peak_utilisation = len(peak_match) / len(self.atlas)
 
         if robust_refit:
             coeff = models.robust_polyfit(peak_match, atlas_match, polydeg)

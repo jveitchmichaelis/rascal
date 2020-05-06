@@ -76,6 +76,7 @@ def robust_polyfit(x, y, degree=3, x0=None, bounds=None):
 
     return p[::-1]
 
+
 def pprint_coefficients(coeffs):
     expr = "{} ".format(round(coeffs[0], 3))
 

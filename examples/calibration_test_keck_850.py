@@ -4,7 +4,6 @@ from astropy.io import fits
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
-import pypeit
 from scipy.signal import find_peaks
 
 from rascal.calibrator import Calibrator
@@ -53,9 +52,18 @@ c.plot_search_space()
 best_p, rms, residual, peak_utilisation = c.fit(max_tries=10000)
 
 # Refine solution
-best_p, x_fit, y_fit, residual, peak_utilisation = c.refine_fit(
+# First set is to refine only the 0th and 1st coefficient (i.e. the 2 lowest orders)
+best_p, x_fit, y_fit, residual, peak_utilisation = c.match_peaks(
     best_p,
-    delta=best_p * 0.01,
+    delta=best_p[:1] * 0.001,
+    tolerance=10.,
+    convergence=1e-10,
+    method='Nelder-Mead',
+    robust_refit=True)
+# Second set is to refine all the coefficients
+best_p, x_fit, y_fit, residual, peak_utilisation = c.match_peaks(
+    best_p,
+    delta=best_p * 0.001,
     tolerance=10.,
     convergence=1e-10,
     method='Nelder-Mead',

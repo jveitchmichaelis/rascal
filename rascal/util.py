@@ -1,7 +1,8 @@
 import numpy as np
 import random
 from scipy.optimize import curve_fit
-from scipy import asarray as ar, exp
+from scipy import asarray as ar
+from numpy import exp
 import pkg_resources
 
 """

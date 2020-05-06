@@ -2,7 +2,6 @@ import numpy as np
 from astropy.io import fits
 from scipy.signal import find_peaks
 from matplotlib import pyplot as plt
-from tqdm.autonotebook import tqdm
 import os
 
 from rascal.calibrator import Calibrator
@@ -11,7 +10,9 @@ from rascal import models
 
 # Load the 1D spectrum
 base_dir = os.path.dirname(__file__)
-spectrum = np.loadtxt(os.path.join(base_dir,'data_msp1000/A620EBA HgCal.mspec'), delimiter=',')[:, 1]
+spectrum = np.loadtxt(os.path.join(base_dir,
+                                   'data_msp1000/A620EBA HgCal.mspec'),
+                      delimiter=',')[:, 1]
 
 plt.figure()
 plt.plot(spectrum / spectrum.max())
@@ -24,7 +25,7 @@ plt.tight_layout()
 
 # Identify the peaks
 peaks, _ = find_peaks(spectrum, prominence=300, distance=15, threshold=None)
-peaks_refined = refine_peaks(spectrum, peaks, window_width=3)
+peaks_refined = refine_peaks(spectrum, peaks, window_width=5)
 
 # Initialise the calibrator
 c = Calibrator(peaks,
@@ -34,7 +35,7 @@ c = Calibrator(peaks,
 
 # Ignore bluer Argon lines
 c.add_atlas("Hg", include_second_order=True)
-c.add_atlas("Ar", min_wavelength=6500)
+c.add_atlas("Ar", min_atlas_wavelength=6500)
 
 # Show the parameter space for searching possible solution
 c.plot_search_space()
@@ -43,9 +44,18 @@ c.plot_search_space()
 best_p, rms, residual, peak_utilisation = c.fit(max_tries=10000)
 
 # Refine solution
-best_p, x_fit, y_fit, residual, peak_utilisation = c.refine_fit(
+# First set is to refine only the 0th and 1st coefficient (i.e. the 2 lowest orders)
+best_p, x_fit, y_fit, residual, peak_utilisation = c.match_peaks(
     best_p,
-    delta=best_p * 0.01,
+    delta=best_p[:1] * 0.001,
+    tolerance=10.,
+    convergence=1e-10,
+    method='Nelder-Mead',
+    robust_refit=True)
+# Second set is to refine all the coefficients
+best_p, x_fit, y_fit, residual, peak_utilisation = c.match_peaks(
+    best_p,
+    delta=best_p * 0.001,
     tolerance=10.,
     convergence=1e-10,
     method='Nelder-Mead',
