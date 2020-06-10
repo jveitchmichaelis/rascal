@@ -6,8 +6,10 @@ import astropy.units as u
 import numpy as np
 from scipy.spatial import Delaunay
 from scipy.optimize import minimize
+from scipy import interpolate
 
 from .util import load_calibration_lines
+from .util import derivative
 from .synthetic import SyntheticSpectrum
 from . import models
 
@@ -533,8 +535,8 @@ class Calibrator:
             else:
                 # weight the probability of choosing the sample by the inverse
                 # line density
-                hist = np.histogram(peaks, bins=3)
-                prob = 1. / hist[0][np.digitize(peaks, hist[1], right=True) -
+                h = np.histogram(peaks, bins=3)
+                prob = 1. / h[0][np.digitize(peaks, h[1], right=True) -
                                     1]
                 prob = prob / np.sum(prob)
 
@@ -597,7 +599,29 @@ class Calibrator:
             fit = self.polyval(x, fit_coeffs)
             err = np.abs(fit - y)
             err[err > thresh] = thresh
-            cost = sum(err)
+
+            # compute the hough space density as weights for the cost function
+            pix = np.arange(self.num_pix)
+            wave = self.polyval(pix, fit_coeffs)
+            gradient = self.polyval(pix, derivative(fit_coeffs))
+            intercept = wave - gradient * pix
+
+            hist, xedges, yedges = np.histogram2d(
+                self.accumulator[:, 1],
+                self.accumulator[:, 0],
+                bins=(self.xbins, self.ybins),
+                range=((self.min_intercept, self.max_intercept),
+                       (self.min_slope, self.max_slope)))
+
+            xbin_size = (xedges[1] - xedges[0]) / 2.
+            ybin_size = (yedges[1] - yedges[0]) / 2.
+
+            twoditp = interpolate.RectBivariateSpline(xedges[1:] - xbin_size,
+                                                      yedges[1:] - ybin_size,
+                                                      hist)
+            weight = twoditp(intercept, gradient, grid=False)
+
+            cost = sum(err) / np.sum(weight)
 
             # reject lines outside the rms limit (thresh)
             best_mask = err < thresh
