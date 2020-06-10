@@ -26,12 +26,12 @@ plt.grid()
 plt.tight_layout()
 
 # Identify the peaks
-peaks, _ = find_peaks(spectrum, height=200, distance=5, threshold=None)
+peaks, _ = find_peaks(spectrum, height=200, distance=10, threshold=None)
 peaks = util.refine_peaks(spectrum, peaks, window_width=5)
 
 # Initialise the calibrator
 c = Calibrator(peaks, num_pix=1024, min_wavelength=3500., max_wavelength=8000.)
-c.set_fit_constraints(num_slopes=5000,
+c.set_fit_constraints(num_slopes=2000,
                       range_tolerance=500.,
                       xbins=100,
                       ybins=100)
@@ -41,7 +41,7 @@ c.add_atlas(elements='Xe')
 c.plot_search_space()
 
 # Run the wavelength calibration
-best_p, rms, residual, peak_utilisation = c.fit(max_tries=10000)
+best_p, rms, residual, peak_utilisation = c.fit(max_tries=1000)
 
 # Refine solution
 # First set is to refine only the 0th and 1st coefficient (i.e. the 2 lowest orders)
