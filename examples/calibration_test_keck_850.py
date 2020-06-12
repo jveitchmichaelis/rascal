@@ -17,7 +17,7 @@ spectrum = fits.open(data_path)[1].data
 flux = spectrum['flux']
 
 # Identify the arc lines
-peaks, _ = find_peaks(flux, prominence=1000, distance=20)
+peaks, _ = find_peaks(flux, prominence=1000, distance=10)
 refined_peaks = refine_peaks(flux, peaks, window_width=3)
 
 intensity_range = max(flux) - min(flux)
@@ -49,7 +49,7 @@ c.set_fit_constraints(range_tolerance=500, fit_tolerance=10, polydeg=5)
 c.plot_search_space()
 
 # Run the wavelength calibration
-best_p, rms, residual, peak_utilisation = c.fit(max_tries=10000)
+best_p, rms, residual, peak_utilisation = c.fit(max_tries=5000)
 
 # Refine solution
 # First set is to refine only the 0th and 1st coefficient (i.e. the 2 lowest orders)

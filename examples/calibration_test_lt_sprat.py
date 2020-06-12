@@ -16,6 +16,7 @@ spectrum2D = fits.open(
 # Collapse into 1D spectrum between row 110 and 120
 spectrum = np.median(spectrum2D[110:120], axis=0)
 
+'''
 plt.figure()
 plt.plot(spectrum / spectrum.max())
 plt.title('Number of pixels: ' + str(spectrum.shape[0]))
@@ -24,6 +25,7 @@ plt.ylabel("Normalised Count")
 plt.xlim(0, 1024)
 plt.grid()
 plt.tight_layout()
+'''
 
 # Identify the peaks
 peaks, _ = find_peaks(spectrum, height=200, distance=10, threshold=None)
@@ -31,17 +33,17 @@ peaks = util.refine_peaks(spectrum, peaks, window_width=5)
 
 # Initialise the calibrator
 c = Calibrator(peaks, num_pix=1024, min_wavelength=3500., max_wavelength=8000.)
-c.set_fit_constraints(num_slopes=2000,
+c.set_fit_constraints(num_slopes=5000,
                       range_tolerance=500.,
                       xbins=100,
                       ybins=100)
 c.add_atlas(elements='Xe')
 
 # Show the parameter space for searching possible solution
-c.plot_search_space()
+#c.plot_search_space()
 
 # Run the wavelength calibration
-best_p, rms, residual, peak_utilisation = c.fit(max_tries=1000)
+best_p, rms, residual, peak_utilisation = c.fit(max_tries=2000)
 
 # Refine solution
 # First set is to refine only the 0th and 1st coefficient (i.e. the 2 lowest orders)

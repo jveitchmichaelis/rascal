@@ -4,7 +4,6 @@ from scipy.optimize import curve_fit
 from scipy import asarray as ar
 from numpy import exp
 import pkg_resources
-
 """
 def filter_wavelengths(lines, min_atlas_wavelength, max_wavlength):
     wavelengths = lines[:,1].astype(np.float32)
@@ -83,14 +82,16 @@ def load_calibration_lines(elements=[], min_atlas_wavelength=0, max_atlas_wavele
 
 """
 
+
 def vacuum_to_air(wavelengths):
-    s = 10000/wavelengths
+    s = 10000 / wavelengths
     s2 = s**2
 
     n = 1 + 0.0000834254 + 0.02406147 / (130 - s2) + 0.00015998 / (38.9 - s2)
     wavelengths /= n
 
     return
+
 
 def load_calibration_lines(elements,
                            min_atlas_wavelength=1000.,
@@ -130,10 +131,10 @@ def load_calibration_lines(elements,
                 line_elements.append(source)
 
                 if include_second_order:
-                    wavelength = 2*lines[-1]
+                    wavelength = 2 * lines[-1]
 
                     lines.append(wavelength)
-                    line_elements.append(line_elements[-1]+"_2")
+                    line_elements.append(line_elements[-1] + "_2")
                     line_strengths.append(line_strengths[-1])
 
     cal_lines = np.array(lines)
@@ -141,12 +142,13 @@ def load_calibration_lines(elements,
     cal_strengths = np.array(line_strengths)
 
     # Get only lines within the requested wavelength
-    mask = (cal_lines > min_atlas_wavelength) * (cal_lines < max_atlas_wavelength)
+    mask = (cal_lines > min_atlas_wavelength) * (cal_lines <
+                                                 max_atlas_wavelength)
     return cal_elements[mask], cal_lines[mask], cal_strengths[mask]
 
 
 def gauss(x, a, x0, sigma):
-    return a*exp(-(x-x0)**2/(2*sigma**2))
+    return a * exp(-(x - x0)**2 / (2 * sigma**2))
 
 
 def refine_peaks(spectrum, peaks, window_width=10):
@@ -156,14 +158,14 @@ def refine_peaks(spectrum, peaks, window_width=10):
 
     for peak in peaks:
 
-        y = spectrum[int(peak)-window_width:int(peak)+window_width]
+        y = spectrum[int(peak) - window_width:int(peak) + window_width]
         y /= y.max()
 
         x = np.arange(len(y))
 
         n = len(x)
-        mean = sum(x*y)/n
-        sigma = sum(y*(x-mean)**2)/n
+        mean = sum(x * y) / n
+        sigma = sum(y * (x - mean)**2) / n
 
         try:
             popt, _ = curve_fit(gauss, x, y, p0=[1, mean, sigma])
@@ -171,7 +173,11 @@ def refine_peaks(spectrum, peaks, window_width=10):
 
             if height < 0:
                 continue
-            refined_peaks.append(peak-window_width+centre)
+
+            if centre > len(spectrum) or centre < 0:
+                continue
+
+            refined_peaks.append(peak - window_width + centre)
         except RuntimeError:
             continue
 
@@ -179,3 +185,10 @@ def refine_peaks(spectrum, peaks, window_width=10):
     mask = (refined_peaks > 0) & (refined_peaks < len(spectrum))
 
     return refined_peaks[mask]
+
+
+def derivative(p):
+    derv = []
+    for i in range(1, len(p)):
+        derv.append(i * p[i])
+    return derv

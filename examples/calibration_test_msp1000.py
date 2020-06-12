@@ -41,7 +41,7 @@ c.add_atlas("Ar", min_atlas_wavelength=6500)
 c.plot_search_space()
 
 # Run the wavelength calibration
-best_p, rms, residual, peak_utilisation = c.fit(max_tries=10000)
+best_p, rms, residual, peak_utilisation = c.fit(max_tries=1000)
 
 # Refine solution
 # First set is to refine only the 0th and 1st coefficient (i.e. the 2 lowest orders)
