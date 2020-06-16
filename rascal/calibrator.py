@@ -386,8 +386,11 @@ class Calibrator:
             diff = np.abs(predicted - actual)
             mask = (diff <= self.candidate_thresh)
 
+            # Match the range_tolerance to 1.1775 s.d. to match the FWHM
+            # Note that the pairs outside of the range_tolerance were already
+            # removed in an earlier stage
             weight = gauss(actual[mask], 1., predicted[mask],
-                           self.range_tolerance)
+                           self.range_tolerance * 1.1775)
 
             self.candidates.append((self.pairs[:,
                                                0][mask], actual[mask], weight))
@@ -528,7 +531,7 @@ class Calibrator:
         # If the number of lines is smaller than the number of degree of
         # polynomial fit, return failed fit.
         if len(np.unique(x)) <= polydeg:
-            return (best_p, best_err, sum(best_mask), False)
+            return (best_p, best_err, sum(best_mask), 0, False)
 
         idx = range(len(x))
 
@@ -642,9 +645,8 @@ class Calibrator:
             gradient = self.polyval(self.pixel_list, derivative(fit_coeffs))
             intercept = wave - gradient * self.pixel_list
 
-            weight = twoditp(intercept, gradient, grid=False)
-
-            cost = sum(err) / np.sum(weight)
+            weight = np.sum(twoditp(intercept, gradient, grid=False))
+            cost = sum(err) / (len(err) - len(fit_coeffs) + 1) / weight
 
             # reject lines outside the rms limit (thresh)
             best_mask = err < thresh
@@ -1013,7 +1015,7 @@ class Calibrator:
                             polydeg=4,
                             candidate_thresh=15.,
                             linearity_thresh=1.5,
-                            ransac_thresh=1,
+                            ransac_thresh=3,
                             num_candidates=25,
                             xbins=100,
                             ybins=100,

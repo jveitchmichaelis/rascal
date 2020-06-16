@@ -8,42 +8,44 @@ from rascal.calibrator import Calibrator
 from rascal import models
 from rascal import util
 
+
+plt.ion()
+
 # Load the LT SPRAT data
 base_dir = os.path.dirname(__file__)
 spectrum2D = fits.open(
-    os.path.join(base_dir, 'data_lt_sprat/v_a_20190516_57_1_0_1.fits'))[0].data
+    os.path.join(base_dir, 'data_wht_isis/r2701004_red_arc.fit'))[1].data.T
 
 # Collapse into 1D spectrum between row 110 and 120
-spectrum = np.median(spectrum2D[110:120], axis=0)
+spectrum = np.median(spectrum2D[500:520], axis=0)
 
-'''
+
 plt.figure()
 plt.plot(spectrum / spectrum.max())
 plt.title('Number of pixels: ' + str(spectrum.shape[0]))
 plt.xlabel("Pixel (Spectral Direction)")
 plt.ylabel("Normalised Count")
-plt.xlim(0, 1024)
+plt.xlim(0, len(spectrum))
 plt.grid()
 plt.tight_layout()
-'''
 
 # Identify the peaks
-peaks, _ = find_peaks(spectrum, height=200, distance=10, threshold=None)
+peaks, _ = find_peaks(spectrum, height=1500, distance=10, threshold=None)
 peaks = util.refine_peaks(spectrum, peaks, window_width=5)
 
 # Initialise the calibrator
-c = Calibrator(peaks, num_pix=len(spectrum), min_wavelength=3500., max_wavelength=8000.)
+c = Calibrator(peaks, num_pix=len(spectrum), min_wavelength=6500., max_wavelength=10500.)
 c.set_fit_constraints(num_slopes=5000,
                       range_tolerance=1000.,
-                      xbins=100,
-                      ybins=100)
-c.add_atlas(elements='Xe')
+                      xbins=200,
+                      ybins=200)
+c.add_atlas(elements='CuNeAr_low')
 
 # Show the parameter space for searching possible solution
 #c.plot_search_space()
 
 # Run the wavelength calibration
-best_p, rms, residual, peak_utilisation = c.fit(max_tries=100000)
+best_p, rms, residual, peak_utilisation = c.fit(max_tries=10000)
 
 # Refine solution
 # First set is to refine only the 0th and 1st coefficient (i.e. the 2 lowest orders)

@@ -1,5 +1,6 @@
 import os
 import logging
+import sys
 
 from astropy.io import fits
 from matplotlib import pyplot as plt
@@ -15,47 +16,39 @@ from rascal import util
 
 
 # Load the LT SPRAT data
-spectrum2D = fits.open('/Users/marcolam/git/rascal/examples/data_lt_sprat/v_a_20190516_57_1_0_1.fits')[0].data
-# Collapse into 1D spectrum between row 110 and 120
-spectrum = np.median(spectrum2D[110:120], axis=0)
+spectrum2D = fits.open('/Users/marcolam/git/GMOSfieldflattening/example/gaia2018cnz/output/N20181115S0215_flattened.fits')[0].data
+# Collapse into 1D spectrum between row 150 and 160
+spectrum = np.median(spectrum2D[150:160], axis=0)[::-1]
+
+
+sys.path.append('/Users/marcolam/git/GMOSfieldflattening')
+
+from gmos_longslit_fieldflattening import create_pixel_array
+
+
+pixel_list = create_pixel_array('north', 2)
+
+
 # Identify the peaks
-peaks, _ = find_peaks(spectrum, height=1000, distance=5, threshold=None)
+peaks, _ = find_peaks(spectrum, height=500, distance=10, threshold=None)
 peaks = util.refine_peaks(spectrum, peaks, window_width=5)
 
 # Initialise the calibrator
-c = Calibrator(peaks, num_pix=1024, min_wavelength=3500., max_wavelength=8000.)
+c = Calibrator(peaks, num_pix=len(pixel_list), pixel_list=pixel_list, min_wavelength=5000., max_wavelength=9500.)
 c.set_fit_constraints(num_slopes=2000,
                       range_tolerance=500.,
-                      xbins=100,
-                      ybins=100)
+                      candidate_thresh=10.,
+                      fit_tolerance=5,
+                      xbins=200,
+                      ybins=200)
 
 
-# blend: 4829.71, 4844.33
-# blend: 5566.62, 5581.88
-# blend: 6261.212, 6265.302
-# blend: 6872.11, 6882.16
-# blend: 7283.961, 7285.301
-# blend: 7316.272, 7321.452
-atlas = [4193.5, 4385.77,
-    4500.98, 4524.68, 4582.75, 4624.28, 4671.23, 4697.02, 4734.15, 4807.02, 4921.48,
-    5028.28,
-    5618.88, 5823.89, 5893.29, 5934.17,
-    6182.42, 6318.06, 6472.841,
-    6595.56, 6668.92, 6728.01, 6827.32, 6976.18,
-    7119.60, 7257.9, 7393.8,
-    7584.68, 7642.02, 7740.31, 7802.65, 7887.40, 7967.34, 8057.258]
-element = ['Xe'] * len(atlas)
+c.add_atlas('CuAr')
 
-c.load_user_atlas(element, atlas)
-
-c.set_peaks(constrain_poly=True)
-'''
-
-c.add_atlas('Xe')
-'''
 def run_sprat_calibration(polydeg, peaks):
     # Run the wavelength calibration
-    best_p, rms, residual, peak_utilisation = c.fit(max_tries=2000)
+    best_p, rms, residual, peak_utilisation = c.fit(max_tries=5000,
+                      top_n=10)
     # First set is to refine only the 0th and 1st coefficient (i.e. the 2 lowest orders)
     best_p, x_fit, y_fit, residual, peak_utilisation = c.match_peaks(
         best_p,
@@ -79,7 +72,7 @@ def run_sprat_calibration(polydeg, peaks):
 
 
 # run n times
-n = 100
+n = 10
 
 c0 = np.zeros(n)
 c1 = np.zeros(n)
