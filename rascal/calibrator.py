@@ -931,8 +931,8 @@ class Calibrator:
             if not isinstance(intensity, list):
                 intensity = [intensity]
 
-        assert (len(element) == len(atlas) == len(intensity),
-                ValueError('Please check the length of the input lists.'))
+        assert len(element) == len(atlas) == len(intensity), ValueError(
+            'Please check the length of the input lists.')
 
         self.atlas_elements.extend(element)
         self.atlas.extend(atlas)
@@ -960,8 +960,9 @@ class Calibrator:
         if intensities is None:
             intensities = [0] * len(wavelengths)
 
-        assert (len(elements) == len(wavelengths) == len(intensities),
-                ValueError('Please check the length of the input lists.'))
+        assert len(elements) == len(wavelengths) == len(
+            intensities), ValueError(
+                'Please check the length of the input lists.')
 
         self.add_user_atlas(elements, wavelengths, intensities)
 
@@ -1002,8 +1003,8 @@ class Calibrator:
 
         '''
 
-        assert (len(pix) == len(wave),
-                ValueError('Please check the length of the input lists.'))
+        assert len(pix) == len(wave), ValueError(
+            'Please check the length of the input lists.')
 
         self.pix_known = np.asarray(pix, dtype='float')
         self.wave_known = np.asarray(wave, dtype='float')
@@ -1116,7 +1117,7 @@ class Calibrator:
             top_n=10,
             max_tries=5000,
             progress=True,
-            coeff=None,
+            polyfit_coeff=None,
             linear=True,
             weighted=True,
             filter_close=False):
@@ -1134,14 +1135,14 @@ class Calibrator:
         progress : boolean (default: True)
             True to show progress with tdqm. It is overrid if tdqm cannot be
             imported.
-        coeff : list (default: None)
+        polyfit_coeff : list (default: None)
             €£$ how is this used???
         filter_close : boolean (default: False)
             €£$
 
         Returns
         -------
-        coeff: list
+        polyfit_coeff: list
             List of best fit polynomial coefficient.
         rms: float
             RMS
@@ -1159,7 +1160,7 @@ class Calibrator:
                 str(len(self.atlas)) + ".")
             sample_size = len(self.atlas)
 
-        self.pfit = coeff
+        self.pfit = polyfit_coeff
 
         self.pfit, self.rms, self.residual, self.peak_utilisation = self._get_best_model(
             self.polydeg, sample_size, max_tries, self.ransac_thresh,
@@ -1205,8 +1206,8 @@ class Calibrator:
         return lsq
 
     def match_peaks(self,
-                    fit,
-                    delta=[0.001],
+                    polyfit_coeff,
+                    n_delta=None,
                     refine=True,
                     tolerance=10.,
                     method='Nelder-Mead',
@@ -1232,12 +1233,10 @@ class Calibrator:
 
         Parameters
         ----------
-        fit : list
+        polyfit_coeff : list
             List of polynomial fit coefficients.
-        delta : list (default: [1.])
-            List of delta(fit) as a starting condition for refining the
-            solution. The length has to be less than or equal to the length
-            of fit.
+        n_delta : int (default: None)
+            The number of the highest polynomial order to be adjusted
         refine : boolean (default: True)
             Set to True to refine solution.
         tolerance : float (default: 10.)
@@ -1254,7 +1253,7 @@ class Calibrator:
 
         Returns
         -------
-        fit_new/coeff: list
+        polyfit_coeff: list
             List of best fit polynomial coefficient.
         peak_match: numpy 1D array
             Matched peaks
@@ -1268,15 +1267,20 @@ class Calibrator:
 
         '''
 
-        fit_new = fit.copy()
+        polyfit_coeff_new = polyfit_coeff.copy()
 
         if polydeg is None:
-            polydeg = len(fit) - 1
+            polydeg = len(polyfit_coeff) - 1
+
+        if n_delta is None:
+            n_delta = len(polyfit_coeff) - 1
+
+        delta = polyfit_coeff_new[int(n_delta):] * 0.001
 
         if refine:
             fit_delta = minimize(self._adjust_polyfit,
                                  delta,
-                                 args=(fit, tolerance),
+                                 args=(polyfit_coeff, tolerance),
                                  method=method,
                                  tol=convergence,
                                  options={
@@ -1284,19 +1288,19 @@ class Calibrator:
                                  }).x
 
             for i, d in enumerate(fit_delta):
-                fit_new[i] += d
+                polyfit_coeff_new[i] += d
 
-            if np.any(np.isnan(fit_new)):
+            if np.any(np.isnan(polyfit_coeff_new)):
                 warnings.warn('_adjust_polyfit() returns None. '
                               'Input solution is returned.')
-                return fit, None, None, None, None
+                return polyfit_coeff, None, None, None, None
 
         peak_match = []
         atlas_match = []
         residual = []
 
         for p in self.peaks:
-            x = self.polyval(p, fit_new)
+            x = self.polyval(p, polyfit_coeff_new)
             diff = self.atlas - x
             diff_abs = np.abs(diff)
             idx = np.argmin(diff_abs)
@@ -1322,13 +1326,13 @@ class Calibrator:
                 warnings.warn('robust_polyfit() returns None. '
                               'Input solution is returned.')
 
-                return fit_new, peak_match, atlas_match, residual, peak_utilisation
+                return polyfit_coeff_new, peak_match, atlas_match, residual, peak_utilisation
 
             return coeff, peak_match, atlas_match, residual, peak_utilisation
 
         else:
 
-            return fit_new, peak_match, atlas_match, residual, peak_utilisation
+            return polyfit_coeff_new, peak_match, atlas_match, residual, peak_utilisation
 
     def plot_search_space(self,
                           constrain_poly=False,
