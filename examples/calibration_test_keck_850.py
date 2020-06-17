@@ -42,7 +42,10 @@ c = Calibrator(refined_peaks,
                min_wavelength=6500,
                max_wavelength=10500)
 
-c.add_atlas(["Ne", "Ar", "Kr"])
+c.add_atlas(["Ne", "Ar", "Kr"],
+                  relative_intensity=10,
+                  pressure=90000.,
+                  temperature=285.)
 c.set_fit_constraints(range_tolerance=1000,
                       xbins=500,
                       ybins=500,

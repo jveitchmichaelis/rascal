@@ -837,7 +837,10 @@ class Calibrator:
                   min_intensity=None,
                   min_distance=None,
                   include_second_order=None,
-                  constrain_poly=False):
+                  constrain_poly=False,
+                  relative_intensity=10,
+                  pressure=101325,
+                  temperature=273.15):
         '''
         Provider the chemical symbol(s) to add arc lines to the Calibrator.
 
@@ -857,7 +860,11 @@ class Calibrator:
             Set to True to include second order arc lines.
         constrain_poly: boolean (default: False)
             €£$
-
+        pressure: float
+            Pressure when the observation took place, in Pascal.
+            If it is not known, assume 10% decrement per 1000 meter altitude
+        temperature: float
+            Temperature when the observation took place, in Kelvin.
         '''
 
         if min_atlas_wavelength is None:
@@ -874,7 +881,7 @@ class Calibrator:
             atlas_elements_tmp, atlas_tmp, atlas_intensities_tmp =\
                 load_calibration_lines(
                     element, min_atlas_wavelength, max_atlas_wavelength,
-                    include_second_order)
+                    include_second_order, relative_intensity, pressure, temperature)
 
             self.atlas_elements.extend(atlas_elements_tmp)
             self.atlas.extend(atlas_tmp)

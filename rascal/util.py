@@ -80,7 +80,6 @@ def load_calibration_lines(elements=[], min_atlas_wavelength=0, max_atlas_wavele
     return elements, wavelengths, intensities
 
 
-"""
 
 
 def vacuum_to_air(wavelengths):
@@ -92,11 +91,54 @@ def vacuum_to_air(wavelengths):
 
     return
 
+"""
+
+
+def pressure_temperature_to_density(pressure, temperature):
+    '''
+    Get the air density in unit of amagat from pressure in Pa and temperature
+    in K
+    '''
+
+    density = (pressure / 101325) * (273.15 / temperature)
+
+    return density
+
+
+def vacuum_to_air_wavelength(wavelengths, density=1.0):
+    '''
+    Calculate refractive index of air from Cauchy formula.
+
+    Input: wavelength in Angstrom, density of air in amagat (relative to STP,
+    e.g. ~10% decrease per 1000m above sea level).
+
+    refracstp = (n-1) * 1E6
+    return n = refracstp / 1E6 + 1
+
+    The IAU standard for conversion from air to vacuum wavelengths is given
+    in Morton (1991, ApJS, 77, 119). For vacuum wavelengths (VAC) in
+    Angstroms, convert to air wavelength (AIR) via:
+
+    AIR = VAC / (1.0 + 2.735182E-4 + 131.4182 / VAC^2 + 2.76249E8 / VAC^4)
+        = VAC / (1.0002735182 + 131.4182 / VAC^2 + 2.76249E8 / VAC^4)
+    '''
+
+    wl = np.array(wavelengths)
+    wl_inv = 1. / wl
+
+    refracstp = 1.000272643 + 131.4182 * wl_inv**2 + 2.76249E8 * w_linv**4
+    air_wavelengths = (density * refracstp) * wl
+
+    return air_wavelengths
+
 
 def load_calibration_lines(elements,
                            min_atlas_wavelength=1000.,
                            max_atlas_wavelength=10000.,
-                           include_second_order=False):
+                           include_second_order=False,
+                           relative_intensity=1000,
+                           pressure=101325,
+                           temperature=273.15):
     '''
     https://apps.dtic.mil/dtic/tr/fulltext/u2/a105494.pdf
     '''
@@ -142,8 +184,9 @@ def load_calibration_lines(elements,
     cal_strengths = np.array(line_strengths)
 
     # Get only lines within the requested wavelength
-    mask = (cal_lines > min_atlas_wavelength) * (cal_lines <
-                                                 max_atlas_wavelength)
+    mask = (cal_lines > min_atlas_wavelength) * (
+        cal_lines < max_atlas_wavelength) * (cal_strengths >
+                                             relative_intensity)
     return cal_elements[mask], cal_lines[mask], cal_strengths[mask]
 
 

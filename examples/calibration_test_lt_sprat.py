@@ -35,17 +35,17 @@ c = Calibrator(peaks,
                num_pix=len(spectrum),
                min_wavelength=3500.,
                max_wavelength=8000.)
-c.set_fit_constraints(num_slopes=5000,
-                      range_tolerance=1000.,
-                      xbins=100,
-                      ybins=100)
-c.add_atlas(elements='Xe')
+c.set_fit_constraints(num_slopes=10000,
+                      range_tolerance=500.,
+                      xbins=500,
+                      ybins=500)
+c.add_atlas(elements='Xe', relative_intensity=50)
 
 # Show the parameter space for searching possible solution
 #c.plot_search_space()
 
 # Run the wavelength calibration
-best_p, rms, residual, peak_utilisation = c.fit(max_tries=2000)
+best_p, rms, residual, peak_utilisation = c.fit(max_tries=10000)
 
 # Refine solution
 # First set is to refine only the 0th and 1st coefficient (i.e. the 2 lowest orders)
