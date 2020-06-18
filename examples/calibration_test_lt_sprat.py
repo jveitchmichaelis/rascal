@@ -10,9 +10,15 @@ from rascal import util
 
 # Load the LT SPRAT data
 base_dir = os.path.dirname(__file__)
-spectrum2D = fits.open(
-    os.path.join(base_dir, 'data_lt_sprat/v_a_20190516_57_1_0_1.fits'))[0].data
+fits_file = fits.open(
+    os.path.join(base_dir, 'data_lt_sprat/v_a_20190516_57_1_0_1.fits'))[0]
 
+spectrum2D = fits_file.data
+
+temperature = fits_file.header['REFTEMP']
+pressure = fits_file.header['REFPRES'] * 100.
+relative_humidity = fits_file.header['REFHUMID']
+print(temperature, pressure, relative_humidity)
 # Collapse into 1D spectrum between row 110 and 120
 spectrum = np.median(spectrum2D[110:120], axis=0)
 '''
@@ -39,7 +45,11 @@ c.set_fit_constraints(num_slopes=10000,
                       range_tolerance=500.,
                       xbins=500,
                       ybins=500)
-c.add_atlas(elements='Xe', min_intensity=50, pressure=90000., temperature=285.)
+c.add_atlas(elements='Xe',
+            min_intensity=20,
+            pressure=pressure,
+            temperature=temperature,
+            relative_humidity=relative_humidity)
 
 # Show the parameter space for searching possible solution
 #c.plot_search_space()

@@ -75,42 +75,86 @@ def load_calibration_lines(elements,
 """
 
 
-def pressure_temperature_to_density(pressure, temperature):
+def get_vapour_pressure(temperature):
     '''
-    Get the air density in unit of amagat from pressure in Pa and temperature
-    in K
+    Appendix A.I of https://emtoolbox.nist.gov/Wavelength/Documentation.asp
+    '''
+    K1=1.16705214528E+03
+    K2=-7.24213167032E+05
+    K3=-1.70738469401E+01
+    K4=1.20208247025E+04
+    K5=-3.23255503223E+06
+    K6=1.49151086135E+01
+    K7=-4.82326573616E+03
+    K8=4.05113405421E+05
+    K9=-2.38555575678E-01
+    K10=6.50175348448E+02
+    omega = temperature + K9 / (temperature - K10)
+    A = omega**2. + K1 * omega + K2
+    B = K3 * omega**2. + K4 * omega + K5
+    C = K6 * omega**2. + K7 * omega + K8
+    X = -B + np.sqrt(B**2. - 4*A*C)
+    vapour_pressure = 10**6. * (2. * C / X)**4.
+    return vapour_pressure
+
+
+def get_vapour_partial_pressure(relative_humidity, vapour_pressure):
+    '''
+    Appendix A.II of https://emtoolbox.nist.gov/Wavelength/Documentation.asp
+    '''
+    partial_pressure = relative_humidity / 100. * vapour_pressure
+    return partial_pressure
+
+def edlen_refraction(wavelengths, temperature, pressure, vapour_partial_pressure):
+    '''
+    Appendix A.IV of https://emtoolbox.nist.gov/Wavelength/Documentation.asp
+    '''
+    A = 8342.54
+    B = 2406147.
+    C = 15998.
+    D = 96095.43
+    E = 0.601
+    F = 0.00972
+    G = 0.003661
+    S = 1. / wavelengths**2.
+    n_s = 1. + 1E-8 * (A + B/(130-S) + C / (38.9 -S))
+    X = (1. + 1E-8 * (E - F * (temperature-273.15)) * pressure) / (1. + G * (temperature-273.15))
+    n_tp = 1. + pressure * (n_s - 1.) * X / D
+    n = n_tp - 1E-10 * (292.75/temperature) * (3.7345 - 0.0401 * S) * vapour_partial_pressure
+    return n
+
+def vacuum_to_air_wavelength(wavelengths, temperature=273.15, pressure=101325, relative_humidity=0):
     '''
 
-    density = (pressure / 101325) * (273.15 / temperature)
+    The conversion follows the Modified Edlén Equations
 
-    return density
+    https://emtoolbox.nist.gov/Wavelength/Documentation.asp
+
+    pressure drops by ~10% per 1000m above sea level
+    temperature depends heavily on the location
+    relative humidity is between 0-100, depends heavily on the location
 
 
-def vacuum_to_air_wavelength(wavelengths, density=1.0):
+    Parameters
+    ----------
+    wavelengths: float or numpy.array
+        Wavelengths in vacuum
+    temperature: float
+        In unit of Kelvin
+    pressure: float
+        In unit of Pa
+    relative_humidity: float
+        Unitless in percentage (i.e. 0 - 100)
+
+    Returns
+    -------
+    air wavelengths: float or numpy.array
+        The wavelengths in air given the condition
     '''
-    Calculate refractive index of air from Cauchy formula.
 
-    Input: wavelength in Angstrom, density of air in amagat (relative to STP,
-    e.g. ~10% decrease per 1000m above sea level).
-
-    refracstp = (n-1) * 1E6
-    return n = refracstp / 1E6 + 1
-
-    The IAU standard for conversion from air to vacuum wavelengths is given
-    in Morton (1991, ApJS, 77, 119). For vacuum wavelengths (VAC) in
-    Angstroms, convert to air wavelength (AIR) via:
-
-    AIR = VAC / (1.0 + n * (2.735182E-4 + 131.4182 / VAC^2 + 2.76249E8 / VAC^4))
-    '''
-
-    wl = np.array(wavelengths)
-    wl_inv = 1. / wl
-
-    refracstp = 1. + density * (0.000272643 + 131.4182 * wl_inv**2 + 2.76249E8 * wl_inv**4)
-    air_wavelengths = refracstp * wl
-
-    return air_wavelengths
-
+    vapour_pressure = get_vapour_pressure(temperature)
+    vapour_partial_pressure = get_vapour_partial_pressure(relative_humidity, vapour_pressure)
+    return wavelengths / edlen_refraction(wavelengths, temperature, pressure, vapour_partial_pressure)
 
 def filter_wavelengths(lines, min_atlas_wavelength, max_wavlength):
     wavelengths = lines[:,1].astype(np.float32)
@@ -152,8 +196,9 @@ def load_calibration_lines(elements=[],
                            min_intensity=10,
                            min_distance=10,
                            vacuum=False,
-                           pressure=101325,
-                           temperature=273.15):
+                           pressure=101325.,
+                           temperature=273.15,
+                           relative_humidity=0.):
 
     if isinstance(elements, str):
         elements = [elements]
@@ -195,8 +240,7 @@ def load_calibration_lines(elements=[],
 
     # Vacuum to air conversion
     if not vacuum:
-        density = pressure_temperature_to_density(pressure, temperature)
-        wavelengths = vacuum_to_air_wavelength(wavelengths, density)
+        wavelengths = vacuum_to_air_wavelength(wavelengths, temperature, pressure, relative_humidity)
 
     return elements, wavelengths, intensities
 
