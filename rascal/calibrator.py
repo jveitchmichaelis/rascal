@@ -834,13 +834,12 @@ class Calibrator:
                   elements,
                   min_atlas_wavelength=None,
                   max_atlas_wavelength=None,
-                  min_intensity=None,
-                  min_distance=None,
-                  include_second_order=None,
-                  constrain_poly=False,
-                  relative_intensity=10,
+                  min_intensity=10,
+                  min_distance=10,
+                  vacuum=False,
                   pressure=101325,
-                  temperature=273.15):
+                  temperature=273.15,
+                  constrain_poly=False):
         '''
         Provider the chemical symbol(s) to add arc lines to the Calibrator.
 
@@ -881,7 +880,7 @@ class Calibrator:
             atlas_elements_tmp, atlas_tmp, atlas_intensities_tmp =\
                 load_calibration_lines(
                     element, min_atlas_wavelength, max_atlas_wavelength,
-                    include_second_order, relative_intensity, pressure, temperature)
+                    min_intensity, min_distance, vacuum, pressure, temperature)
 
             self.atlas_elements.extend(atlas_elements_tmp)
             self.atlas.extend(atlas_tmp)

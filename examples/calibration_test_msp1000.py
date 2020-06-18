@@ -34,7 +34,7 @@ c = Calibrator(peaks,
                max_wavelength=8750.)
 
 # Ignore bluer Argon lines
-c.add_atlas("Hg", include_second_order=True)
+c.add_atlas("Hg")
 c.add_atlas("Ar", min_atlas_wavelength=6500)
 
 # Show the parameter space for searching possible solution

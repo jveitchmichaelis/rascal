@@ -39,7 +39,7 @@ c.set_fit_constraints(num_slopes=10000,
                       range_tolerance=500.,
                       xbins=500,
                       ybins=500)
-c.add_atlas(elements='Xe', relative_intensity=50)
+c.add_atlas(elements='Xe', min_intensity=50, pressure=90000., temperature=285.)
 
 # Show the parameter space for searching possible solution
 #c.plot_search_space()

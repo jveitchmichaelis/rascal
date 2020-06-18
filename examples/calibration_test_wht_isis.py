@@ -38,13 +38,16 @@ c.set_fit_constraints(num_slopes=5000,
                       range_tolerance=1000.,
                       xbins=200,
                       ybins=200)
-c.add_atlas(elements='CuNeAr_low')
+c.add_atlas(elements=['Cu', 'Ne', 'Ar'],
+            min_intensity=20,
+            pressure=90000.,
+            temperature=285.)
 
 # Show the parameter space for searching possible solution
 #c.plot_search_space()
 
 # Run the wavelength calibration
-best_p, rms, residual, peak_utilisation = c.fit(max_tries=2000)
+best_p, rms, residual, peak_utilisation = c.fit(max_tries=10000)
 
 # Refine solution
 # First set is to refine only the 0th and 1st coefficient (i.e. the 2 lowest orders)
