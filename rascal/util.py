@@ -253,10 +253,11 @@ def refine_peaks(spectrum, peaks, window_width=10):
     refined_peaks = []
 
     spectrum = np.array(spectrum)
+    length = len(spectrum)
 
     for peak in peaks:
 
-        y = spectrum[int(peak) - window_width:int(peak) + window_width]
+        y = spectrum[max(0, int(peak) - window_width):min(int(peak) + window_width, length)]
         y /= y.max()
 
         x = np.arange(len(y))

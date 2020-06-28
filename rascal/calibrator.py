@@ -1282,7 +1282,7 @@ class Calibrator:
         if n_delta is None:
             n_delta = len(polyfit_coeff) - 1
 
-        delta = polyfit_coeff_new[int(n_delta):] * 0.001
+        delta = polyfit_coeff_new[:int(n_delta)] * 0.001
 
         if refine:
             fit_delta = minimize(self._adjust_polyfit,
@@ -1592,8 +1592,8 @@ class Calibrator:
                 ),
                 hovermode='closest',
                 showlegend=True,
-                height=800,
-                width=1000)
+                height=height,
+                width=width)
 
             if renderer == 'default':
                 fig.show()
