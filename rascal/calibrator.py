@@ -1282,6 +1282,7 @@ class Calibrator:
                           constrain_poly=False,
                           coeff=None,
                           top_n=3,
+                          plot_candidates=True,
                           savefig=False,
                           filename=None,
                           json=False,
@@ -1316,7 +1317,7 @@ class Calibrator:
         self._get_candidates(num_slope=self.num_slopes,
                              top_n=self.num_candidates)
 
-        # ?
+        # Get top linear estimates and combine
         self.candidate_peak, self.candidate_arc =\
             self._combine_linear_estimates(self.candidates, top_n=top_n)
 
@@ -1340,7 +1341,9 @@ class Calibrator:
 
             # Plot all-pairs
             plt.scatter(*self.pairs.T, alpha=0.2, c='red')
-            plt.scatter(*self._merge_candidates(self.candidates).T, alpha=0.2)
+
+            if plot_candidates:
+                plt.scatter(*self._merge_candidates(self.candidates).T, alpha=0.2)
 
             # Tolerance region around the minimum wavelength
             plt.text(5, self.min_wavelength + 100,
@@ -1384,10 +1387,11 @@ class Calibrator:
                             self.polyval(self.peaks, coeff),
                             color='red')
 
-            plt.scatter(self.candidate_peak,
-                        self.candidate_arc,
-                        s=20,
-                        c='purple')
+            if plot_candidates:
+                plt.scatter(self.candidate_peak,
+                            self.candidate_arc,
+                            s=20,
+                            c='purple')
 
             plt.xlim(0, self.num_pix)
             plt.ylim(self.min_wavelength - self.range_tolerance,
@@ -1409,18 +1413,20 @@ class Calibrator:
                            mode='markers',
                            name='All Pairs',
                            marker=dict(color='red', opacity=0.2)))
-            fig.add_trace(
-                go.Scatter(x=self._merge_candidates(self.candidates)[:, 0],
-                           y=self._merge_candidates(self.candidates)[:, 1],
-                           mode='markers',
-                           name='Candidate Pairs',
-                           marker=dict(color='royalblue', opacity=0.2)))
-            fig.add_trace(
-                go.Scatter(x=self.candidate_peak,
-                           y=self.candidate_arc,
-                           mode='markers',
-                           name='Best Candidate Pairs',
-                           marker=dict(color='purple')))
+
+            if plot_candidates:
+                fig.add_trace(
+                    go.Scatter(x=self._merge_candidates(self.candidates)[:, 0],
+                            y=self._merge_candidates(self.candidates)[:, 1],
+                            mode='markers',
+                            name='Candidate Pairs',
+                            marker=dict(color='royalblue', opacity=0.2)))
+                fig.add_trace(
+                    go.Scatter(x=self.candidate_peak,
+                            y=self.candidate_arc,
+                            mode='markers',
+                            name='Best Candidate Pairs',
+                            marker=dict(color='purple')))
 
             # Tolerance region around the minimum wavelength
             fig.add_trace(
