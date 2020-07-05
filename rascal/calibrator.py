@@ -843,7 +843,16 @@ class Calibrator:
                   relative_humidity=0.,
                   constrain_poly=False):
         '''
-        Provider the chemical symbol(s) to add arc lines to the Calibrator.
+        Adds an atlas of arc lines to the calibrator, given an element.
+        
+        Arc lines are taken from a general list of NIST lines and can be filtered
+        using the minimum relative intensity (note this may not be accurate due to
+        instrumental effects such as detector response, dichroics, etc) and 
+        minimum line separation.
+
+        Lines are filtered first by relative intensity, then by separation. This
+        is to improve robustness in the case where there is a strong line very 
+        close to a weak line (which is within the separation limit).
 
         The vacuum to air wavelength conversion is deafult to False because
         observatories usually provide the line lists in the respective air
@@ -927,7 +936,10 @@ class Calibrator:
                        temperature=273.15,
                        relative_humidity=0.):
         '''
-        Add a single or list arc lines.
+        Add a single or list of arc lines. Each arc line should have an 
+        element label associated with it. It is recommended that you use
+        a standard periodic table abbreviation (e.g. "Hg"), but it makes
+        no difference to the fitting process.
 
         The vacuum to air wavelength conversion is deafult to False because
         observatories usually provide the line lists in the respective air
@@ -1004,7 +1016,7 @@ class Calibrator:
         elements : list
             Element (required). Preferably a standard (i.e. periodic table)
             name for convenience with built-in atlases
-        wavelenths : list
+        wavelengths : list
             Wavelength to add (Angstrom)
         intensities : list
             Relative line intensities
@@ -1063,6 +1075,9 @@ class Calibrator:
         Provide manual pixel-wavelength pair(s), fixed values in the fit.
         Use with caution because it can completely skew or bias the fit.
 
+        This can be used for example for low intensity lines at the edge of
+        the spectrum.
+
         Parameters
         ----------
         pix : numeric value, list or numpy 1D array (N) (default: ())
@@ -1072,6 +1087,9 @@ class Calibrator:
             The matching wavelength for each of the pix.
 
         '''
+
+        assert len(pix) > 0 and len(wave) > 0, ValueError(
+            'Please supply at least one pair')
 
         assert len(pix) == len(wave), ValueError(
             'Please check the length of the input lists.')
@@ -1085,7 +1103,7 @@ class Calibrator:
                             fit_tolerance=10.,
                             polydeg=4,
                             candidate_thresh=15.,
-                            linearity_thresh=1.5,
+                            linearity_thresh=100,
                             ransac_thresh=3,
                             num_candidates=25,
                             xbins=100,
@@ -1093,7 +1111,7 @@ class Calibrator:
                             brute_force=False,
                             fittype='poly'):
         '''
-        Configure the Calibrator. This requires some manual twiddling before
+        Configure the Calibrator. This may require some manual twiddling before
         the calibrator can work efficiently. However, in theory, a large
         max_tries in fit() should provide a good solution in the expense of
         performance (minutes instead of seconds).
@@ -1116,10 +1134,10 @@ class Calibrator:
             during candidate peak/line selection. This should be reasonable
             small as we want to search for candidate points which are
             *locally* linear.
-        linearity_thresh : float (default: 1.5)
-            A threshold (Angstroms) that expresses how non-linear the solution
-            can be. This mostly affects which atlas points are included and
-            should be reasonably large, e.g. 500A.
+        linearity_thresh : float (default: 100)
+            A threshold (Ansgtroms) which defines some padding around the 
+            range tolerance to allow for non-linearity. This should be the
+            maximum expected excursion from linearity.
         ransac_thresh : float (default: 1)
             The distance criteria  (Angstroms) to be considered an inlier to a
             fit. This should be close to the size of the expected residuals on
@@ -1146,18 +1164,13 @@ class Calibrator:
         self.min_intercept = self.min_wavelength - self.range_tolerance
         self.max_intercept = self.min_wavelength + self.range_tolerance
 
-        # TODO: This has problems if you reduce range tolerance.
-        self.min_slope = ((self.max_wavelength - self.range_tolerance) -
+        self.min_slope = ((self.max_wavelength - self.range_tolerance - self.linearity_thresh) -
                           (self.min_intercept +
-                           self.range_tolerance)) / self.pixel_list.max()
+                           self.range_tolerance + self.linearity_thresh)) / self.pixel_list.max()
 
-        self.max_slope = ((self.max_wavelength + self.range_tolerance) -
+        self.max_slope = ((self.max_wavelength + self.range_tolerance + self.linearity_thresh) -
                           (self.min_intercept -
-                           self.range_tolerance)) / self.pixel_list.max()
-
-        # This seems wrong.
-        #self.min_slope /= self.linearity_thresh
-        #self.max_slope *= self.linearity_thresh
+                           self.range_tolerance - self.linearity_thresh)) / self.pixel_list.max()
 
         self.fit_tolerance = fit_tolerance
         self.polydeg = polydeg
