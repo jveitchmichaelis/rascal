@@ -11,6 +11,7 @@ from scipy import interpolate
 from .util import load_calibration_lines
 from .util import derivative
 from .util import gauss
+from .util import vacuum_to_air_wavelength
 from .synthetic import SyntheticSpectrum
 from . import models
 
@@ -844,6 +845,11 @@ class Calibrator:
         '''
         Provider the chemical symbol(s) to add arc lines to the Calibrator.
 
+        The vacuum to air wavelength conversion is deafult to False because
+        observatories usually provide the line lists in the respective air
+        wavelength, as the corrections from temperature and humidity are
+        small. See https://emtoolbox.nist.gov/Wavelength/Documentation.asp
+
         Parameters
         ----------
         elements: string or list of strings
@@ -858,13 +864,15 @@ class Calibrator:
             Minimum separation between neighbouring arc lines.
         include_second_order: boolean (default: None)
             Set to True to include second order arc lines.
-        constrain_poly: boolean (default: False)
-            €£$
         pressure: float
             Pressure when the observation took place, in Pascal.
             If it is not known, assume 10% decrement per 1000 meter altitude
         temperature: float
             Temperature when the observation took place, in Kelvin.
+        relative_humidity: float
+            In percentage.
+        constrain_poly : boolean
+            Apply a polygonal constraint on possible peak/atlas pairs
         '''
 
         if min_atlas_wavelength is None:
@@ -910,9 +918,21 @@ class Calibrator:
         self.atlas = []
         self.atlas_intensities = []
 
-    def add_user_atlas(self, element, atlas, intensity=None):
+    def add_user_atlas(self,
+                       element,
+                       atlas,
+                       intensity=None,
+                       vacuum=False,
+                       pressure=101325.,
+                       temperature=273.15,
+                       relative_humidity=0.):
         '''
         Add a single or list arc lines.
+
+        The vacuum to air wavelength conversion is deafult to False because
+        observatories usually provide the line lists in the respective air
+        wavelength, as the corrections from temperature and humidity are
+        small. See https://emtoolbox.nist.gov/Wavelength/Documentation.asp
 
         Parameters
         ----------
@@ -923,32 +943,61 @@ class Calibrator:
             Wavelength to add (Angstrom)
         intensity : list/float
             Relative line intensity (NIST value)
+        vacuum: boolean
+            Set to true to convert the input wavelength to air-wavelengths
+            based on the given pressure, temperature and humidity.
+        pressure: float
+            Pressure when the observation took place, in Pascal.
+            If it is not known, assume 10% decrement per 1000 meter altitude
+        temperature: float
+            Temperature when the observation took place, in Kelvin.
+        relative_humidity: float
+            In percentage.
 
         '''
 
         if not isinstance(element, list):
-            element = [element]
+            element = list(element)
 
         if not isinstance(atlas, list):
-            atlas = [atlas]
+            atlas = list(atlas)
 
         if intensity is None:
             intensity = [0] * len(atlas)
         else:
             if not isinstance(intensity, list):
-                intensity = [intensity]
+                intensity = list(intensity)
 
-        assert len(element) == len(atlas) == len(intensity), ValueError(
-            'Please check the length of the input lists.')
+        assert len(element) == len(atlas), ValueError(
+                'Input element and atlas have different length.')
+        assert len(element) == len(intensity), ValueError(
+                'Input element and intensity have different length.')
+
+        if vacuum:
+            atlas = vacuum_to_air_wavelength(atlas, temperature, pressure,
+                                             relative_humidity)
 
         self.atlas_elements.extend(element)
         self.atlas.extend(atlas)
         self.atlas_intensities.extend(intensity)
 
-    def load_user_atlas(self, elements, wavelengths, intensities=None):
+    def load_user_atlas(self,
+                        elements,
+                        wavelengths,
+                        intensities=None,
+                        constrain_poly=False,
+                        vacuum=False,
+                        pressure=101325.,
+                        temperature=273.15,
+                        relative_humidity=0.):
         '''
-        Remove all the arc lines loaded to the Calibrator and then use the user
+        *Remove* all the arc lines loaded to the Calibrator and then use the user
         supplied arc lines instead.
+
+        The vacuum to air wavelength conversion is deafult to False because
+        observatories usually provide the line lists in the respective air
+        wavelength, as the corrections from temperature and humidity are
+        small. See https://emtoolbox.nist.gov/Wavelength/Documentation.asp
 
         Parameters
         ----------
@@ -959,7 +1008,18 @@ class Calibrator:
             Wavelength to add (Angstrom)
         intensities : list
             Relative line intensities
-
+        constrain_poly : boolean
+            Apply a polygonal constraint on possible peak/atlas pairs
+        vacuum: boolean
+            Set to true to convert the input wavelength to air-wavelengths
+            based on the given pressure, temperature and humidity.
+        pressure: float
+            Pressure when the observation took place, in Pascal.
+            If it is not known, assume 10% decrement per 1000 meter altitude
+        temperature: float
+            Temperature when the observation took place, in Kelvin.
+        relative_humidity: float
+            In percentage.
         '''
 
         self.clear_atlas()
@@ -967,11 +1027,14 @@ class Calibrator:
         if intensities is None:
             intensities = [0] * len(wavelengths)
 
-        assert len(elements) == len(wavelengths) == len(
-            intensities), ValueError(
-                'Please check the length of the input lists.')
+        assert len(elements) == len(wavelengths), ValueError(
+                'Input elements and wavelengths have different length.')
+        assert len(elements) == len(intensities), ValueError(
+                'Input elements and intensities have different length.')
 
-        self.add_user_atlas(elements, wavelengths, intensities)
+        self.add_user_atlas(elements, wavelengths, intensities, vacuum, pressure, temperature,
+                                             relative_humidity)
+        self.set_peaks(constrain_poly)
 
     def remove_atlas_lines_range(self, wavelength, tolerance=10):
         """
@@ -1359,8 +1422,8 @@ class Calibrator:
 
         Parameters
         ----------
-        constrain_poly : boolean (default: False)
-            €£$
+        constrain_poly : boolean
+            Apply a polygonal constraint on possible peak/atlas pairs
         coeff : list (default: None)
             List of best polynomial coefficients
         top_n : int (default: 3)

@@ -116,7 +116,7 @@ def edlen_refraction(wavelengths, temperature, pressure, vapour_partial_pressure
     E = 0.601
     F = 0.00972
     G = 0.003661
-    S = 1. / wavelengths**2.
+    S = 1. / np.array(wavelengths)**2.
     n_s = 1. + 1E-8 * (A + B/(130-S) + C / (38.9 -S))
     X = (1. + 1E-8 * (E - F * (temperature-273.15)) * pressure) / (1. + G * (temperature-273.15))
     n_tp = 1. + pressure * (n_s - 1.) * X / D
@@ -154,7 +154,7 @@ def vacuum_to_air_wavelength(wavelengths, temperature=273.15, pressure=101325, r
 
     vapour_pressure = get_vapour_pressure(temperature)
     vapour_partial_pressure = get_vapour_partial_pressure(relative_humidity, vapour_pressure)
-    return wavelengths / edlen_refraction(wavelengths, temperature, pressure, vapour_partial_pressure)
+    return np.array(wavelengths) / edlen_refraction(wavelengths, temperature, pressure, vapour_partial_pressure)
 
 def filter_wavelengths(lines, min_atlas_wavelength, max_wavlength):
     wavelengths = lines[:,1].astype(np.float32)
