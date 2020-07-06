@@ -391,7 +391,7 @@ class Calibrator:
             # Note that the pairs outside of the range_tolerance were already
             # removed in an earlier stage
             weight = gauss(actual[mask], 1., predicted[mask],
-                           self.range_tolerance * 1.1775)
+                           (self.range_tolerance+self.linearity_thresh) * 1.1775)
 
             self.candidates.append((self.pairs[:,
                                                0][mask], actual[mask], weight))
@@ -1298,7 +1298,7 @@ class Calibrator:
                     robust_refit=True,
                     polydeg=None):
         '''
-        Refine the polynomial fit coefficients. Recomended to use in it
+        Refine the polynomial fit coefficients. Recommended to use in it
         multiple calls to first refine the lowest order and gradually increase
         the order of coefficients to be included for refinement. This is be
         achieved by providing delta in the length matching the number of the

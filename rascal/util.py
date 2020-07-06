@@ -246,7 +246,7 @@ def load_calibration_lines(elements=[],
 
 
 def gauss(x, a, x0, sigma):
-    return a * exp(-(x - x0)**2 / (2 * sigma**2))
+    return a * exp(-(x - x0)**2 / (2 * sigma**2 + 1e-9))
 
 
 def refine_peaks(spectrum, peaks, window_width=10):
