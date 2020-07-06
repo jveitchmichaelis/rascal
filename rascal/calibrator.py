@@ -844,14 +844,14 @@ class Calibrator:
                   constrain_poly=False):
         '''
         Adds an atlas of arc lines to the calibrator, given an element.
-        
+
         Arc lines are taken from a general list of NIST lines and can be filtered
         using the minimum relative intensity (note this may not be accurate due to
-        instrumental effects such as detector response, dichroics, etc) and 
+        instrumental effects such as detector response, dichroics, etc) and
         minimum line separation.
 
         Lines are filtered first by relative intensity, then by separation. This
-        is to improve robustness in the case where there is a strong line very 
+        is to improve robustness in the case where there is a strong line very
         close to a weak line (which is within the separation limit).
 
         The vacuum to air wavelength conversion is deafult to False because
@@ -936,7 +936,7 @@ class Calibrator:
                        temperature=273.15,
                        relative_humidity=0.):
         '''
-        Add a single or list of arc lines. Each arc line should have an 
+        Add a single or list of arc lines. Each arc line should have an
         element label associated with it. It is recommended that you use
         a standard periodic table abbreviation (e.g. "Hg"), but it makes
         no difference to the fitting process.
@@ -1088,8 +1088,8 @@ class Calibrator:
 
         '''
 
-        assert len(pix) > 0 and len(wave) > 0, ValueError(
-            'Please supply at least one pair')
+        #assert len(pix) > 0 and len(wave) > 0, ValueError(
+        #    'Please supply at least one pair')
 
         assert len(pix) == len(wave), ValueError(
             'Please check the length of the input lists.')
@@ -1135,7 +1135,7 @@ class Calibrator:
             small as we want to search for candidate points which are
             *locally* linear.
         linearity_thresh : float (default: 100)
-            A threshold (Ansgtroms) which defines some padding around the 
+            A threshold (Ansgtroms) which defines some padding around the
             range tolerance to allow for non-linearity. This should be the
             maximum expected excursion from linearity.
         ransac_thresh : float (default: 1)
