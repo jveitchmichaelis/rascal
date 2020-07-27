@@ -10,12 +10,18 @@ from rascal import util
 
 # Load the LT SPRAT data
 base_dir = os.path.dirname(__file__)
-spectrum2D = fits.open(
-    os.path.join(base_dir, 'data_lt_sprat/v_a_20190516_57_1_0_1.fits'))[0].data
+fits_file = fits.open(
+    os.path.join(base_dir, 'data_lt_sprat/v_a_20190516_57_1_0_1.fits'))[0]
 
+spectrum2D = fits_file.data
+
+temperature = fits_file.header['REFTEMP']
+pressure = fits_file.header['REFPRES'] * 100.
+relative_humidity = fits_file.header['REFHUMID']
+print(temperature, pressure, relative_humidity)
 # Collapse into 1D spectrum between row 110 and 120
 spectrum = np.median(spectrum2D[110:120], axis=0)
-
+'''
 plt.figure()
 plt.plot(spectrum / spectrum.max())
 plt.title('Number of pixels: ' + str(spectrum.shape[0]))
@@ -24,30 +30,38 @@ plt.ylabel("Normalised Count")
 plt.xlim(0, 1024)
 plt.grid()
 plt.tight_layout()
+'''
 
 # Identify the peaks
 peaks, _ = find_peaks(spectrum, height=200, distance=10, threshold=None)
 peaks = util.refine_peaks(spectrum, peaks, window_width=5)
 
 # Initialise the calibrator
-c = Calibrator(peaks, num_pix=1024, min_wavelength=3500., max_wavelength=8000.)
-c.set_fit_constraints(num_slopes=2000,
+c = Calibrator(peaks,
+               num_pix=len(spectrum),
+               min_wavelength=3500.,
+               max_wavelength=8000.)
+c.set_fit_constraints(num_slopes=10000,
                       range_tolerance=500.,
-                      xbins=100,
-                      ybins=100)
-c.add_atlas(elements='Xe')
+                      xbins=500,
+                      ybins=500)
+c.add_atlas(elements='Xe',
+            min_intensity=20,
+            pressure=pressure,
+            temperature=temperature,
+            relative_humidity=relative_humidity)
 
 # Show the parameter space for searching possible solution
-c.plot_search_space()
+#c.plot_search_space()
 
 # Run the wavelength calibration
-best_p, rms, residual, peak_utilisation = c.fit(max_tries=1000)
+best_p, rms, residual, peak_utilisation = c.fit(max_tries=10000)
 
 # Refine solution
 # First set is to refine only the 0th and 1st coefficient (i.e. the 2 lowest orders)
 best_p, x_fit, y_fit, residual, peak_utilisation = c.match_peaks(
     best_p,
-    delta=best_p[:1] * 0.001,
+    n_delta=2,
     tolerance=10.,
     convergence=1e-10,
     method='Nelder-Mead',
@@ -55,7 +69,6 @@ best_p, x_fit, y_fit, residual, peak_utilisation = c.match_peaks(
 # Second set is to refine all the coefficients
 best_p, x_fit, y_fit, residual, peak_utilisation = c.match_peaks(
     best_p,
-    delta=best_p * 0.001,
     tolerance=10.,
     convergence=1e-10,
     method='Nelder-Mead',

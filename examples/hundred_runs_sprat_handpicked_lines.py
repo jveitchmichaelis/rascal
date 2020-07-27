@@ -24,10 +24,12 @@ peaks = util.refine_peaks(spectrum, peaks, window_width=5)
 
 # Initialise the calibrator
 c = Calibrator(peaks, num_pix=1024, min_wavelength=3500., max_wavelength=8000.)
-c.set_fit_constraints(num_slopes=5000,
+c.set_fit_constraints(num_slopes=2000,
                       range_tolerance=500.,
                       xbins=100,
                       ybins=100)
+
+
 # blend: 4829.71, 4844.33
 # blend: 5566.62, 5581.88
 # blend: 6261.212, 6265.302
@@ -50,11 +52,11 @@ c.set_peaks(constrain_poly=True)
 
 def run_sprat_calibration(polydeg, peaks):
     # Run the wavelength calibration
-    best_p, rms, residual, peak_utilisation = c.fit(max_tries=10000)
+    best_p, rms, residual, peak_utilisation = c.fit(max_tries=2000)
     # First set is to refine only the 0th and 1st coefficient (i.e. the 2 lowest orders)
     best_p, x_fit, y_fit, residual, peak_utilisation = c.match_peaks(
         best_p,
-        delta=best_p[:1] * 0.001,
+        n_delta=2,
         tolerance=10.,
         convergence=1e-10,
         method='Nelder-Mead',
@@ -63,7 +65,6 @@ def run_sprat_calibration(polydeg, peaks):
     # Second set is to refine all the coefficients
     best_p, x_fit, y_fit, residual, peak_utilisation = c.match_peaks(
         best_p,
-        delta=best_p * 0.001,
         tolerance=10.,
         convergence=1e-10,
         method='Nelder-Mead',
@@ -93,7 +94,7 @@ for i in range(n):
 
 #sort by the wavelength fitted to the largest pixel value
 mask_sorted = np.argsort(waves[:,-1])
-
+'''
 plt.figure(1)
 plt.clf()
 plt.scatter(c0[mask_sorted], c1[mask_sorted], c=np.arange(n), s=5)
@@ -137,7 +138,7 @@ plt.ylim(min(c4), max(c4))
 plt.colorbar()
 plt.grid()
 plt.tight_layout()
-
+'''
 plt.figure(5)
 plt.clf()
 for i in range(len(peaks)):

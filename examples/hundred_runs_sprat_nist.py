@@ -36,7 +36,7 @@ def run_sprat_calibration(polydeg, peaks):
     # First set is to refine only the 0th and 1st coefficient (i.e. the 2 lowest orders)
     best_p, x_fit, y_fit, residual, peak_utilisation = c.match_peaks(
         best_p,
-        delta=best_p[:1] * 0.001,
+        n_delta=2,
         tolerance=10.,
         convergence=1e-10,
         method='Nelder-Mead',
@@ -45,7 +45,6 @@ def run_sprat_calibration(polydeg, peaks):
     # Second set is to refine all the coefficients
     best_p, x_fit, y_fit, residual, peak_utilisation = c.match_peaks(
         best_p,
-        delta=best_p * 0.001,
         tolerance=10.,
         convergence=1e-10,
         method='Nelder-Mead',

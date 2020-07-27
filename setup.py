@@ -6,7 +6,7 @@ __packagename__ = "rascal"
 
 setup(
     name=__packagename__,
-    version='0.0.1',
+    version='0.1.0',
     packages=find_packages(),
     author='Josh Veitch-Michaelis',
     author_email='j.veitchmichaelis@gmail.com',

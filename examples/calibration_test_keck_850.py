@@ -17,7 +17,7 @@ spectrum = fits.open(data_path)[1].data
 flux = spectrum['flux']
 
 # Identify the arc lines
-peaks, _ = find_peaks(flux, prominence=1000, distance=20)
+peaks, _ = find_peaks(flux, prominence=1000, height=1000, distance=10)
 refined_peaks = refine_peaks(flux, peaks, window_width=3)
 
 intensity_range = max(flux) - min(flux)
@@ -40,22 +40,29 @@ plt.ylabel("Intensity (arbitrary)")
 c = Calibrator(refined_peaks,
                num_pix=len(spectrum),
                min_wavelength=6500,
-               max_wavelength=10400)
+               max_wavelength=10500)
 
-c.add_atlas(["Ne", "Ar", "Kr"])
-c.set_fit_constraints(range_tolerance=500, fit_tolerance=10, polydeg=5)
+c.add_atlas(["Ne", "Ar", "Kr"],
+            min_intensity=50,
+            pressure=70000.,
+            temperature=285.)
+c.set_fit_constraints(range_tolerance=1000,
+                      xbins=500,
+                      ybins=500,
+                      fit_tolerance=10,
+                      polydeg=5)
 
 # Show the parameter space for searching possible solution
 c.plot_search_space()
 
 # Run the wavelength calibration
-best_p, rms, residual, peak_utilisation = c.fit(max_tries=10000)
+best_p, rms, residual, peak_utilisation = c.fit(max_tries=5000)
 
 # Refine solution
 # First set is to refine only the 0th and 1st coefficient (i.e. the 2 lowest orders)
 best_p, x_fit, y_fit, residual, peak_utilisation = c.match_peaks(
     best_p,
-    delta=best_p[:1] * 0.001,
+    n_delta=2,
     tolerance=10.,
     convergence=1e-10,
     method='Nelder-Mead',
@@ -63,12 +70,10 @@ best_p, x_fit, y_fit, residual, peak_utilisation = c.match_peaks(
 # Second set is to refine all the coefficients
 best_p, x_fit, y_fit, residual, peak_utilisation = c.match_peaks(
     best_p,
-    delta=best_p * 0.001,
     tolerance=10.,
     convergence=1e-10,
     method='Nelder-Mead',
-    robust_refit=True,
-    polydeg=7)
+    robust_refit=True)
 
 # Plot the solution
 c.plot_fit(flux, best_p, plot_atlas=True, log_spectrum=False, tolerance=3)

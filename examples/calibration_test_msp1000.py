@@ -34,20 +34,20 @@ c = Calibrator(peaks,
                max_wavelength=8750.)
 
 # Ignore bluer Argon lines
-c.add_atlas("Hg", include_second_order=True)
+c.add_atlas("Hg")
 c.add_atlas("Ar", min_atlas_wavelength=6500)
 
 # Show the parameter space for searching possible solution
 c.plot_search_space()
 
 # Run the wavelength calibration
-best_p, rms, residual, peak_utilisation = c.fit(max_tries=10000)
+best_p, rms, residual, peak_utilisation = c.fit(max_tries=1000)
 
 # Refine solution
 # First set is to refine only the 0th and 1st coefficient (i.e. the 2 lowest orders)
 best_p, x_fit, y_fit, residual, peak_utilisation = c.match_peaks(
     best_p,
-    delta=best_p[:1] * 0.001,
+    n_delta=2,
     tolerance=10.,
     convergence=1e-10,
     method='Nelder-Mead',
@@ -55,7 +55,6 @@ best_p, x_fit, y_fit, residual, peak_utilisation = c.match_peaks(
 # Second set is to refine all the coefficients
 best_p, x_fit, y_fit, residual, peak_utilisation = c.match_peaks(
     best_p,
-    delta=best_p * 0.001,
     tolerance=10.,
     convergence=1e-10,
     method='Nelder-Mead',
