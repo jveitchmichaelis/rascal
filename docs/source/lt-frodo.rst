@@ -1,0 +1,4 @@
+Example - FRODOSpec
+===================
+
+Liverpool Telescope
