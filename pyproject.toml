@@ -2,7 +2,7 @@
 name = "rascal"
 version = "0.1.0"
 description = ""
-license = "GPL"
+license = "BSD"
 readme = "README.md"
 authors = ["Josh Veitch-Michaelis <j.veitchmichaelis@gmail.com>"]
 homepage = "https://github.com/jveitchmichaelis/rascal"

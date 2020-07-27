@@ -10,7 +10,7 @@ setup(
     packages=find_packages(),
     author='Josh Veitch-Michaelis',
     author_email='j.veitchmichaelis@gmail.com',
-    license='GPL',
+    license='BSD',
     long_description=open('README.md').read(),
     zip_safe=False,
     include_package_data=True,
