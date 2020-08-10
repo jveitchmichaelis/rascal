@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-install_requires=['scipy', 'numpy>=1.16', 'tqdm', 'matplotlib', 'astropy', 'pynverse', 'pytest']
+install_requires=['scipy>=1.3.3', 'numpy>=1.16', 'tqdm>=4.48', 'matplotlib>=3.0.3', 'astropy>=4.0', 'pynverse>=0.1.4', 'pytest>=5.3', 'pytest-cov>=2.8']
 
 __packagename__ = "rascal"
 
@@ -14,5 +14,6 @@ setup(
     long_description=open('README.md').read(),
     zip_safe=False,
     include_package_data=True,
-    install_requires = install_requires
+    install_requires = install_requires,
+    python_requires='>=3.6'
 )
