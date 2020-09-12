@@ -51,17 +51,16 @@ atlas = [
 ]
 element = ['Xe'] * len(atlas)
 
-c.load_user_atlas(element, atlas)
+c.load_user_atlas(element, atlas, constrain_poly=True,
+                                                pressure=90000.,
+                                                temperature=285.,
+                                                relative_humidity=10.)
 
-c.set_peaks(constrain_poly=True)
-
-# Show the parameter space for searching possible solution
-c.plot_search_space()
 
 # Run the wavelength calibration
 best_p, rms, residual, peak_utilisation = c.fit(max_tries=10000,
                                                 sample_size=5,
-                                                top_n=20)
+                                                top_n=5)
 
 # Refine solution
 # First set is to refine only the 0th and 1st coefficient (i.e. the 2 lowest orders)
@@ -83,6 +82,9 @@ best_p, x_fit, y_fit, residual, peak_utilisation = c.match_peaks(
 
 # Plot the solution
 c.plot_fit(spectrum, best_p, plot_atlas=True, log_spectrum=False, tolerance=5.)
+
+# Show the parameter space for searching possible solution
+c.plot_search_space(top_n=5)
 
 fit_diff = c.polyval(x_fit, best_p) - y_fit
 rms = np.sqrt(np.sum(fit_diff**2 / len(x_fit)))

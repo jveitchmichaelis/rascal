@@ -2,7 +2,9 @@ import warnings
 import itertools
 from collections import Counter
 import logging
+
 import astropy.units as u
+import json
 import numpy as np
 from scipy.spatial import Delaunay
 from scipy.optimize import minimize
@@ -22,6 +24,234 @@ except:
     warnings.warn(
         'tqdm package not available. Progress bar will not be shown.')
     tdqm_imported = False
+
+
+class HoughTransform:
+    def __init__(self):
+
+        self.hough_points = None
+        self.hist = None
+        self.xedges = None
+        self.yedges = None
+
+    def set_constraints(self, min_slope, max_slope, min_intercept,
+                        max_intercept):
+
+        assert np.isfinite(
+            min_slope), 'min_slope has to be finite, %s is given ' % min_slope
+        assert np.isfinite(
+            max_slope), 'max_slope has to be finite, %s is given ' % max_slope
+        assert np.isfinite(
+            min_intercept
+        ), 'min_intercept has to be finite, %s is given ' % min_intercept
+        assert np.isfinite(
+            max_intercept
+        ), 'max_intercept has to be finite, %s is given ' % max_intercept
+
+        self.min_slope = min_slope
+        self.max_slope = max_slope
+        self.min_intercept = min_intercept
+        self.max_intercept = max_intercept
+
+    def generate_hough_points(self, x, y, num_slopes):
+        '''
+        Calculate the Hough transform for a set of input points and returns the
+        2D Hough hough_points matrix.
+
+        Parameters
+        ----------
+        x : 1D numpy array
+            The x-axis represents slope.
+        y : 1D numpy array
+            The y-axis represents intercept. Vertical lines (infinite gradient)
+            are not accommodated.
+        num_slopes : int
+            The number of slopes to be generated.
+
+        Returns
+        -------
+        hough_points : 2D numpy array
+            A 2D Hough hough_points array.
+
+        '''
+
+        # Getting all the slopes
+        slopes = np.linspace(self.min_slope, self.max_slope, num_slopes)
+
+        # Computing all the intercepts and gradients
+        intercepts = np.concatenate(y - np.outer(slopes, x))
+        gradients = np.concatenate(np.column_stack([slopes] * len(x)))
+
+        # Apply boundaries
+        mask = ((self.min_intercept <= intercepts) &
+                (intercepts <= self.max_intercept))
+        intercepts = intercepts[mask]
+        gradients = gradients[mask]
+
+        # Create an array of Hough Points
+        self.hough_points = np.column_stack((gradients, intercepts))
+
+    def bin_hough_points(self, xbins, ybins):
+        '''
+        Bin up data by using a 2D histogram method.
+
+        Parameters
+        ----------
+        hough_points : 2D numpy array
+            A 2D Hough hough_points array.
+        xbins : int
+            The number of bins in the pixel direction.
+        ybins : int
+            The number of bins in the wavelength direction.
+
+        Returns
+        -------
+        hist : 2D numpy array (M*N)
+            Height of the 2D histogram
+        xedges : 1D numpy array (M)
+            Centres of the y-bins
+        yedges : 1D numpy array (N)
+            Centres of the y-bins
+
+        '''
+        assert self.hough_points is not None, 'Please load an hough_points or create an hough_points with hough_points() first.'
+
+        self.hist, self.xedges, self.yedges = np.histogram2d(
+            self.hough_points[:, 0],
+            self.hough_points[:, 1],
+            bins=(xbins, ybins))
+
+        # Get the line coeffients from the promising bins in the histogram
+        self.hist_sorted_arg = np.dstack(
+            np.unravel_index(np.argsort(self.hist.ravel())[::-1],
+                             self.hist.shape))[0]
+
+        xbin_width = (self.xedges[1] - self.xedges[0]) / 2
+        ybin_width = (self.yedges[1] - self.yedges[0]) / 2
+
+        lines = []
+        for b in self.hist_sorted_arg:
+            lines.append(
+                (self.xedges[b[0]] + xbin_width, self.yedges[b[1]] + ybin_width))
+
+        self.hough_lines = lines
+
+    def save(self,
+             filename='hough_transform',
+             fileformat='npy',
+             content='hp_hist',
+             delimiter='+'):
+        '''
+        Store the binned Hough space and/or the raw Hough pairs.
+
+        Parameters
+        ----------
+        filename: str
+            The filename of the output, not used if to_disk is False. It will be
+            appended with the content type.
+        format: str (default: 'npy')
+            Choose from 'npy' and json'
+        content: str (default: 'hp_constraints+hp_hist')
+            Choose from 'hp', 'hp_hist'
+                hp: all the hough points
+                hp_hist: the binned 2d histogram of the houghspace
+        delimiter: str (default: '+')
+            Delimiter for format and content types
+        to_disk: boolean
+            Set to True to save to disk, else return a numpy array object
+
+        Returns
+        -------
+        hp_hough_points: numpy.ndarray
+            only return if to_disk is False.
+
+        '''
+
+        fileformat_split = fileformat.split(delimiter)
+        content_split = content.split(delimiter)
+
+        if 'npy' in fileformat_split:
+
+            output_npy = []
+
+            if 'hp' in content_split:
+                output_npy.append(self.hough_points)
+
+            if 'hp_hist' in content_split:
+                output_npy.append(self.hist)
+                output_npy.append(self.xedges)
+                output_npy.append(self.yedges)
+
+            output_npy.append([self.min_slope])
+            output_npy.append([self.max_slope])
+            output_npy.append([self.min_intercept])
+            output_npy.append([self.min_intercept])
+
+            np.save(filename + '.npy', output_npy)
+
+        if 'json' in fileformat_split:
+            output_json = {}
+
+            if 'hp' in content_split:
+                output_json['hough_points'] = self.hough_points.tolist()
+
+            if 'hp_hist' in content_split:
+                output_json['hist'] = self.hist.tolist()
+                output_json['xedges'] = self.xedges.tolist()
+                output_json['yedges'] = self.yedges.tolist()
+
+            output_json['min_slope'] = self.min_slope
+            output_json['max_slope'] = self.max_slope
+            output_json['min_intercept'] = self.min_intercept
+            output_json['max_intercept'] = self.max_intercept
+
+            with open(filename + '.json', 'w+') as f:
+                json.dump(output_json, f)
+
+    def load(self, filename='hough_transform', filetype='npy'):
+
+        if filetype == 'npy':
+
+            input_npy = np.load(filename, allow_pickle=True)
+            len_npy = len(input_npy)
+
+            if len_npy == 7:
+                shift = 0
+
+            elif len_npy == 8:
+                shift = 1
+                self.hough_points = input_npy[0]
+            else:
+                raise ValueError('The npy files has a length of %s.' %
+                                 len(input_npy))
+
+            self.hist = input_npy[0 + shift].astype('float')
+            self.xedges = input_npy[1 + shift].astype('float')
+            self.yedges = input_npy[2 + shift].astype('float')
+            self.min_slope = float(input_npy[3 + shift][0])
+            self.max_slope = float(input_npy[4 + shift][0])
+            self.min_intercept = float(input_npy[5 + shift][0])
+            self.max_intercept = float(input_npy[6 + shift][0])
+
+        elif filetype == 'json':
+
+            input_json = json.load(open(filename))
+            len_json = len(input_json.keys())
+
+            if len_json == 8:
+                self.hough_points = input_json['hough_points']
+
+            self.hist = np.array(input_json['hist']).astype('float')
+            self.xedges = np.array(input_json['xedges']).astype('float')
+            self.yedges = np.array(input_json['yedges']).astype('float')
+            self.min_slope = float(input_json['min_slope'])
+            self.max_slope = float(input_json['max_slope'])
+            self.min_intercept = float(input_json['min_intercept'])
+            self.max_intercept = float(input_json['max_intercept'])
+
+        else:
+            raise ValueError('Unknown filetype %s, it has to be npy or json' %
+                             filetype)
 
 
 class Calibrator:
@@ -165,116 +395,6 @@ class Calibrator:
         else:
             self.pairs = np.array(pairs)
 
-    def _hough_points(self, x, y, num_slopes):
-        """
-        Calculate the Hough transform for a set of input points and returns the
-        2D Hough accumulator matrix.
-
-        Parameters
-        ----------
-        x : 1D numpy array
-            The x-axis represents slope.
-        y : 1D numpy array
-            The y-axis represents intercept. Vertical lines (infinite gradient)
-            are not accommodated.
-        num_slopes : int
-            The number of slopes to be generated.
-
-        Returns
-        -------
-        accumulator : 2D numpy array
-            A 2D Hough accumulator array.
-
-        """
-
-        # Getting all the slopes
-        slopes = np.linspace(self.min_slope, self.max_slope, num_slopes)
-
-        # Computing all the intercepts and gradients
-        intercepts = np.concatenate(y - np.outer(slopes, x))
-        gradients = np.concatenate(np.column_stack([slopes] * len(x)))
-
-        # Apply boundaries
-        mask = ((self.min_intercept <= intercepts) &
-                (intercepts <= self.max_intercept))
-        intercepts = intercepts[mask]
-        gradients = gradients[mask]
-
-        # Create an array of Hough Points
-        accumulator = np.column_stack((gradients, intercepts))
-
-        return accumulator
-
-    def _bin_accumulator(self, accumulator, xbins, ybins):
-        '''
-        Bin up data by using a 2D histogram method.
-
-        Parameters
-        ----------
-        accumulator : 2D numpy array
-            A 2D Hough accumulator array.
-        xbins : int
-            The number of bins in the pixel direction.
-        ybins : int
-            The number of bins in the wavelength direction.
-
-        Returns
-        -------
-        hist : 2D numpy array (M*N)
-            Height of the 2D histogram
-        xedges : 1D numpy array (M)
-            Centres of the y-bins
-        yedges : 1D numpy array (N)
-            Centres of the y-bins
-
-        '''
-
-        hist, xedges, yedges = np.histogram2d(accumulator[:, 0],
-                                              accumulator[:, 1],
-                                              bins=(xbins, ybins))
-
-        return hist, xedges, yedges
-
-    def _get_top_lines(self, accumulator, top_n, xbins, ybins):
-        '''
-        Get the most likely matched pairs in the binned Hough space.
-
-        Parameters
-        ----------
-        accumulator : 2D numpy array
-            A 2D Hough accumulator array.
-        top_n : int
-            Top ranked lines to be fitted.
-        xbins : int
-            The number of bins in the pixel direction.
-        ybins : int
-            The number of bins in the wavelength direction.
-
-        Returns
-        -------
-        hist :
-            €£$
-        lines :
-            €£$
-        '''
-
-        # Find the top bins
-        hist, xedges, yedges = self._bin_accumulator(accumulator, xbins, ybins)
-
-        xbin_width = (xedges[1] - xedges[0]) / 2
-        ybin_width = (yedges[1] - yedges[0]) / 2
-
-        top_bins = np.dstack(
-            np.unravel_index(
-                np.argsort(hist.ravel())[::-1][:top_n], hist.shape))[0]
-
-        lines = []
-        for b in top_bins:
-            lines.append(
-                (xedges[b[0]] + xbin_width, yedges[b[1]] + ybin_width))
-
-        return hist, lines
-
     def _merge_candidates(self, candidates):
         '''
         Merge two candidate lists.
@@ -370,12 +490,6 @@ class Calibrator:
 
         '''
 
-        # Get the line coeffients from the promising bins in the accumulator
-        _, self.hough_lines = self._get_top_lines(self.accumulator,
-                                                  top_n=self.num_candidates,
-                                                  xbins=self.xbins,
-                                                  ybins=self.ybins)
-
         # Locate candidate points for these lines fits
         self.candidates = []
 
@@ -391,7 +505,8 @@ class Calibrator:
             # Note that the pairs outside of the range_tolerance were already
             # removed in an earlier stage
             weight = gauss(actual[mask], 1., predicted[mask],
-                           (self.range_tolerance+self.linearity_thresh) * 1.1775)
+                           (self.range_tolerance + self.linearity_thresh) *
+                           1.1775)
 
             self.candidates.append((self.pairs[:,
                                                0][mask], actual[mask], weight))
@@ -450,7 +565,7 @@ class Calibrator:
 
         self.candidates.append((x_match, y_match, w_match))
 
-    def _solve_candidate_ransac(self, polydeg, sample_size, max_tries, thresh,
+    def _solve_candidate_ransac(self, top_n, polydeg, sample_size, max_tries, thresh,
                                 brute_force, coeff, linear, weighted, progress,
                                 filter_close):
         '''
@@ -458,10 +573,8 @@ class Calibrator:
 
         Parameters
         ----------
-        x: 1D numpy array
-            Array of pixels from peak detection.
-        y: 1D numpy array
-            Array of wavelengths from atlas.
+        top_n: int
+            the top n most common pair of candidates.
         polydeg: int
             The order of polynomial (the polynomial type is definted in the
             set_fit_constraints).
@@ -499,7 +612,7 @@ class Calibrator:
             self._get_candidate_points_poly()
 
         self.candidate_peak, self.candidate_arc =\
-            self._get_most_common_candidates(self.candidates, top_n=3, weighted=weighted)
+            self._get_most_common_candidates(self.candidates, top_n=top_n, weighted=weighted)
 
         valid_solution = False
         best_p = None
@@ -558,19 +671,11 @@ class Calibrator:
         for p in np.unique(x):
             candidates[p] = y[x == p]
 
-        hist, xedges, yedges = np.histogram2d(self.accumulator[:, 1],
-                                              self.accumulator[:, 0],
-                                              bins=(self.xbins, self.ybins),
-                                              range=((self.min_intercept,
-                                                      self.max_intercept),
-                                                     (self.min_slope,
-                                                      self.max_slope)))
+        xbin_size = (self.ht.xedges[1] - self.ht.xedges[0]) / 2.
+        ybin_size = (self.ht.yedges[1] - self.ht.yedges[0]) / 2.
 
-        xbin_size = (xedges[1] - xedges[0]) / 2.
-        ybin_size = (yedges[1] - yedges[0]) / 2.
-
-        twoditp = interpolate.RectBivariateSpline(xedges[1:] - xbin_size,
-                                                  yedges[1:] - ybin_size, hist)
+        twoditp = interpolate.RectBivariateSpline(self.ht.xedges[1:] - xbin_size,
+                                                  self.ht.yedges[1:] - ybin_size, self.ht.hist)
 
         for sample in sampler_list:
             if brute_force:
@@ -596,7 +701,7 @@ class Calibrator:
                     y_hat.append(np.random.choice(candidates[_x]))
 
             if (len(y_hat) > len(np.unique(y_hat))):
-                #print("dupe y - impossible?")
+                #print('dupe y - impossible?')
                 continue
 
             # insert user given known pairs
@@ -672,7 +777,7 @@ class Calibrator:
 
                 if tdqm_imported & progress:
                     sampler_list.set_description(
-                        "Most inliers: {:d}, best error: {:1.4f}".format(
+                        'Most inliers: {:d}, best error: {:1.4f}'.format(
                             n_inliers, best_err))
 
                 # Perfect fit, break early
@@ -687,7 +792,7 @@ class Calibrator:
 
         return best_p, best_err, best_residual, best_inliers, valid_solution
 
-    def _get_best_model(self, polydeg, sample_size, max_tries, thresh,
+    def _get_best_model(self, top_n, polydeg, sample_size, max_tries, thresh,
                         brute_force, coeff, linear, weighted, progress,
                         filter_close):
         '''
@@ -729,12 +834,20 @@ class Calibrator:
 
         '''
 
-        # Generate the accumulator from the pairs
-        self.accumulator = self._hough_points(self.pairs[:, 0],
-                                              self.pairs[:, 1],
-                                              num_slopes=self.num_slopes)
+        # Generate the hough_points from the pairs
+        self.ht = HoughTransform()
+        self.ht.set_constraints(self.min_slope, self.max_slope,
+                                self.min_intercept, self.max_intercept)
+        self.ht.generate_hough_points(self.pairs[:, 0],
+                                      self.pairs[:, 1],
+                                      num_slopes=self.num_slopes)
+        self.ht.bin_hough_points(self.xbins, self.ybins)
+
+        self.hough_points = self.ht.hough_points
+        self.hough_lines = self.ht.hough_lines
 
         coeff, rms, residual, n_inliers, valid = self._solve_candidate_ransac(
+            top_n=top_n,
             polydeg=polydeg,
             sample_size=sample_size,
             max_tries=max_tries,
@@ -752,13 +865,13 @@ class Calibrator:
             peak_utilisation = n_inliers / len(self.atlas)
 
         if not valid:
-            self.logger.warn("Invalid fit")
+            self.logger.warn('Invalid fit')
 
         if rms > self.fit_tolerance:
-            self.logger.warn("RMS too large {} > {}".format(
+            self.logger.warn('RMS too large {} > {}'.format(
                 rms, self.fit_tolerance))
 
-        assert (coeff is not None), "Couldn't fit"
+        assert (coeff is not None), 'Couldn\'t fit'
 
         return coeff, rms, residual, peak_utilisation
 
@@ -913,8 +1026,8 @@ class Calibrator:
         '''
 
         for i in range(len(self.atlas)):
-            print("Element " + str(self.atlas_elements[i]) + " at " +
-                  str(self.atlas[i]) + " with intensity " +
+            print('Element ' + str(self.atlas_elements[i]) + ' at ' +
+                  str(self.atlas[i]) + ' with intensity ' +
                   str(self.atlas_intensities[i]))
 
     def clear_atlas(self):
@@ -938,7 +1051,7 @@ class Calibrator:
         '''
         Add a single or list of arc lines. Each arc line should have an
         element label associated with it. It is recommended that you use
-        a standard periodic table abbreviation (e.g. "Hg"), but it makes
+        a standard periodic table abbreviation (e.g. 'Hg'), but it makes
         no difference to the fitting process.
 
         The vacuum to air wavelength conversion is deafult to False because
@@ -981,9 +1094,9 @@ class Calibrator:
                 intensity = list(intensity)
 
         assert len(element) == len(atlas), ValueError(
-                'Input element and atlas have different length.')
+            'Input element and atlas have different length.')
         assert len(element) == len(intensity), ValueError(
-                'Input element and intensity have different length.')
+            'Input element and intensity have different length.')
 
         if vacuum:
             atlas = vacuum_to_air_wavelength(atlas, temperature, pressure,
@@ -1040,16 +1153,16 @@ class Calibrator:
             intensities = [0] * len(wavelengths)
 
         assert len(elements) == len(wavelengths), ValueError(
-                'Input elements and wavelengths have different length.')
+            'Input elements and wavelengths have different length.')
         assert len(elements) == len(intensities), ValueError(
-                'Input elements and intensities have different length.')
+            'Input elements and intensities have different length.')
 
-        self.add_user_atlas(elements, wavelengths, intensities, vacuum, pressure, temperature,
-                                             relative_humidity)
+        self.add_user_atlas(elements, wavelengths, intensities, vacuum,
+                            pressure, temperature, relative_humidity)
         self.set_peaks(constrain_poly)
 
     def remove_atlas_lines_range(self, wavelength, tolerance=10):
-        """
+        '''
         Remove arc lines within a certain wavelength range.
 
         Parameters
@@ -1059,7 +1172,7 @@ class Calibrator:
         tolerance : float
             Tolerance around this wavelength where atlas lines will be removed
 
-        """
+        '''
 
         for i, line in enumerate(self.atlas):
             if abs(line - wavelength) < tolerance:
@@ -1067,7 +1180,7 @@ class Calibrator:
                 removed_peak = self.atlas.pop(i)
                 self.atlas_intensities.pop(i)
 
-                self.logger.info("Removed {} line : {} A".format(
+                self.logger.info('Removed {} line : {} A'.format(
                     removed_element, removed_peak))
 
     def set_known_pairs(self, pix=(), wave=()):
@@ -1164,13 +1277,15 @@ class Calibrator:
         self.min_intercept = self.min_wavelength - self.range_tolerance
         self.max_intercept = self.min_wavelength + self.range_tolerance
 
-        self.min_slope = ((self.max_wavelength - self.range_tolerance - self.linearity_thresh) -
-                          (self.min_intercept +
-                           self.range_tolerance + self.linearity_thresh)) / self.pixel_list.max()
+        self.min_slope = ((self.max_wavelength - self.range_tolerance -
+                           self.linearity_thresh) -
+                          (self.min_intercept + self.range_tolerance +
+                           self.linearity_thresh)) / self.pixel_list.max()
 
-        self.max_slope = ((self.max_wavelength + self.range_tolerance + self.linearity_thresh) -
-                          (self.min_intercept -
-                           self.range_tolerance - self.linearity_thresh)) / self.pixel_list.max()
+        self.max_slope = ((self.max_wavelength + self.range_tolerance +
+                           self.linearity_thresh) -
+                          (self.min_intercept - self.range_tolerance -
+                           self.linearity_thresh)) / self.pixel_list.max()
 
         self.fit_tolerance = fit_tolerance
         self.polydeg = polydeg
@@ -1197,7 +1312,7 @@ class Calibrator:
 
     def fit(self,
             sample_size=5,
-            top_n=10,
+            top_n=5,
             max_tries=5000,
             progress=True,
             polyfit_coeff=None,
@@ -1238,15 +1353,15 @@ class Calibrator:
 
         if sample_size > len(self.atlas):
             self.logger.warn(
-                "Size of sample_size is larger than the size of atlas, " +
-                "the sample_size is set to match the size of atlas = " +
-                str(len(self.atlas)) + ".")
+                'Size of sample_size is larger than the size of atlas, ' +
+                'the sample_size is set to match the size of atlas = ' +
+                str(len(self.atlas)) + '.')
             sample_size = len(self.atlas)
 
         self.pfit = polyfit_coeff
 
         self.pfit, self.rms, self.residual, self.peak_utilisation = self._get_best_model(
-            self.polydeg, sample_size, max_tries, self.ransac_thresh,
+            top_n, self.polydeg, sample_size, max_tries, self.ransac_thresh,
             self.brute_force, self.pfit, linear, weighted, progress,
             filter_close)
 
@@ -1418,7 +1533,6 @@ class Calibrator:
             return polyfit_coeff_new, peak_match, atlas_match, residual, peak_utilisation
 
     def plot_search_space(self,
-                          constrain_poly=False,
                           coeff=None,
                           top_n=3,
                           weighted=True,
@@ -1448,19 +1562,8 @@ class Calibrator:
 
         '''
 
-        # Generate Hough pairs and only accept those within the tolerance
-        # region
-        self._generate_pairs(constrain_poly=constrain_poly)
-
-        self.accumulator = self._hough_points(self.pairs[:, 0],
-                                              self.pairs[:, 1],
-                                              num_slopes=self.num_slopes)
-
-        # Get candidates
-        self._get_candidate_points_linear()
-
         # Get top linear estimates and combine
-        self.candidate_peak, self.candidate_arc =\
+        candidate_peak, candidate_arc =\
             self._get_most_common_candidates(self.candidates, top_n=top_n, weighted=weighted)
 
         # Get the search space boundaries
@@ -1487,12 +1590,12 @@ class Calibrator:
             # Plot all-pairs
             plt.scatter(*self.pairs.T, alpha=0.2, c='red')
 
-            if plot_candidates:
-                plt.scatter(*self._merge_candidates(self.candidates).T, alpha=0.2)
+            plt.scatter(*self._merge_candidates(self.candidates).T,
+                            alpha=0.2)
 
             # Tolerance region around the minimum wavelength
             plt.text(5, self.min_wavelength + 100,
-                     "Min wavelength (user-supplied)")
+                     'Min wavelength (user-supplied)')
             plt.hlines(self.min_wavelength, 0, self.pixel_list.max())
             plt.hlines(self.min_wavelength + self.range_tolerance,
                        0,
@@ -1507,7 +1610,7 @@ class Calibrator:
 
             # Tolerance region around the maximum wavelength
             plt.text(5, self.max_wavelength + 100,
-                     "Max wavelength (user-supplied)")
+                     'Max wavelength (user-supplied)')
             plt.hlines(self.max_wavelength, 0, self.pixel_list.max())
             plt.hlines(self.max_wavelength + self.range_tolerance,
                        0,
@@ -1523,7 +1626,7 @@ class Calibrator:
             # The line from (first pixel, minimum wavelength) to
             # (last pixel, maximum wavelength), and the two lines defining the
             # tolerance region.
-            plt.plot(x, y_1, label="Nominal linear fit")
+            plt.plot(x, y_1, label='Nominal linear fit')
             plt.plot(x, y_2, c='black', linestyle='dashed')
             plt.plot(x, y_3, c='black', linestyle='dashed')
 
@@ -1532,11 +1635,10 @@ class Calibrator:
                             self.polyval(self.peaks, coeff),
                             color='red')
 
-            if plot_candidates:
-                plt.scatter(self.candidate_peak,
-                            self.candidate_arc,
-                            s=20,
-                            c='purple')
+            plt.scatter(candidate_peak,
+                        candidate_arc,
+                        s=20,
+                        c='purple')
 
             plt.xlim(0, self.pixel_list.max())
             plt.ylim(self.min_wavelength - self.range_tolerance,
@@ -1544,6 +1646,8 @@ class Calibrator:
 
             plt.xlabel('Pixel')
             plt.ylabel('Wavelength / A')
+
+            plt.show()
 
             return plt.gca()
 
@@ -1559,19 +1663,18 @@ class Calibrator:
                            name='All Pairs',
                            marker=dict(color='red', opacity=0.2)))
 
-            if plot_candidates:
-                fig.add_trace(
-                    go.Scatter(x=self._merge_candidates(self.candidates)[:, 0],
-                            y=self._merge_candidates(self.candidates)[:, 1],
-                            mode='markers',
-                            name='Candidate Pairs',
-                            marker=dict(color='royalblue', opacity=0.2)))
-                fig.add_trace(
-                    go.Scatter(x=self.candidate_peak,
-                            y=self.candidate_arc,
-                            mode='markers',
-                            name='Best Candidate Pairs',
-                            marker=dict(color='purple')))
+            fig.add_trace(
+                go.Scatter(x=self._merge_candidates(self.candidates)[:, 0],
+                           y=self._merge_candidates(self.candidates)[:, 1],
+                           mode='markers',
+                           name='Candidate Pairs',
+                           marker=dict(color='royalblue', opacity=0.2)))
+            fig.add_trace(
+                go.Scatter(x=candidate_peak,
+                           y=candidate_arc,
+                           mode='markers',
+                           name='Best Candidate Pairs',
+                           marker=dict(color='purple')))
 
             # Tolerance region around the minimum wavelength
             fig.add_trace(
@@ -1771,12 +1874,12 @@ class Calibrator:
                 idx = np.argmin(np.abs(diff))
                 all_diff.append(diff[idx])
 
-                self.logger.info("Peak at: {} A".format(x))
+                self.logger.info('Peak at: {} A'.format(x))
 
                 if np.abs(diff[idx]) < tolerance:
                     fitted_peaks.append(p)
                     fitted_diff.append(diff[idx])
-                    self.logger.info("- matched to {} A".format(
+                    self.logger.info('- matched to {} A'.format(
                         self.atlas[idx]))
                     ax1.vlines(self.polyval(p, fit),
                                spectrum[self.pix_to_rawpix(p).astype('int')],
@@ -1785,7 +1888,7 @@ class Calibrator:
 
                     ax1.text(x - 3,
                              text_box_pos,
-                             s="{}:{:1.2f}".format(self.atlas_elements[idx],
+                             s='{}:{:1.2f}'.format(self.atlas_elements[idx],
                                                    self.atlas[idx]),
                              rotation=90,
                              bbox=dict(facecolor='white', alpha=1))
@@ -1875,14 +1978,14 @@ class Calibrator:
                 idx = np.argmin(np.abs(diff))
                 all_diff.append(diff[idx])
 
-                self.logger.info("Peak at: {} A".format(x))
+                self.logger.info('Peak at: {} A'.format(x))
 
                 if np.abs(diff[idx]) < tolerance:
                     fitted_peaks.append(p)
                     fitted_peaks_adu.append(spectrum[int(
                         self.pix_to_rawpix(p))])
                     fitted_diff.append(diff[idx])
-                    self.logger.info("- matched to {} A".format(
+                    self.logger.info('- matched to {} A'.format(
                         self.atlas[idx]))
 
             x_fitted = self.polyval(fitted_peaks, fit)
