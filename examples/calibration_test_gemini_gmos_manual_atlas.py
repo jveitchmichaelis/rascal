@@ -85,12 +85,6 @@ c.plot_search_space()
 # Run the wavelength calibration
 best_p, rms, residual, peak_utilisation = c.fit(max_tries=10000)
 
-
-# Second set is to refine all the coefficients
-best_p, x_fit, y_fit, residual, peak_utilisation = c.match_peaks(
-    best_p,
-    refine=False)
-
 # Plot the solution
 c.plot_fit(spectrum, best_p, plot_atlas=True, log_spectrum=False, tolerance=5.)
 

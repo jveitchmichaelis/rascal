@@ -50,17 +50,19 @@ def robust_polyfit(x, y, degree=3, x0=None, bounds=None):
     # Need to normalise the fit function too
     if x0 is not None:
         for i in range(0, degree):
-            x0[i] *= x.std()**(i)
+            x0[i] *= x.std()**i
 
         x0 /= y.std()
     else:
         x0 = np.ones(degree + 1)
 
+    '''
     if bounds is None:
         bounds = np.inf * np.ones(degree + 1)
 
     assert len(bounds) > 0
-
+    '''
+    
     res = scipy.optimize.least_squares(poly_cost_function,
                                        x0,
                                        args=(x_n, y_n, degree),
