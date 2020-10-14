@@ -30,7 +30,7 @@ The bare minimum example code to to get a wavelength calibration:
     from astropy.io import fits
 
     from rascal.calibrator import Calibrator
-    from rascal.util import load_calibration_lines
+    from rascal.util import refine_peaks
 
     # Open the example file
     spectrum2D = fits.open("filename.fits")[0].data
@@ -38,20 +38,20 @@ The bare minimum example code to to get a wavelength calibration:
     # Get the median along the spectral direction
     spectrum = np.median(spectrum2D, axis=0)
 
-    # Load the Lines from library
-    atlas = load_calibration_lines(elements=["Xe"])
-
     # Get the spectral lines
     peaks, _ = find_peaks(spectrum)
 
     # Set up the Calibrator object
-    c = Calibrator(peaks, atlas)
+    c = Calibrator(peaks)
+
+    # Load the Lines from library
+    c.add_atlas(["Xe"])
 
     # Solve for the wavelength calibration
-    best_p = c.fit()
+    best_polyfit_coefficient, rms, residual, peak_utilisation = c.fit()
 
     # Produce the diagnostic plot
-    c.plot_fit(spectrum, best_p)
+    c.plot_fit(spectrum, best_polyfit_coefficient)
 
 
 Some more complete examples are available in the :ref:`quickstart` tutorial.

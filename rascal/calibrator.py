@@ -63,12 +63,12 @@ class HoughTransform:
 
         Parameters
         ----------
-        x : 1D numpy array
+        x: 1D numpy array
             The x-axis represents slope.
-        y : 1D numpy array
+        y: 1D numpy array
             The y-axis represents intercept. Vertical lines (infinite gradient)
             are not accommodated.
-        num_slopes : int
+        num_slopes: int
             The number of slopes to be generated.
 
         '''
@@ -95,11 +95,11 @@ class HoughTransform:
 
         Parameters
         ----------
-        hough_points : 2D numpy array
+        hough_points: 2D numpy array
             A 2D Hough hough_points array.
-        xbins : int
+        xbins: int
             The number of bins in the pixel direction.
-        ybins : int
+        ybins: int
             The number of bins in the wavelength direction.
 
         '''
@@ -204,11 +204,13 @@ class HoughTransform:
 
         if not to_disk:
 
-            if ('npy' in fileformat_split) and ('json' not in fileformat_split):
+            if ('npy' in fileformat_split) and ('json'
+                                                not in fileformat_split):
 
                 return output_npy
 
-            elif ('npy' not in fileformat_split) and ('json' in fileformat_split):
+            elif ('npy' not in fileformat_split) and ('json'
+                                                      in fileformat_split):
 
                 return output_json
 
@@ -267,14 +269,7 @@ class HoughTransform:
 
 
 class Calibrator:
-    def __init__(self,
-                 peaks,
-                 num_pix,
-                 pixel_list=None,
-                 min_wavelength=3000,
-                 max_wavelength=9000,
-                 plotting_library='matplotlib',
-                 log_level='info'):
+    def __init__(self, peaks, spectrum=None):
         '''
         Initialise the calibrator object.
 
@@ -282,15 +277,36 @@ class Calibrator:
         ----------
         peaks: list
             List of identified arc line pixel values.
+        spectrum: list
+            The spectral intensity as a function of pixel.
+
+        '''
+
+        self.peaks = peaks
+        self.spectrum = spectrum
+        self.matplotlib_imported = False
+        self.plotly_imported = False
+        self.plot_with_matplotlib = False
+        self.plot_with_plotly = False
+        self.atlas_elements = []
+        self.atlas = []
+        self.atlas_intensities = []
+
+    def set_calibrator_properties(self,
+                                  num_pix=None,
+                                  pixel_list=None,
+                                  plotting_library='matplotlib',
+                                  log_level='info'):
+        '''
+        Initialise the calibrator object.
+
+        Parameters
+        ----------
         num_pix: int
             Number of pixels in the spectral axis.
         pixel_list: list
             pixel value of the of the spectrum, this is only needed if the
             spectrum spans multiple detector arrays.
-        min_wavelength: float (default: 3000)
-            Minimum wavelength of the spectrum.
-        max_wavelength: float (default: 9000)
-            Maximum wavelength of the spectrum.
         plotting_library: string (default: 'matplotlib')
             Choose between matplotlib and plotly.
         log_level: string (default: 'info')
@@ -298,43 +314,170 @@ class Calibrator:
 
         '''
 
-        self.peaks = peaks
-        self.num_pix = num_pix
-        if pixel_list is None:
-            self.pixel_list = np.arange(self.num_pix)
-        else:
-            self.pixel_list = np.asarray(pixel_list)
-        self.pix_to_rawpix = interpolate.interp1d(
-            self.pixel_list, np.arange(len(self.pixel_list)))
-        self.min_wavelength = min_wavelength
-        self.max_wavelength = max_wavelength
-        self.plotting_library = plotting_library
-        self.matplotlib_imported = False
-        self.plotly_imported = False
-        self.plot_with_matplotlib = False
-        self.plot_with_plotly = False
-
+        # initialise the logger
         self.logger = logging.getLogger(__name__)
         level = logging.getLevelName(log_level.upper())
         logging.basicConfig(level=level)
 
-        self.atlas_elements = []
-        self.atlas = []
-        self.atlas_intensities = []
+        # set the num_pix
+        if num_pix is None:
+            try:
+                self.num_pix = len(self.spectrum)
+            except:
+                self.logger.warning('Neither num_pix nor spectrum is given, '
+                                    'it uses 1.1 times max(peaks) as the '
+                                    'maximum pixel value.')
+                self.num_pix = 1.1 * max(self.peaks)
+        else:
+            self.num_pix = num_pix
 
-        # Configuring default fitting constraints
-        self.set_fit_constraints()
+        self.logger.info('num_pix is set to {}.'.format(num_pix))
 
+        # set the pixel_list
+        if pixel_list is None:
+            self.pixel_list = np.arange(self.num_pix)
+        else:
+            self.pixel_list = np.asarray(pixel_list)
+
+        self.logger.info('pixel_list is set to {}.'.format(pixel_list))
+
+        # map the list position to the pixel value
+        self.pix_to_rawpix = interpolate.interp1d(
+            self.pixel_list, np.arange(len(self.pixel_list)))
+
+        # set the plotting library
+        self.plotting_library = plotting_library
         if self.plotting_library == 'matplotlib':
             self.use_matplotlib()
+            self.logger.info('Plotting with matplotlib.')
         elif self.plotting_library == 'plotly':
             self.use_plotly()
+            self.logger.info('Plotting with plotly.')
         elif self.plotting_library == 'none':
-            pass
+            self.logger.info('Plotting is disabled.')
         else:
-            warnings.warn('Unknown plotting_library, please choose from '
-                          'matplotlib or plotly. Execute use_matplotlib() or '
-                          'use_plotly() to manually select the library.')
+            self.logger.warning(
+                'Unknown plotting_library, please choose from '
+                'matplotlib or plotly. Execute use_matplotlib() or '
+                'use_plotly() to manually select the library.')
+
+    def set_hough_properties(self,
+                             num_slopes=5000,
+                             xbins=500,
+                             ybins=500,
+                             min_wavelength=3000,
+                             max_wavelength=9000,
+                             range_tolerance=500,
+                             linearity_tolerance=50):
+        '''
+        num_slopes: int (default: 1000)
+            Number of slopes to consider during Hough transform
+        xbins: int (default: 50)
+            Number of bins for Hough accumulation
+        ybins: int (default: 50)
+            Number of bins for Hough accumulation
+        min_wavelength: float (default: 3000)
+            Minimum wavelength of the spectrum.
+        max_wavelength: float (default: 9000)
+            Maximum wavelength of the spectrum.
+        range_tolerance: float (default: 500)
+            Estimation of the error on the provided spectral range
+            e.g. 3000-5000 with tolerance 500 will search for
+            solutions that may satisfy 2500-5500
+        linearity_tolerance: float (default: 100)
+            A threshold (Ansgtroms) which defines some padding around the
+            range tolerance to allow for non-linearity. This should be the
+            maximum expected excursion from linearity.
+        '''
+
+        self.num_slopes = num_slopes
+        self.xbins = xbins
+        self.ybins = ybins
+        self.min_wavelength = min_wavelength
+        self.max_wavelength = max_wavelength
+        self.range_tolerance = range_tolerance
+        self.linearity_tolerance = linearity_tolerance
+
+        # Start wavelength in the spectrum, +/- some tolerance
+        self.min_intercept = self.min_wavelength - self.range_tolerance
+        self.max_intercept = self.min_wavelength + self.range_tolerance
+
+        self.min_slope = ((self.max_wavelength - self.range_tolerance -
+                           self.linearity_tolerance) -
+                          (self.min_intercept + self.range_tolerance +
+                           self.linearity_tolerance)) / self.pixel_list.max()
+
+        self.max_slope = ((self.max_wavelength + self.range_tolerance +
+                           self.linearity_tolerance) -
+                          (self.min_intercept - self.range_tolerance -
+                           self.linearity_tolerance)) / self.pixel_list.max()
+
+    def set_ransac_properties(self,
+                              sample_size=5,
+                              top_n_candidate=5,
+                              linear=True,
+                              filter_close=False,
+                              ransac_thresh=5,
+                              candidate_weighted=True,
+                              hough_weight=1.0):
+        '''
+        Configure the Calibrator. This may require some manual twiddling before
+        the calibrator can work efficiently. However, in theory, a large
+        max_tries in fit() should provide a good solution in the expense of
+        performance (minutes instead of seconds).
+
+        Parameters
+        ----------
+        sample_size: int (default: 5)
+            €£$
+        top_n_candidate: int (default: 5)
+            Top ranked lines to be fitted.
+        linear: boolean (default: True)
+            True to use the hough transformed gradient, otherwise, use the
+            known polynomial.
+        filter_close: boolean (default: False)
+            Remove the pairs that are out of bounds in the hough space.
+        ransac_thresh: float (default: 1)
+            The distance criteria  (Angstroms) to be considered an inlier to a
+            fit. This should be close to the size of the expected residuals on
+            the final fit (e.g. 1A is typical)
+        candidate_weighted: boolean (default: True)
+            Set to True to down-weight pairs that are far from the fit.
+        hough_weight: float or None (default: 1.0)
+            Set to use the hough space to weigh the fit. The theoretical
+            optimal weighting is unclear. The larger the value, the heavily it
+            relies on the overdensity in the hough space for a good fit.
+
+        '''
+
+        self.sample_size = sample_size
+        if self.sample_size > len(self.atlas):
+            self.logger.warn(
+                'Size of sample_size is larger than the size of atlas, ' +
+                'the sample_size is set to match the size of atlas = ' +
+                str(len(self.atlas)) + '.')
+            self.sample_size = len(self.atlas)
+
+        self.top_n_candidate = top_n_candidate
+        self.linear = linear
+        self.filter_close = filter_close
+        self.ransac_thresh = ransac_thresh
+        self.candidate_weighted = candidate_weighted
+        self.hough_weight = hough_weight
+
+    def do_hough_transform(self):
+
+        # Generate the hough_points from the pairs
+        self.ht = HoughTransform()
+        self.ht.set_constraints(self.min_slope, self.max_slope,
+                                self.min_intercept, self.max_intercept)
+        self.ht.generate_hough_points(self.pairs[:, 0],
+                                      self.pairs[:, 1],
+                                      num_slopes=self.num_slopes)
+        self.ht.bin_hough_points(self.xbins, self.ybins)
+
+        self.hough_points = self.ht.hough_points
+        self.hough_lines = self.ht.hough_lines
 
     def _get_atlas(self, elements, min_atlas_wavelength, max_atlas_wavelength,
                    min_intensity, min_distance):
@@ -361,40 +504,43 @@ class Calibrator:
                                    min_atlas_wavelength,
                                    max_atlas_wavelength)
 
-    def set_peaks(self, constrain_poly):
+    def set_peaks(self, candidate_thresh, constrain_poly):
         '''
         Gather all the randomly matched and user-supplied pixel-wavelength
         pairs.
 
         Parameters
         ----------
-        constrain_poly : boolean
+        candidate_thresh: float (default: 15)
+            Threshold  (Angstroms) for considering a point to be an inlier
+            during candidate peak/line selection. This should be reasonable
+            small as we want to search for candidate points which are
+            *locally* linear.
+        constrain_poly: boolean
             Apply a polygonal constraint on possible peak/atlas pairs
 
         '''
 
+        self.candidate_thresh = candidate_thresh
+        self.constrain_poly = constrain_poly
+
         # Create a list of all possible pairs of detected peaks and lines
         # from atlas
-        self._generate_pairs(constrain_poly)
+        self._generate_pairs()
 
         # Include user supplied pairs that are always fitted as given
         self.set_known_pairs()
 
-    def _generate_pairs(self, constrain_poly):
+    def _generate_pairs(self):
         '''
         Generate pixel-wavelength pairs without the allowed regions set by the
         linearity limit. This assumes a relatively linear spectrograph.
-
-        Parameters
-        ----------
-        constrain_poly : boolean
-            Apply a polygonal constraint on possible peak/atlas pairs
 
         '''
 
         pairs = [pair for pair in itertools.product(self.peaks, self.atlas)]
 
-        if constrain_poly:
+        if self.constrain_poly:
             # Remove pairs outside polygon
             valid_area = Delaunay([
                 (0, self.max_intercept + self.candidate_thresh),
@@ -428,7 +574,8 @@ class Calibrator:
 
         return np.sort(np.array(merged))
 
-    def _get_most_common_candidates(self, candidates, top_n, weighted):
+    def _get_most_common_candidates(self, candidates, top_n_candidate,
+                                    weighted):
         '''
         Takes a number of candidate pair sets and returns the most common 
         pair for each wavelength
@@ -437,7 +584,7 @@ class Calibrator:
         ----------
         candidates: list of list(float, float)
             A list of list of peak/line pairs
-        top_n: int
+        top_n_candidate: int
             Top ranked lines to be fitted.
         weighted: boolean
             If True, the distance from the atlas wavelength will be used to 
@@ -477,7 +624,8 @@ class Calibrator:
 
                     counts = np.ones_like(probabilities[idx])
 
-                n = int(min(top_n, len(np.unique(wavelengths_matched))))
+                n = int(
+                    min(top_n_candidate, len(np.unique(wavelengths_matched))))
 
                 if n == 1:
 
@@ -488,7 +636,7 @@ class Calibrator:
                     unique_wavelengths = np.unique(wavelengths_matched)
                     aggregated_count = np.zeros_like(unique_wavelengths)
                     for j, w in enumerate(unique_wavelengths):
-                        idx_j = np.where(wavelengths_matched==w)
+                        idx_j = np.where(wavelengths_matched == w)
                         aggregated_count[j] = np.sum(counts[idx_j])
 
                     out_peaks.extend([peak] * n)
@@ -523,7 +671,7 @@ class Calibrator:
             # Note that the pairs outside of the range_tolerance were already
             # removed in an earlier stage
             weight = gauss(actual[mask], 1., predicted[mask],
-                           (self.range_tolerance + self.linearity_thresh) *
+                           (self.range_tolerance + self.linearity_tolerance) *
                            1.1775)
 
             self.candidates.append((self.pairs[:,
@@ -571,57 +719,49 @@ class Calibrator:
 
         self.candidates.append((x_match, y_match, w_match))
 
-    def _solve_candidate_ransac(self, top_n, polydeg, sample_size, max_tries,
-                                thresh, brute_force, polyfit_coeff, linear,
-                                candidate_weighted, hough_weight, progress,
-                                filter_close):
+    def _solve_candidate_ransac(self, polydeg, polyfit_coeff, max_tries,
+                                brute_force, progress):
         '''
         Use RANSAC to sample the parameter space and give best guess
 
         Parameters
         ----------
-        top_n: int
-            the top n most common pair of candidates.
         polydeg: int
             The order of polynomial (the polynomial type is definted in the
             set_fit_constraints).
-        sample_size: int
-            Number of lines to be fitted.
-        max_tries: int
-            Number of trials of polynomial fitting.
-        thresh:
-            Threshold for considering a point an inlier
-        brute_force: boolean
-            Solve all pixel-wavelength combinations with set to True.
         polyfit_coeff: None or 1D numpy array
             Initial polynomial fit polyfit_coefficients.
+        max_tries: int
+            Number of trials of polynomial fitting.
+        brute_force: boolean
+            Solve all pixel-wavelength combinations with set to True.
         progress: boolean
             Show the progress bar with tdqm if set to True.
-        filter_close: boolean
-            €£$
 
         Returns
         -------
-        best_p : list
+        best_p: list
             A list of size polydeg of the best fit polynomial
             polyfit_coefficient.
-        best_err : float
+        best_err: float
             Arithmetic mean of the residuals.
-        sum(best_inliers) : int
-            Number of lines fitted within the thresh.
-        valid_solution : boolean
+        sum(best_inliers): int
+            Number of lines fitted within the ransac_thresh.
+        valid_solution: boolean
             False if overfitted.
 
         '''
 
-        if linear:
+        if self.linear:
             self._get_candidate_points_linear()
         else:
             self._get_candidate_points_poly()
 
         self.candidate_peak, self.candidate_arc =\
             self._get_most_common_candidates(
-               self.candidates, top_n=top_n, weighted=candidate_weighted)
+               self.candidates, top_n_candidate=self.top_n_candidate, weighted=self.candidate_weighted)
+
+        self.polydeg = polydeg
 
         valid_solution = False
         best_p = None
@@ -631,16 +771,17 @@ class Calibrator:
         best_residual = None
         best_inliers = 0
 
-        if sample_size <= polydeg:
-            sample_size = polydeg + 1
+        if self.sample_size <= self.polydeg:
+            self.sample_size = self.polydeg + 1
 
         x = np.array(self.candidate_peak)
         y = np.array(self.candidate_arc)
 
         # Filter close wavelengths
-        if filter_close:
+        if self.filter_close:
             unique_y = np.unique(y)
-            idx = np.argwhere(unique_y[1:] - unique_y[0:-1] < 3 * thresh)
+            idx = np.argwhere(
+                unique_y[1:] - unique_y[0:-1] < 3 * self.ransac_thresh)
             separation_mask = np.argwhere((y == unique_y[idx]).sum(0) == 0)
             y = y[separation_mask].flatten()
             x = x[separation_mask].flatten()
@@ -653,7 +794,7 @@ class Calibrator:
 
         # If the number of lines is smaller than the number of degree of
         # polynomial fit, return failed fit.
-        if len(np.unique(x)) <= polydeg:
+        if len(np.unique(x)) <= self.polydeg:
             return (best_p, best_err, sum(best_mask), 0, False)
 
         idx = range(len(x))
@@ -661,9 +802,9 @@ class Calibrator:
         # Brute force check all combinations. If the request sample_size is
         # the same or larger than the available lines, it is essentially a
         # brute force.
-        if brute_force or (sample_size >= len(np.unique(x))):
-            sampler = itertools.combinations(idx, sample_size)
-            sample_size = len(np.unique(x))
+        if brute_force or (self.sample_size >= len(np.unique(x))):
+            sampler = itertools.combinations(idx, self.sample_size)
+            self.sample_size = len(np.unique(x))
         else:
             sampler = range(int(max_tries))
 
@@ -683,7 +824,7 @@ class Calibrator:
         xbin_size = (self.ht.xedges[1] - self.ht.xedges[0]) / 2.
         ybin_size = (self.ht.yedges[1] - self.ht.yedges[0]) / 2.
 
-        if np.isfinite(hough_weight):
+        if np.isfinite(self.hough_weight):
             twoditp = interpolate.RectBivariateSpline(
                 self.ht.xedges[1:] - xbin_size, self.ht.yedges[1:] - ybin_size,
                 self.ht.hist)
@@ -700,14 +841,14 @@ class Calibrator:
             keep_trying = True
             #self.logger.info(sample)
             while keep_trying:
-                stop_now = False
+                stop_n_candidateow = False
                 if brute_force:
                     x_hat = x[[sample]]
                     y_hat = y[[sample]]
                 else:
                     # Pick some random peaks
                     idxes = np.random.choice(idx,
-                                             sample_size,
+                                             self.sample_size,
                                              replace=False,
                                              p=prob)
                     x_hat = peaks[idxes]
@@ -723,10 +864,10 @@ class Calibrator:
                         else:
                             #self.logger.info('Not possible to draw a unique
                             # set of atlas wavelengths.')
-                            stop_now = True
+                            stop_n_candidateow = True
                             break
 
-                if stop_now:
+                if stop_n_candidateow:
                     continue
 
                 # insert user given known pairs
@@ -736,7 +877,7 @@ class Calibrator:
 
                 # Try to fit the data.
                 # This doesn't need to be robust, it's an exact fit.
-                fit_coeffs = self.polyfit(x_hat, y_hat, polydeg)
+                fit_coeffs = self.polyfit(x_hat, y_hat, self.polydeg)
 
                 # Check the intercept.
                 if ((fit_coeffs[0] < self.min_intercept) |
@@ -782,7 +923,7 @@ class Calibrator:
                 # M-SAC Estimator (Torr and Zisserman, 1996)
                 fit = self.polyval(x, fit_coeffs)
                 err = np.abs(fit - y)
-                err[err > thresh] = thresh
+                err[err > self.ransac_thresh] = self.ransac_thresh
 
                 # compute the hough space density as weights for the cost function
                 wave = self.polyval(self.pixel_list, fit_coeffs)
@@ -791,19 +932,19 @@ class Calibrator:
                 intercept = wave - gradient * self.pixel_list
 
                 # modified cost function weighted by the histogram in hough space
-                if np.isfinite(hough_weight):
-                    weight = hough_weight * np.sum(
+                if np.isfinite(self.hough_weight):
+                    weight = self.hough_weight * np.sum(
                         twoditp(intercept, gradient, grid=False))
                 else:
                     weight = 1.
 
                 cost = sum(err) / (len(err) - len(fit_coeffs) + 1) / weight
 
-                # reject lines outside the rms limit (thresh)
-                best_mask = err < thresh
+                # reject lines outside the rms limit (ransac_thresh)
+                best_mask = err < self.ransac_thresh
                 n_inliers = sum(best_mask)
 
-                if len(np.unique(x[best_mask])) <= polydeg:
+                if len(np.unique(x[best_mask])) <= self.polydeg:
                     #self.logger.info('Too few good candidates for fitting.')
                     continue
 
@@ -813,13 +954,13 @@ class Calibrator:
                     # Now we do a robust fit
                     #self.logger.info((x[best_mask], y[best_mask]))
                     best_p = models.robust_polyfit(x[best_mask], y[best_mask],
-                                                   polydeg)
+                                                   self.polydeg)
 
                     best_cost = cost
 
                     # Get the residual of the fit
                     err = self.polyval(x[best_mask], best_p) - y[best_mask]
-                    err[np.abs(err) > thresh] = thresh
+                    err[np.abs(err) > self.ransac_thresh] = self.ransac_thresh
                     #best_cost = sum(err)
                     best_err = np.sqrt(np.mean(err**2))
                     best_residual = err
@@ -833,7 +974,7 @@ class Calibrator:
                 keep_trying = False
 
         # Overfit check
-        if best_inliers == polydeg + 1:
+        if best_inliers == self.polydeg + 1:
             valid_solution = False
         else:
             valid_solution = True
@@ -915,11 +1056,12 @@ class Calibrator:
                   max_atlas_wavelength=None,
                   min_intensity=10,
                   min_distance=10,
+                  candidate_thresh=10,
+                  constrain_poly=False,
                   vacuum=False,
                   pressure=101325.,
                   temperature=273.15,
-                  relative_humidity=0.,
-                  constrain_poly=False):
+                  relative_humidity=0.):
         '''
         Adds an atlas of arc lines to the calibrator, given an element.
 
@@ -949,6 +1091,13 @@ class Calibrator:
             Minimum intensity of the arc lines. Refer to NIST for the intensity.
         min_distance: float (default: None)
             Minimum separation between neighbouring arc lines.
+        candidate_thresh: float (default: 10)
+            Threshold  (Angstroms) for considering a point to be an inlier
+            during candidate peak/line selection. This should be reasonable
+            small as we want to search for candidate points which are
+            *locally* linear.
+        constrain_poly: boolean
+            Apply a polygonal constraint on possible peak/atlas pairs
         vacuum: boolean
             Set to True if the light path from the arc lamb to the detector
             plane is entirely in vacuum.
@@ -959,8 +1108,6 @@ class Calibrator:
             Temperature when the observation took place, in Kelvin.
         relative_humidity: float
             In percentage.
-        constrain_poly: boolean
-            Apply a polygonal constraint on possible peak/atlas pairs
         '''
 
         if min_atlas_wavelength is None:
@@ -983,7 +1130,7 @@ class Calibrator:
             self.atlas.extend(atlas_tmp)
             self.atlas_intensities.extend(atlas_intensities_tmp)
 
-        self.set_peaks(constrain_poly)
+        self.set_peaks(candidate_thresh, constrain_poly)
 
     def list_atlas(self):
         '''
@@ -1010,6 +1157,8 @@ class Calibrator:
                        element,
                        atlas,
                        intensity=None,
+                       candidate_thresh=10,
+                       constrain_poly=False,
                        vacuum=False,
                        pressure=101325.,
                        temperature=273.15,
@@ -1027,13 +1176,20 @@ class Calibrator:
 
         Parameters
         ----------
-        elements : list/str
+        elements: list/str
             Element (required). Preferably a standard (i.e. periodic table)
             name for convenience with built-in atlases
-        atlas : list/float
+        atlas: list/float
             Wavelength to add (Angstrom)
-        intensity : list/float
+        intensity: list/float
             Relative line intensity (NIST value)
+        candidate_thresh: float (default: 15)
+            Threshold  (Angstroms) for considering a point to be an inlier
+            during candidate peak/line selection. This should be reasonable
+            small as we want to search for candidate points which are
+            *locally* linear.
+        constrain_poly: boolean
+            Apply a polygonal constraint on possible peak/atlas pairs
         vacuum: boolean
             Set to true to convert the input wavelength to air-wavelengths
             based on the given pressure, temperature and humidity.
@@ -1072,10 +1228,13 @@ class Calibrator:
         self.atlas.extend(atlas)
         self.atlas_intensities.extend(intensity)
 
+        self.set_peaks(candidate_thresh, constrain_poly)
+
     def load_user_atlas(self,
                         elements,
                         wavelengths,
                         intensities=None,
+                        candidate_thresh=10.,
                         constrain_poly=False,
                         vacuum=False,
                         pressure=101325.,
@@ -1092,14 +1251,19 @@ class Calibrator:
 
         Parameters
         ----------
-        elements : list
+        elements: list
             Element (required). Preferably a standard (i.e. periodic table)
             name for convenience with built-in atlases
-        wavelengths : list
+        wavelengths: list
             Wavelength to add (Angstrom)
-        intensities : list
+        intensities: list
             Relative line intensities
-        constrain_poly : boolean
+        candidate_thresh: float (default: 15)
+            Threshold  (Angstroms) for considering a point to be an inlier
+            during candidate peak/line selection. This should be reasonable
+            small as we want to search for candidate points which are
+            *locally* linear.
+        constrain_poly: boolean
             Apply a polygonal constraint on possible peak/atlas pairs
         vacuum: boolean
             Set to true to convert the input wavelength to air-wavelengths
@@ -1125,7 +1289,7 @@ class Calibrator:
 
         self.add_user_atlas(elements, wavelengths, intensities, vacuum,
                             pressure, temperature, relative_humidity)
-        self.set_peaks(constrain_poly)
+        self.set_peaks(candidate_thresh, constrain_poly)
 
     def remove_atlas_lines_range(self, wavelength, tolerance=10):
         '''
@@ -1133,9 +1297,9 @@ class Calibrator:
 
         Parameters
         ----------
-        wavelength : float
+        wavelength: float
             Wavelength to remove (Angstrom)
-        tolerance : float
+        tolerance: float
             Tolerance around this wavelength where atlas lines will be removed
 
         '''
@@ -1146,7 +1310,7 @@ class Calibrator:
                 removed_peak = self.atlas.pop(i)
                 self.atlas_intensities.pop(i)
 
-                self.logger.info('Removed {} line : {} A'.format(
+                self.logger.info('Removed {} line: {} A'.format(
                     removed_element, removed_peak))
 
     def set_known_pairs(self, pix=(), wave=()):
@@ -1159,10 +1323,10 @@ class Calibrator:
 
         Parameters
         ----------
-        pix : numeric value, list or numpy 1D array (N) (default: ())
+        pix: numeric value, list or numpy 1D array (N) (default: ())
             Any pixel value, can be outside the detector chip and
             serve purely as anchor points.
-        wave : numeric value, list or numpy 1D array (N) (default: ())
+        wave: numeric value, list or numpy 1D array (N) (default: ())
             The matching wavelength for each of the pix.
 
         '''
@@ -1176,148 +1340,38 @@ class Calibrator:
         self.pix_known = np.asarray(pix, dtype='float')
         self.wave_known = np.asarray(wave, dtype='float')
 
-    def set_fit_constraints(self,
-                            num_slopes=5000,
-                            range_tolerance=500,
-                            fit_tolerance=10.,
-                            polydeg=4,
-                            candidate_thresh=15.,
-                            linearity_thresh=100,
-                            ransac_thresh=5,
-                            num_candidates=25,
-                            xbins=100,
-                            ybins=100,
-                            brute_force=False,
-                            fittype='poly'):
-        '''
-        Configure the Calibrator. This may require some manual twiddling before
-        the calibrator can work efficiently. However, in theory, a large
-        max_tries in fit() should provide a good solution in the expense of
-        performance (minutes instead of seconds).
-
-        Parameters
-        ----------
-        num_slopes : int (default: 1000)
-            Number of slopes to consider during Hough transform
-        range_tolerance : float (default: 500)
-            Estimation of the error on the provided spectral range
-            e.g. 3000-5000 with tolerance 500 will search for
-            solutions that may satisfy 2500-5500
-        fit_tolerance : float (default: 10)
-            Sets a tolerance on whether a fit found by RANSAC is considered
-            acceptable
-        polydeg : int (default: 4)
-            Degree of the polynomial fit.
-        candidate_thresh : float (default: 15)
-            Threshold  (Angstroms) for considering a point to be an inlier
-            during candidate peak/line selection. This should be reasonable
-            small as we want to search for candidate points which are
-            *locally* linear.
-        linearity_thresh : float (default: 100)
-            A threshold (Ansgtroms) which defines some padding around the
-            range tolerance to allow for non-linearity. This should be the
-            maximum expected excursion from linearity.
-        ransac_thresh : float (default: 1)
-            The distance criteria  (Angstroms) to be considered an inlier to a
-            fit. This should be close to the size of the expected residuals on
-            the final fit (e.g. 1A is typical)
-        num_candidates: int (default: 25)
-            Number of best trial Hough pairs.
-        xbins : int (default: 50)
-            Number of bins for Hough accumulation
-        ybins : int (default: 50)
-            Number of bins for Hough accumulation
-        brute_force : boolean (default: False)
-            Set to True to try all possible combination in the given parameter
-            space
-        fittype : string (default: 'poly')
-            One of 'poly', 'legendre' or 'chebyshev'
-
-        '''
-
-        self.num_slopes = num_slopes
-        self.range_tolerance = range_tolerance
-        self.linearity_thresh = linearity_thresh
-
-        # Start wavelength in the spectrum, +/- some tolerance
-        self.min_intercept = self.min_wavelength - self.range_tolerance
-        self.max_intercept = self.min_wavelength + self.range_tolerance
-
-        self.min_slope = ((self.max_wavelength - self.range_tolerance -
-                           self.linearity_thresh) -
-                          (self.min_intercept + self.range_tolerance +
-                           self.linearity_thresh)) / self.pixel_list.max()
-
-        self.max_slope = ((self.max_wavelength + self.range_tolerance +
-                           self.linearity_thresh) -
-                          (self.min_intercept - self.range_tolerance -
-                           self.linearity_thresh)) / self.pixel_list.max()
-
-        self.fit_tolerance = fit_tolerance
-        self.polydeg = polydeg
-        self.ransac_thresh = ransac_thresh
-        self.candidate_thresh = candidate_thresh
-        self.xbins = xbins
-        self.ybins = ybins
-        self.brute_force = brute_force
-        self.fittype = fittype
-        self.num_candidates = num_candidates
-
-        if fittype == 'poly':
-            self.polyfit = np.polynomial.polynomial.polyfit
-            self.polyval = np.polynomial.polynomial.polyval
-        elif fittype == 'legendre':
-            self.polyfit = np.polynomial.legendre.legfit
-            self.polyval = np.polynomial.legendre.legval
-        elif fittype == 'chebyshev':
-            self.polyfit = np.polynomial.chebyshev.chebfit
-            self.polyval = np.polynomial.chebyshev.chebval
-        else:
-            raise ValueError(
-                'fittype must be: (1) poly, (2) legendre or (3) chebyshev')
-
     def fit(self,
-            sample_size=5,
-            top_n=5,
-            polydeg=4,
             max_tries=500,
+            polydeg=4,
             polyfit_coeff=None,
-            linear=True,
-            candidate_weighted=True,
-            hough_weight=1.0,
-            progress=True,
-            filter_close=False):
+            fit_tolerance=10.,
+            fittype='poly',
+            brute_force=False,
+            progress=True):
         '''
         Solve for the wavelength calibration polynomial by getting the most
         likely solution with RANSAC.
 
         Parameters
         ----------
-        sample_size : int (default: 5)
-            €£$
-        top_n : int (default: 10)
-            Top ranked lines to be fitted.
-        polydeg: int
-            The degree of the polynomial to be fitted.
-        max_tries : int (default: 5000)
+        max_tries: int (default: 5000)
             Maximum number of iteration.
-        polyfit_coeff : list (default: None)
+        polydeg: int (default: 4)
+            The degree of the polynomial to be fitted.
+        polyfit_coeff: list (default: None)
             Set the baseline of the least square fit. If no fits outform this
             set of polynomial coefficients, this will be used as the best fit.
-        linear: boolean (default: True)
-            True to use the hough transformed gradient, otherwise, use the
-            known polynomial.
-        candidate_weighted: boolean (default: True)
-            Set to True to down-weight pairs that are far from the fit.
-        hough_weight: float or None (default: 1.0)
-            Set to use the hough space to weigh the fit. The theoretical
-            optimal weighting is unclear. The larger the value, the heavily it
-            relies on the overdensity in the hough space for a good fit.
-        progress : boolean (default: True)
+        fit_tolerance: float (default: 10)
+            Sets a tolerance on whether a fit found by RANSAC is considered
+            acceptable
+        fittype: string (default: 'poly')
+            One of 'poly', 'legendre' or 'chebyshev'
+        brute_force: boolean (default: False)
+            Set to True to try all possible combination in the given parameter
+            space
+        progress: boolean (default: True)
             True to show progress with tdqm. It is overrid if tdqm cannot be
             imported.
-        filter_close : boolean (default: False)
-            Remove the pairs that are out of bounds in the hough space.
 
         Returns
         -------
@@ -1334,38 +1388,33 @@ class Calibrator:
 
         '''
 
-        if sample_size > len(self.atlas):
-            self.logger.warn(
-                'Size of sample_size is larger than the size of atlas, ' +
-                'the sample_size is set to match the size of atlas = ' +
-                str(len(self.atlas)) + '.')
-            sample_size = len(self.atlas)
+        self.max_tries = max_tries
+        self.polydeg = polydeg
+        self.polyfit_coeff = polyfit_coeff
+        self.fit_tolerance = fit_tolerance
+        self.fittype = fittype
+        self.brute_force = brute_force
+        self.progress = progress
 
-        # Generate the hough_points from the pairs
-        self.ht = HoughTransform()
-        self.ht.set_constraints(self.min_slope, self.max_slope,
-                                self.min_intercept, self.max_intercept)
-        self.ht.generate_hough_points(self.pairs[:, 0],
-                                      self.pairs[:, 1],
-                                      num_slopes=self.num_slopes)
-        self.ht.bin_hough_points(self.xbins, self.ybins)
-
-        self.hough_points = self.ht.hough_points
-        self.hough_lines = self.ht.hough_lines
+        if self.fittype == 'poly':
+            self.polyfit = np.polynomial.polynomial.polyfit
+            self.polyval = np.polynomial.polynomial.polyval
+        elif self.fittype == 'legendre':
+            self.polyfit = np.polynomial.legendre.legfit
+            self.polyval = np.polynomial.legendre.legval
+        elif self.fittype == 'chebyshev':
+            self.polyfit = np.polynomial.chebyshev.chebfit
+            self.polyval = np.polynomial.chebyshev.chebval
+        else:
+            raise ValueError(
+                'fittype must be: (1) poly, (2) legendre or (3) chebyshev')
 
         polyfit_coeff, rms, residual, n_inliers, valid = self._solve_candidate_ransac(
-            top_n=top_n,
-            polydeg=polydeg,
-            sample_size=sample_size,
-            max_tries=max_tries,
-            thresh=self.ransac_thresh,
+            polydeg=self.polydeg,
+            polyfit_coeff=self.polyfit_coeff,
+            max_tries=self.max_tries,
             brute_force=self.brute_force,
-            polyfit_coeff=polyfit_coeff,
-            linear=linear,
-            candidate_weighted=candidate_weighted,
-            hough_weight=hough_weight,
-            progress=progress,
-            filter_close=filter_close)
+            progress=self.progress)
 
         if len(self.peaks) < len(self.atlas):
             peak_utilisation = n_inliers / len(self.peaks)
@@ -1442,12 +1491,12 @@ class Calibrator:
         if len(x_match) < len(self.peaks) * min_frac:
             return np.inf
 
-        if not np.all(np.diff(self.polyval(np.sort(self.pixel_list), fit_new)) > 0):
+        if not np.all(
+                np.diff(self.polyval(np.sort(self.pixel_list), fit_new)) > 0):
             self.logger.info('not monotonic')
             return np.inf
 
-        lsq = np.sum(
-            (y_match - self.polyval(x_matched, fit_new))**2.) / dof
+        lsq = np.sum((y_match - self.polyval(x_matched, fit_new))**2.) / dof
 
         return lsq
 
@@ -1529,13 +1578,13 @@ class Calibrator:
         if refine:
             # fit everything
             fitted_delta = minimize(self._adjust_polyfit,
-                                 polyfit_coeff_new[:int(n_delta)] * 1e-3,
-                                 args=(polyfit_coeff, tolerance, min_frac),
-                                 method=method,
-                                 tol=convergence,
-                                 options={
-                                     'maxiter': 10000
-                                 }).x
+                                    polyfit_coeff_new[:int(n_delta)] * 1e-3,
+                                    args=(polyfit_coeff, tolerance, min_frac),
+                                    method=method,
+                                    tol=convergence,
+                                    options={
+                                        'maxiter': 10000
+                                    }).x
 
             for i, d in enumerate(fitted_delta):
                 polyfit_coeff_new[i] += d
@@ -1586,9 +1635,23 @@ class Calibrator:
 
             return polyfit_coeff_new, peak_matched, atlas_matched, residual, peak_utilisation
 
+    def plot_arc(self):
+        plt.figure(figsize=(18, 5))
+        if self.spectrum is not None:
+            plt.plot(self.spectrum / self.spectrum.max())
+            plt.title('Number of pixels: ' + str(self.spectrum.shape[0]))
+            plt.xlim(0, self.spectrum.shape[0])
+        else:
+            plt.xlim(0, max(self.peaks))
+        plt.vlines(self.peaks, 0, 1.05, colors='C1')
+        plt.xlabel("Pixel (Spectral Direction)")
+        plt.ylabel("Normalised Count")
+        plt.grid()
+        plt.tight_layout()
+
     def plot_search_space(self,
                           polyfit_coeff=None,
-                          top_n=3,
+                          top_n_candidate=3,
                           weighted=True,
                           savefig=False,
                           filename=None,
@@ -1603,9 +1666,9 @@ class Calibrator:
 
         Parameters
         ----------
-        polyfit_coeff : list (default: None)
+        polyfit_coeff: list (default: None)
             List of best polynomial polyfit_coefficients
-        top_n : int (default: 3)
+        top_n_candidate: int (default: 3)
             Top ranked lines to be fitted.
         weighted: (default: True)
             Draw sample based on the distance from the matched known wavelength
@@ -1630,7 +1693,7 @@ class Calibrator:
 
         # Get top linear estimates and combine
         candidate_peak, candidate_arc =\
-            self._get_most_common_candidates(self.candidates, top_n=top_n, weighted=weighted)
+            self._get_most_common_candidates(self.candidates, top_n_candidate=top_n_candidate, weighted=weighted)
 
         # Get the search space boundaries
         x = self.pixel_list
@@ -1847,8 +1910,8 @@ class Calibrator:
                 return fig.to_json()
 
     def plot_fit(self,
-                 spectrum,
                  fit,
+                 spectrum=None,
                  tolerance=5.,
                  plot_atlas=True,
                  log_spectrum=False,
@@ -1859,28 +1922,28 @@ class Calibrator:
         '''
         Parameters
         ----------
-        spectrum : 1D numpy array (N)
-            Array of length N pixels
-        fit : 1D numpy array or list
+        fit: 1D numpy array or list
             Best fit polynomail polyfit_coefficients
-        tolerance : float (default: 5)
+        spectrum: 1D numpy array (N)
+            Array of length N pixels
+        tolerance: float (default: 5)
             Absolute difference between model and fitted wavelengths in unit
             of angstrom.
-        plot_atlas : boolean (default: True)
+        plot_atlas: boolean (default: True)
             Display all the relavent lines available in the atlas library.
-        log_spectrum : boolean (default: False)
+        log_spectrum: boolean (default: False)
             Display the arc in log-space if set to True.
-        savefig : boolean (default: False)
+        savefig: boolean (default: False)
             Save a png image if set to True. Other matplotlib.pyplot.savefig()
             support format type are possible through providing the extension
             in the filename.
-        filename : string (default: None)
+        filename: string (default: None)
             Provide a filename or full path. If the extension is not provided
             it is defaulted to png.
-        json : boolean (default: False)
+        json: boolean (default: False)
             Set to True to return json strings if using plotly as the plotting
             library.
-        renderer : string (default: 'default')
+        renderer: string (default: 'default')
             Indicate the Plotly renderer. Nothing gets displayed if json is
             set to True.
 
@@ -1890,6 +1953,12 @@ class Calibrator:
         is True.
 
         '''
+        if spectrum is None:
+            try:
+                spectrum = self.spectrum
+            except:
+                self.logger.error('Spectrum is not provided, it cannot be '
+                                  'plotted.')
 
         if log_spectrum:
             spectrum[spectrum < 0] = 1e-100
@@ -1990,8 +2059,9 @@ class Calibrator:
             ax3.set_xlabel('Wavelength / A')
             ax3.set_ylabel('Pixel')
             ax3.legend(loc='lower right')
-            ax3.set_xlim(self.polyval(min(fitted_peaks), fit)*0.9,
-                         self.polyval(max(fitted_peaks), fit)*1.1)
+            ax3.set_xlim(
+                self.polyval(min(fitted_peaks), fit) * 0.9,
+                self.polyval(max(fitted_peaks), fit) * 1.1)
 
             plt.show()
 
@@ -2111,8 +2181,10 @@ class Calibrator:
                 xaxis=dict(
                     title='Wavelength / A',
                     zeroline=False,
-                    range=[self.polyval(min(fitted_peaks), fit)*0.9,
-                         self.polyval(max(fitted_peaks), fit)*1.1],
+                    range=[
+                        self.polyval(min(fitted_peaks), fit) * 0.9,
+                        self.polyval(max(fitted_peaks), fit) * 1.1
+                    ],
                     showgrid=True,
                 ),
                 hovermode='closest',
