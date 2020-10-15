@@ -158,7 +158,7 @@ def vacuum_to_air_wavelength(wavelengths, temperature=273.15, pressure=101325, r
 
 def filter_wavelengths(lines, min_atlas_wavelength, max_wavlength):
     wavelengths = lines[:,1].astype(np.float32)
-    wavelength_mask = (wavelengths >= min_atlas_wavelength) * (wavelengths <= max_wavlength)
+    wavelength_mask = (wavelengths >= min_atlas_wavelength) & (wavelengths <= max_wavlength)
 
     return lines[wavelength_mask]
 
