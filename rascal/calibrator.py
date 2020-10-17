@@ -638,6 +638,8 @@ class Calibrator:
 
             self.sample_size = self.fit_deg + 1
 
+        # Note that there may be multiple matches for 
+        # each peak, that is len(x) > len(np.unique(x))
         x = np.array(self.candidate_peak)
         y = np.array(self.candidate_arc)
 
@@ -651,8 +653,11 @@ class Calibrator:
             y = y[separation_mask].flatten()
             x = x[separation_mask].flatten()
 
-        if fit_coeff is not None:
 
+        if fit_coeff is not None:
+            # TODO: Fix this, this will cause errors because 
+            # there may be multiple y's for each x
+            raise NotImplementedError
             fit = self.polyval(x, fit_coeff)
             err = np.abs(fit - y)
             best_cost = sum(err)
@@ -664,19 +669,21 @@ class Calibrator:
 
             return (best_p, best_err, sum(best_mask), 0, False)
 
-        idx = range(len(x))
+        
 
         # Brute force check all combinations. If the request sample_size is
         # the same or larger than the available lines, it is essentially a
         # brute force.
         if brute_force or (self.sample_size >= len(np.unique(x))):
-
+            
+            idx = range(len(x))
             sampler = itertools.combinations(idx, self.sample_size)
             self.sample_size = len(np.unique(x))
 
         else:
 
             sampler = range(int(max_tries))
+
 
         if tdqm_imported & progress:
 
@@ -731,17 +738,19 @@ class Calibrator:
                 else:
 
                     # Pick some random peaks
-                    idxes = np.random.choice(idx,
+                    x_hat = np.random.choice(peaks,
                                              self.sample_size,
                                              replace=False,
                                              p=prob)
-                    x_hat = peaks[idxes]
                     y_hat = []
+
                     # Pick a random wavelength for this x
                     for _x in x_hat:
 
                         y_choice = candidates[_x]
 
+                        # Avoid picking a y that's already associated with
+                        # another x
                         if not set(y_choice).issubset(set(y_hat)):
 
                             y_temp = np.random.choice(y_choice)
@@ -749,6 +758,7 @@ class Calibrator:
                             while y_temp in y_hat:
 
                                 y_temp = np.random.choice(y_choice)
+
                             y_hat.append(y_temp)
 
                         else:
@@ -794,8 +804,45 @@ class Calibrator:
                     continue
 
                 # M-SAC Estimator (Torr and Zisserman, 1996)
-                fit = self.polyval(x, fit_coeffs)
-                err = np.abs(fit - y)
+                # TODO: make this faster
+
+                err = []
+                matched_x = []
+                matched_y = []
+                for peak in peaks:
+
+                    fit = self.polyval(peak, fit_coeffs)
+
+                    # Get closest match for this peak
+                    errs = np.abs(fit - candidates[peak])
+                    idx = np.argmin(errs)
+
+                    err.append(errs[idx])
+                    matched_x.append(peak)
+                    matched_y.append(candidates[peak][idx])
+
+                err = np.array(err)
+                matched_x = np.array(matched_x)
+                matched_y = np.array(matched_y)
+
+                # Now we also need to resolve duplicate y's
+                filtered_x = []
+                filtered_y = []
+                filtered_err = []
+
+                for wavelength in np.unique(matched_y):
+                    mask = matched_y == wavelength
+                    filtered_y.append(wavelength)
+
+                    err_idx = np.argmin(err[mask])
+                    filtered_x.append(matched_x[mask][err_idx])
+                    filtered_err.append(err[mask][err_idx])
+
+                # overwrite
+                err = np.array(filtered_err)
+                matched_x = np.array(filtered_x)
+                matched_y = np.array(filtered_y)
+
                 err[err > self.ransac_tolerance] = self.ransac_tolerance
 
                 # compute the hough space density as weights for the cost function
@@ -814,13 +861,13 @@ class Calibrator:
 
                     weight = 1.
 
-                cost = sum(err) / (len(err) - len(fit_coeffs) + 1) / weight
+                cost = sum(err) / (len(err) - len(fit_coeffs) + 1) / (weight + 1e-9)
 
                 # reject lines outside the rms limit (ransac_tolerance)
                 best_mask = err < self.ransac_tolerance
                 n_inliers = sum(best_mask)
 
-                if len(np.unique(x[best_mask])) <= self.fit_deg:
+                if len(matched_x[best_mask]) <= self.fit_deg:
 
                     self.logger.debug('Too few good candidates for fitting.')
                     continue
@@ -830,13 +877,13 @@ class Calibrator:
 
                     # Now we do a robust fit
                     #self.logger.info((x[best_mask], y[best_mask]))
-                    best_p = models.robust_polyfit(x[best_mask], y[best_mask],
+                    best_p = models.robust_polyfit(matched_x[best_mask], matched_y[best_mask],
                                                    self.fit_deg)
 
                     best_cost = cost
 
                     # Get the residual of the fit
-                    err = self.polyval(x[best_mask], best_p) - y[best_mask]
+                    err = self.polyval(matched_x[best_mask], best_p) - matched_y[best_mask]
                     err[np.abs(err) > self.ransac_tolerance] = self.ransac_tolerance
 
                     best_err = np.sqrt(np.mean(err**2))
