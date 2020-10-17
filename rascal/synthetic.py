@@ -1,7 +1,7 @@
 import pynverse
 import numpy as np
 from . import models
-
+from . import util
 
 class SyntheticSpectrum:
     def __init__(self, coefficients, model_type='cubic', degree=None):
@@ -26,7 +26,7 @@ class SyntheticSpectrum:
 
         # Default is approx. range of Silicon
         self.min_wavelength = 200
-        self.max_wavelength = 12000
+        self.max_wavelength = 1200
 
         # Model to fit
         if model_type == 'quadratic':
@@ -62,3 +62,30 @@ class SyntheticSpectrum:
         wavelengths = wavelengths[wavelengths < self.max_wavelength]
 
         return pynverse.inversefunc(self.model, wavelengths)
+
+class RandomSyntheticSpectrum(SyntheticSpectrum):
+
+    def __init__(self, min_wavelength=400, max_wavelength=800, dispersion=0.5, model_type='poly', degree=5):
+
+        x0 = min_wavelength
+        x1 = dispersion
+        x2 = 0.1*random.random()
+
+        coefficients = [x0, x1, x2]
+        
+        super().__init__(coefficients, model_type, degree)
+
+
+
+    def add_atlas(elements, n_lines=30, min_intensity=10, min_distance=10):
+        lines = load_calibration_lines(elements,
+                           min_atlas_wavelength=self.min_wavelength,
+                           max_atlas_wavelength=self.max_wavelength,
+                           min_intensity=min_intensity,
+                           min_distance=min_distance,
+                           vacuum=False,
+                           pressure=101325.,
+                           temperature=273.15,
+                           relative_humidity=0.)
+
+        self.lines = random.choose(lines, n_lines)
