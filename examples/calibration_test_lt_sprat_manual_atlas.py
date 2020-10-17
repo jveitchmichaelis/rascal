@@ -29,7 +29,7 @@ peaks = util.refine_peaks(spectrum, peaks, window_width=5)
 # Initialise the calibrator
 c = Calibrator(peaks, spectrum=spectrum)
 c.plot_arc()
-c.set_hough_properties(num_slopes=5000.,
+c.set_hough_properties(num_slopes=5000,
                        range_tolerance=500.,
                        xbins=100,
                        ybins=100,
@@ -67,7 +67,7 @@ best_p, rms, residual, peak_utilisation = c.fit(max_tries=250)
 c.plot_fit(best_p, spectrum, plot_atlas=True, log_spectrum=False, tolerance=5.)
 
 # Show the parameter space for searching possible solution
-#c.plot_search_space()
+c.plot_search_space()
 
 print("Stdev error: {} A".format(residual.std()))
 print("Peaks utilisation rate: {}%".format(peak_utilisation * 100))

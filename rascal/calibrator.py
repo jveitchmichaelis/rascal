@@ -1179,7 +1179,7 @@ class Calibrator:
 
         '''
 
-        self.num_slopes = num_slopes
+        self.num_slopes = int(num_slopes)
         self.xbins = xbins
         self.ybins = ybins
         self.min_wavelength = min_wavelength
