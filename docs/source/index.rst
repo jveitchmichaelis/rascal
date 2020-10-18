@@ -93,9 +93,10 @@ User Guide
 
    tutorial/quickstart
    tutorial/lt-sprat
-   tutorial/lt-frodo
+   tutorial/gemini-gmosls
+   tutorial/wht-isis
    tutorial/keck-deimos
-   tutorial/ntt-efosc
+   tutorial/gtc-osiris
 
 .. toctree::
    :maxdepth: 2
@@ -105,12 +106,6 @@ User Guide
    modules/models
    modules/synthetic
    modules/util
-
-.. toctree::
-   :maxdepth: 1
-   :caption: API
-
-   autoapi/index
 
 License & Attribution
 =====================

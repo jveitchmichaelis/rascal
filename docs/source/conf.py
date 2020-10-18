@@ -32,7 +32,7 @@ release = __version__
 # ones.
 extensions = [
     'sphinx.ext.todo', 'sphinx.ext.viewcode', 'sphinx.ext.autodoc',
-    'sphinx.ext.autosectionlabel', 'sphinx.ext.coverage', 'autoapi.extension',
+    'sphinx.ext.autosectionlabel', 'sphinx.ext.coverage',
     'sphinx.ext.mathjax'
 ]
 
@@ -43,12 +43,6 @@ templates_path = ['_templates']
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = []
-
-# Produce API reference automatically for every public and private methods
-autoapi_dirs = ['../../rascal']
-autodoc_default_flags = ['members', 'undoc-members', 'private-members']
-autoclass_content = 'both'
-autoapi_python_class_content = 'both'
 
 mathjax_path = "https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"
 
@@ -67,7 +61,7 @@ else:
         import sphinx_rtd_theme
         html_theme = 'sphinx_rtd_theme'
         html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
-        html_static_path = ["_static"]
+        #html_static_path = ["_static"]
     except:
         html_theme = 'alabaster'
-        html_static_path = ["_static"]
+        #html_static_path = ["_static"]
