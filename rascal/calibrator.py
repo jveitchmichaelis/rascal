@@ -1850,7 +1850,7 @@ class Calibrator:
 
             return fit_coeff_new, peak_matched, atlas_matched, residual, peak_utilisation
 
-    def plot_arc(self):
+    def plot_arc(self, log_spectrum=False):
         '''
         Plots the 1D spectrum of the extracted arc
 
@@ -1859,8 +1859,15 @@ class Calibrator:
         plt.figure(figsize=(18, 5))
 
         if self.spectrum is not None:
-
-            plt.plot(self.spectrum / self.spectrum.max())
+            if log_spectrum:
+                plt.plot(np.log10(self.spectrum / self.spectrum.max()))
+                plt.vlines(self.peaks, -2, 0, colors='C1')
+                plt.ylabel("log(Normalised Count)")
+                plt.ylim(-2,0)
+            else:
+                plt.plot(self.spectrum / self.spectrum.max())
+                plt.ylabel("Normalised Count")
+                plt.vlines(self.peaks, 0, 1.05, colors='C1')
             plt.title('Number of pixels: ' + str(self.spectrum.shape[0]))
             plt.xlim(0, self.spectrum.shape[0])
 
@@ -1868,9 +1875,7 @@ class Calibrator:
 
             plt.xlim(0, max(self.peaks))
 
-        plt.vlines(self.peaks, 0, 1.05, colors='C1')
         plt.xlabel("Pixel (Spectral Direction)")
-        plt.ylabel("Normalised Count")
         plt.grid()
         plt.tight_layout()
 

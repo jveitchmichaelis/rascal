@@ -28,8 +28,8 @@ spectrum2D = fits.open(
 spectrum = np.median(spectrum2D[300:310], axis=0)[::-1]
 
 # Identify the peaks
-peaks, _ = find_peaks(spectrum, height=1000, distance=5, threshold=None)
-peaks = util.refine_peaks(spectrum, peaks, window_width=5)
+peaks, _ = find_peaks(spectrum, height=500, distance=5, threshold=None)
+peaks = util.refine_peaks(spectrum, peaks, window_width=3)
 
 peaks_shifted = rawpix_to_pix_itp(peaks)
 
@@ -43,8 +43,7 @@ c.set_hough_properties(num_slopes=5000,
                        ybins=200,
                        min_wavelength=5000.,
                        max_wavelength=9500.)
-c.set_ransac_properties(sample_size=8,
-                        top_n_candidate=10)
+c.set_ransac_properties(sample_size=8, top_n_candidate=10)
 # Vacuum wavelengths
 c.add_atlas(elements=['Cu', 'Ar'],
             min_intensity=50,

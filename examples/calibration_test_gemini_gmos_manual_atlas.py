@@ -43,8 +43,7 @@ c.set_hough_properties(num_slopes=5000,
                        ybins=200,
                        min_wavelength=5000.,
                        max_wavelength=9500.)
-c.set_ransac_properties(sample_size=8,
-                        top_n_candidate=10)
+c.set_ransac_properties(sample_size=8, top_n_candidate=10)
 # Vacuum wavelengths
 # blend: 5143.21509, 5146.74143
 # something weird near there, so not used: 8008.359, 8016.990

@@ -23,25 +23,23 @@ relative_humidity = fits_file.header['REFHUMID']
 spectrum = np.median(spectrum2D[110:120], axis=0)
 
 # Identify the peaks
-peaks, _ = find_peaks(spectrum, height=500, distance=5)
+peaks, _ = find_peaks(spectrum, height=100, prominence=10, distance=5)
 peaks = util.refine_peaks(spectrum, peaks, window_width=5)
 
 # Initialise the calibrator
 c = Calibrator(peaks, spectrum=spectrum)
 c.plot_arc()
-c.set_hough_properties(num_slopes=1000,
+c.set_hough_properties(num_slopes=5000,
                        range_tolerance=500.,
-                       xbins=200,
-                       ybins=200,
-                       min_wavelength=4000.,
-                       max_wavelength=8000.)
-c.set_ransac_properties(sample_size=5,
-                        top_n_candidate=5,
-                        filter_close=True)
+                       xbins=100,
+                       ybins=100,
+                       min_wavelength=3800.,
+                       max_wavelength=8200.)
+c.set_ransac_properties(sample_size=5, top_n_candidate=5, filter_close=True)
 c.add_atlas(elements=["Xe"],
-            min_intensity=20.,
-            min_distance=10,
-            min_atlas_wavelength=4000.,
+            min_intensity=10.,
+            min_distance=5,
+            min_atlas_wavelength=3800.,
             max_atlas_wavelength=8200.,
             candidate_tolerance=5.,
             pressure=pressure,
@@ -51,7 +49,7 @@ c.add_atlas(elements=["Xe"],
 c.do_hough_transform()
 
 # Run the wavelength calibration
-best_p, rms, residual, peak_utilisation = c.fit(max_tries=250, candidate_tolerance=2., fit_tolerance=5.)
+best_p, rms, residual, peak_utilisation = c.fit(max_tries=250)
 
 # Plot the solution
 c.plot_fit(best_p, spectrum, plot_atlas=True, log_spectrum=False, tolerance=5.)

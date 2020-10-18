@@ -16,61 +16,39 @@ spectrum2D = fits.open(
 # Collapse into 1D spectrum between row 110 and 120
 spectrum = np.median(spectrum2D[500:520], axis=0)
 
-plt.figure()
-plt.plot(spectrum / spectrum.max())
-plt.title('Number of pixels: ' + str(spectrum.shape[0]))
-plt.xlabel("Pixel (Spectral Direction)")
-plt.ylabel("Normalised Count")
-plt.xlim(0, len(spectrum))
-plt.grid()
-plt.tight_layout()
-
 # Identify the peaks
-peaks, _ = find_peaks(spectrum, height=1500, distance=10, threshold=None)
-peaks = util.refine_peaks(spectrum, peaks, window_width=5)
+peaks, _ = find_peaks(spectrum,
+                      height=500,
+                      prominence=10,
+                      distance=5,
+                      threshold=None)
+peaks = util.refine_peaks(spectrum, peaks, window_width=3)
 
 # Initialise the calibrator
-c = Calibrator(peaks,
-               num_pix=len(spectrum),
-               min_wavelength=6500.,
-               max_wavelength=10500.)
-c.set_fit_constraints(num_slopes=5000,
-                      range_tolerance=1000.,
-                      xbins=200,
-                      ybins=200)
+c = Calibrator(peaks, spectrum=spectrum)
+c.plot_arc(log_spectrum=True)
+c.set_hough_properties(num_slopes=5000,
+                       range_tolerance=500.,
+                       xbins=100,
+                       ybins=100,
+                       min_wavelength=6500.,
+                       max_wavelength=10500.)
+c.set_ransac_properties(sample_size=5, top_n_candidate=5, filter_close=True)
 c.add_atlas(elements=['Cu', 'Ne', 'Ar'],
-            min_intensity=20,
+            min_intensity=10,
             pressure=90000.,
             temperature=285.)
 
-# Show the parameter space for searching possible solution
-#c.plot_search_space()
+c.do_hough_transform()
 
 # Run the wavelength calibration
-best_p, rms, residual, peak_utilisation = c.fit(max_tries=10000)
-
-# Refine solution
-# First set is to refine only the 0th and 1st coefficient (i.e. the 2 lowest orders)
-best_p, x_fit, y_fit, residual, peak_utilisation = c.match_peaks(
-    best_p,
-    n_delta=2,
-    tolerance=10.,
-    convergence=1e-10,
-    method='Nelder-Mead',
-    robust_refit=True)
-# Second set is to refine all the coefficients
-best_p, x_fit, y_fit, residual, peak_utilisation = c.match_peaks(
-    best_p,
-    tolerance=10.,
-    convergence=1e-10,
-    method='Nelder-Mead',
-    robust_refit=True)
+best_p, rms, residual, peak_utilisation = c.fit(max_tries=200)
 
 # Plot the solution
-c.plot_fit(spectrum, best_p, plot_atlas=True, log_spectrum=False, tolerance=5.)
+c.plot_fit(best_p, spectrum, plot_atlas=True, log_spectrum=False, tolerance=5.)
 
-fit_diff = c.polyval(x_fit, best_p) - y_fit
-rms = np.sqrt(np.sum(fit_diff**2 / len(x_fit)))
+# Show the parameter space for searching possible solution
+c.plot_search_space()
 
-print("Stdev error: {} A".format(fit_diff.std()))
+print("Stdev error: {} A".format(residual.std()))
 print("Peaks utilisation rate: {}%".format(peak_utilisation * 100))

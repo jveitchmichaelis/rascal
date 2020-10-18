@@ -77,34 +77,34 @@ User Guide
    :maxdepth: 2
    :caption: Installation
 
-   installation
+   installation/installation
 
 .. toctree::
    :maxdepth: 2
    :caption: Behind the Scene
 
-   summary
-   houghtransform
-   ransac
+   background/summary
+   background/houghtransform
+   background/ransac
 
 .. toctree::
    :maxdepth: 2
    :caption: Tutorials
 
-   quickstart
-   lt-sprat
-   lt-frodo
-   keck-deimos
-   ntt-efosc
+   tutorial/quickstart
+   tutorial/lt-sprat
+   tutorial/lt-frodo
+   tutorial/keck-deimos
+   tutorial/ntt-efosc
 
 .. toctree::
    :maxdepth: 2
    :caption: List of Modules
 
-   calibrator
-   models
-   synthetic
-   util
+   modules/calibrator
+   modules/models
+   modules/synthetic
+   modules/util
 
 .. toctree::
    :maxdepth: 1

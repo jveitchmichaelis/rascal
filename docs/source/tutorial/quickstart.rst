@@ -57,8 +57,8 @@ To distinguish from the Hough transform and fitting from the calibrator, in manu
                            range_tolerance=500.,
                            linearity_tolerance=50)
 
-    c.set_ransac_properties(sample_size=8,
-                            top_n_candidate=10)
+    c.set_ransac_properties(sample_size=5,
+                            top_n_candidate=8)
 
 The calibration still does not know what it is calibrating against, so we have to provide the arc lines or use the built-in library by providing the Chemical symbols.
 

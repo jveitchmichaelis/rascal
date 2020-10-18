@@ -30,8 +30,7 @@ c.set_hough_properties(num_slopes=5000,
                        ybins=200,
                        min_wavelength=2500.,
                        max_wavelength=4600.)
-c.set_ransac_properties(sample_size=8,
-                        top_n_candidate=10)
+c.set_ransac_properties(sample_size=8, top_n_candidate=10)
 c.add_atlas(elements=['Cu', 'Ne', 'Ar'],
             min_intensity=10,
             pressure=80000.,

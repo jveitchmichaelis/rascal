@@ -10,7 +10,8 @@ from rascal.calibrator import Calibrator
 from rascal.util import refine_peaks
 
 # Load the 1D Spectrum from Pypeit
-spectrum_json = json.load(open('data_keck_deimos/keck_deimos_830g_l_PYPIT.json'))
+spectrum_json = json.load(
+    open('data_keck_deimos/keck_deimos_830g_l_PYPIT.json'))
 spectrum = np.array(spectrum_json['spec'])
 
 # Identify the arc lines
@@ -25,8 +26,7 @@ c.set_hough_properties(num_slopes=5000,
                        ybins=200,
                        min_wavelength=6500.,
                        max_wavelength=10500.)
-c.set_ransac_properties(sample_size=5,
-                        top_n_candidate=10)
+c.set_ransac_properties(sample_size=5, top_n_candidate=10)
 c.add_atlas(elements=["Ne", "Ar", "Kr"],
             min_intensity=200.,
             pressure=70000.,
