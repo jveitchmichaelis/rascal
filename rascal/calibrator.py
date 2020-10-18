@@ -2154,7 +2154,7 @@ class Calibrator:
                 return fig.to_json()
 
     def plot_fit(self,
-                 fit,
+                 fit_coeff,
                  spectrum=None,
                  tolerance=5.,
                  plot_atlas=True,
@@ -2166,7 +2166,7 @@ class Calibrator:
         '''
         Parameters
         ----------
-        fit: 1D numpy array or list
+        fit_coeff: 1D numpy array or list
             Best fit polynomail fit_coefficients
         spectrum: 1D numpy array (N)
             Array of length N pixels
@@ -2221,7 +2221,7 @@ class Calibrator:
             vline_max = np.nanmax(spectrum) * 1.05
             text_box_pos = 0.8 * max(spectrum)
 
-        wave = self.polyval(self.pixel_list, fit)
+        wave = self.polyval(self.pixel_list, fit_coeff)
 
         if self.plot_with_matplotlib:
 
@@ -2233,7 +2233,7 @@ class Calibrator:
 
             # Plot fitted spectrum
             ax1.plot(wave, spectrum)
-            ax1.vlines(self.polyval(self.peaks, fit),
+            ax1.vlines(self.polyval(self.peaks, fit_coeff),
                        spectrum[self.pix_to_rawpix(self.peaks).astype('int')],
                        vline_max,
                        linestyles='dashed',
@@ -2253,7 +2253,7 @@ class Calibrator:
 
             for p in self.peaks:
 
-                x = self.polyval(p, fit)
+                x = self.polyval(p, fit_coeff)
                 diff = self.atlas - x
                 idx = np.argmin(np.abs(diff))
                 all_diff.append(diff[idx])
@@ -2266,7 +2266,7 @@ class Calibrator:
                     fitted_diff.append(diff[idx])
                     self.logger.info('- matched to {} A'.format(
                         self.atlas[idx]))
-                    ax1.vlines(self.polyval(p, fit),
+                    ax1.vlines(self.polyval(p, fit_coeff),
                                spectrum[self.pix_to_rawpix(p).astype('int')],
                                vline_max,
                                colors='C1')
@@ -2291,7 +2291,7 @@ class Calibrator:
                 ax1.set_ylim(np.nanmin(spectrum), vline_max)
 
             # Plot the residuals
-            ax2.scatter(self.polyval(fitted_peaks, fit),
+            ax2.scatter(self.polyval(fitted_peaks, fit_coeff),
                         fitted_diff,
                         marker='+',
                         color='C1')
@@ -2308,7 +2308,7 @@ class Calibrator:
             '''
 
             # Plot the polynomial
-            ax3.scatter(self.polyval(fitted_peaks, fit),
+            ax3.scatter(self.polyval(fitted_peaks, fit_coeff),
                         fitted_peaks,
                         marker='+',
                         color='C1',
@@ -2355,7 +2355,7 @@ class Calibrator:
 
             for i, p in enumerate(self.peaks):
 
-                p_x.append(self.polyval(p, fit))
+                p_x.append(self.polyval(p, fit_coeff))
                 p_y.append(spectrum[int(self.pix_to_rawpix(p))])
 
             fig.add_trace(
@@ -2372,7 +2372,7 @@ class Calibrator:
 
             for p in self.peaks:
 
-                x = self.polyval(p, fit)
+                x = self.polyval(p, fit_coeff)
                 diff = self.atlas - x
                 idx = np.argmin(np.abs(diff))
                 all_diff.append(diff[idx])
@@ -2388,7 +2388,7 @@ class Calibrator:
                     self.logger.info('- matched to {} A'.format(
                         self.atlas[idx]))
 
-            x_fitted = self.polyval(fitted_peaks, fit)
+            x_fitted = self.polyval(fitted_peaks, fit_coeff)
 
             fig.add_trace(
                 go.Scatter(x=x_fitted,
@@ -2451,8 +2451,8 @@ class Calibrator:
                     title='Wavelength / A',
                     zeroline=False,
                     range=[
-                        self.polyval(min(fitted_peaks), fit) * 0.9,
-                        self.polyval(max(fitted_peaks), fit) * 1.1
+                        self.polyval(min(fitted_peaks), fit_coeff) * 0.9,
+                        self.polyval(max(fitted_peaks), fit_coeff) * 1.1
                     ],
                     showgrid=True,
                 ),
