@@ -803,9 +803,9 @@ class Calibrator:
                         'Solution is not monotonically increasing.')
                     continue
 
-                # M-SAC Estimator (Torr and Zisserman, 1996)
+                
+                # Compute error and filter out many-to-one matches
                 # TODO: make this faster
-
                 err = []
                 matched_x = []
                 matched_y = []
@@ -843,6 +843,7 @@ class Calibrator:
                 matched_x = np.array(filtered_x)
                 matched_y = np.array(filtered_y)
 
+                # M-SAC Estimator (Torr and Zisserman, 1996)
                 err[err > self.ransac_tolerance] = self.ransac_tolerance
 
                 # compute the hough space density as weights for the cost function
@@ -895,6 +896,12 @@ class Calibrator:
                         sampler_list.set_description(
                             'Most inliers: {:d}, best error: {:1.4f}'.format(
                                 n_inliers, best_err))
+
+                    if n_inliers == len(peaks):
+                        """
+                        all peaks matched
+                        """
+                        break
 
                 keep_trying = False
 
