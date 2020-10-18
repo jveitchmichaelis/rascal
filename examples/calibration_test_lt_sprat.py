@@ -18,67 +18,46 @@ spectrum2D = fits_file.data
 temperature = fits_file.header['REFTEMP']
 pressure = fits_file.header['REFPRES'] * 100.
 relative_humidity = fits_file.header['REFHUMID']
-print(temperature, pressure, relative_humidity)
+
 # Collapse into 1D spectrum between row 110 and 120
 spectrum = np.median(spectrum2D[110:120], axis=0)
-'''
-plt.figure()
-plt.plot(spectrum / spectrum.max())
-plt.title('Number of pixels: ' + str(spectrum.shape[0]))
-plt.xlabel("Pixel (Spectral Direction)")
-plt.ylabel("Normalised Count")
-plt.xlim(0, 1024)
-plt.grid()
-plt.tight_layout()
-'''
 
 # Identify the peaks
-peaks, _ = find_peaks(spectrum, height=200, distance=10, threshold=None)
+peaks, _ = find_peaks(spectrum, height=500, distance=5)
 peaks = util.refine_peaks(spectrum, peaks, window_width=5)
 
 # Initialise the calibrator
-c = Calibrator(peaks,
-               num_pix=len(spectrum),
-               min_wavelength=3500.,
-               max_wavelength=8000.)
-c.set_fit_constraints(num_slopes=10000,
-                      range_tolerance=500.,
-                      xbins=500,
-                      ybins=500)
-c.add_atlas(elements='Xe',
-            min_intensity=20,
+c = Calibrator(peaks, spectrum=spectrum)
+c.plot_arc()
+c.set_hough_properties(num_slopes=1000,
+                       range_tolerance=500.,
+                       xbins=200,
+                       ybins=200,
+                       min_wavelength=4000.,
+                       max_wavelength=8000.)
+c.set_ransac_properties(sample_size=5,
+                        top_n_candidate=5,
+                        filter_close=True)
+c.add_atlas(elements=["Xe"],
+            min_intensity=20.,
+            min_distance=10,
+            min_atlas_wavelength=4000.,
+            max_atlas_wavelength=8200.,
+            candidate_tolerance=5.,
             pressure=pressure,
             temperature=temperature,
             relative_humidity=relative_humidity)
 
+c.do_hough_transform()
+
+# Run the wavelength calibration
+best_p, rms, residual, peak_utilisation = c.fit(max_tries=250, candidate_tolerance=2., fit_tolerance=5.)
+
+# Plot the solution
+c.plot_fit(best_p, spectrum, plot_atlas=True, log_spectrum=False, tolerance=5.)
+
 # Show the parameter space for searching possible solution
 #c.plot_search_space()
 
-# Run the wavelength calibration
-best_p, rms, residual, peak_utilisation = c.fit(max_tries=10000)
-
-# Refine solution
-# First set is to refine only the 0th and 1st coefficient (i.e. the 2 lowest orders)
-best_p, x_fit, y_fit, residual, peak_utilisation = c.match_peaks(
-    best_p,
-    n_delta=2,
-    tolerance=10.,
-    convergence=1e-10,
-    method='Nelder-Mead',
-    robust_refit=True)
-# Second set is to refine all the coefficients
-best_p, x_fit, y_fit, residual, peak_utilisation = c.match_peaks(
-    best_p,
-    tolerance=10.,
-    convergence=1e-10,
-    method='Nelder-Mead',
-    robust_refit=True)
-
-# Plot the solution
-c.plot_fit(spectrum, best_p, plot_atlas=True, log_spectrum=False, tolerance=5.)
-
-fit_diff = c.polyval(x_fit, best_p) - y_fit
-rms = np.sqrt(np.sum(fit_diff**2 / len(x_fit)))
-
-print("Stdev error: {} A".format(fit_diff.std()))
+print("Stdev error: {} A".format(residual.std()))
 print("Peaks utilisation rate: {}%".format(peak_utilisation * 100))

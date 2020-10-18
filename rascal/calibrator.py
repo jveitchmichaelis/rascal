@@ -389,6 +389,16 @@ class Calibrator:
         Generate pixel-wavelength pairs without the allowed regions set by the
         linearity limit. This assumes a relatively linear spectrograph.
 
+        Parameters
+        ----------
+        constrain_poly: boolean
+            Apply a polygonal constraint on possible peak/atlas pairs
+        candidate_tolerance: float (default: 10)
+            toleranceold  (Angstroms) for considering a point to be an inlier
+            during candidate peak/line selection. This should be reasonable
+            small as we want to search for candidate points which are
+            *locally* linear.
+
         '''
 
         pairs = [pair for pair in itertools.product(self.peaks, self.atlas)]
@@ -510,6 +520,14 @@ class Calibrator:
         Note: depending on the toleranceold set, one peak may match with multiple
         wavelengths.
 
+        Parameters
+        ----------
+        candidate_tolerance: float (default: 10)
+            toleranceold  (Angstroms) for considering a point to be an inlier
+            during candidate peak/line selection. This should be reasonable
+            small as we want to search for candidate points which are
+            *locally* linear.
+
         '''
 
         # Locate candidate points for these lines fits
@@ -534,7 +552,7 @@ class Calibrator:
             self.candidates.append((self.pairs[:,
                                                0][mask], actual[mask], weight))
 
-    def _get_candidate_points_poly(self):
+    def _get_candidate_points_poly(self, candidate_tolerance):
         '''
         **EXPERIMENTAL**
 
@@ -544,6 +562,14 @@ class Calibrator:
 
         Note: depending on the toleranceold set, one peak may match with multiple
         wavelengths.
+
+        Parameters
+        ----------
+        candidate_tolerance: float (default: 10)
+            toleranceold  (Angstroms) for considering a point to be an inlier
+            during candidate peak/line selection. This should be reasonable
+            small as we want to search for candidate points which are
+            *locally* linear.
 
         '''
 
@@ -564,10 +590,10 @@ class Calibrator:
             x = self.polyval(p, self.fit_coeff)
             diff = np.abs(self.atlas - x)
 
-            weight = gauss(self.atlas[diff < self.candidate_tolerance], 1., x,
+            weight = gauss(self.atlas[diff < andidate_tolerance], 1., x,
                            self.range_tolerance)
 
-            for y, w in zip(self.atlas[diff < self.candidate_tolerance], weight):
+            for y, w in zip(self.atlas[diff < candidate_tolerance], weight):
 
                 x_match.append(p)
                 y_match.append(y)
@@ -593,6 +619,11 @@ class Calibrator:
             Initial polynomial fit fit_coefficients.
         max_tries: int
             Number of trials of polynomial fitting.
+        candidate_tolerance: float (default: 10)
+            toleranceold  (Angstroms) for considering a point to be an inlier
+            during candidate peak/line selection. This should be reasonable
+            small as we want to search for candidate points which are
+            *locally* linear.
         brute_force: boolean
             Solve all pixel-wavelength combinations with set to True.
         progress: boolean
@@ -1155,7 +1186,7 @@ class Calibrator:
 
         '''
 
-        self.num_slopes = num_slopes
+        self.num_slopes = int(num_slopes)
         self.xbins = xbins
         self.ybins = ybins
         self.min_wavelength = min_wavelength

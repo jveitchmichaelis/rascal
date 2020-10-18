@@ -10,32 +10,32 @@ from rascal import util
 
 # Load the LT SPRAT data
 base_dir = os.path.dirname(__file__)
-spectrum2D = fits.open(
-    os.path.join(base_dir, 'data_lt_sprat/v_a_20190516_57_1_0_1.fits'))[0].data
+fits_file = fits.open(
+    os.path.join(base_dir, 'data_lt_sprat/v_a_20190516_57_1_0_1.fits'))[0]
+
+spectrum2D = fits_file.data
 
 # Collapse into 1D spectrum between row 110 and 120
 spectrum = np.median(spectrum2D[110:120], axis=0)
 
-plt.figure()
-plt.plot(spectrum / spectrum.max())
-plt.title('Number of pixels: ' + str(spectrum.shape[0]))
-plt.xlabel("Pixel (Spectral Direction)")
-plt.ylabel("Normalised Count")
-plt.xlim(0, 1024)
-plt.grid()
-plt.tight_layout()
+temperature = fits_file.header['REFTEMP']
+pressure = fits_file.header['REFPRES'] * 100.
+relative_humidity = fits_file.header['REFHUMID']
 
 # Identify the peaks
 peaks, _ = find_peaks(spectrum, height=500, distance=5, threshold=None)
 peaks = util.refine_peaks(spectrum, peaks, window_width=5)
 
 # Initialise the calibrator
-c = Calibrator(peaks, num_pix=1024, min_wavelength=3500., max_wavelength=8000.)
-c.set_fit_constraints(num_slopes=10000,
-                      range_tolerance=500.,
-                      xbins=100,
-                      ybins=100)
-
+c = Calibrator(peaks, spectrum=spectrum)
+c.plot_arc()
+c.set_hough_properties(num_slopes=5000,
+                       range_tolerance=500.,
+                       xbins=100,
+                       ybins=100,
+                       min_wavelength=3500.,
+                       max_wavelength=8000.)
+c.set_ransac_properties(sample_size=5, top_n_candidate=5, filter_close=True)
 # blend: 4829.71, 4844.33
 # blend: 5566.62, 5581.88
 # blend: 6261.212, 6265.302
@@ -51,43 +51,23 @@ atlas = [
 ]
 element = ['Xe'] * len(atlas)
 
-c.load_user_atlas(element, atlas, constrain_poly=True,
-                                                pressure=90000.,
-                                                temperature=285.,
-                                                relative_humidity=10.)
+c.load_user_atlas(element,
+                  atlas,
+                  constrain_poly=True,
+                  pressure=pressure,
+                  temperature=temperature,
+                  relative_humidity=relative_humidity)
 
+c.do_hough_transform()
 
 # Run the wavelength calibration
-best_p, rms, residual, peak_utilisation = c.fit(max_tries=10000,
-                                                sample_size=5,
-                                                top_n=5)
-
-# Refine solution
-# First set is to refine only the 0th and 1st coefficient (i.e. the 2 lowest orders)
-best_p, x_fit, y_fit, residual, peak_utilisation = c.match_peaks(
-    best_p,
-    n_delta=2,
-    tolerance=10.,
-    convergence=1e-10,
-    method='Nelder-Mead',
-    robust_refit=True)
-
-# Second set is to refine all the coefficients
-best_p, x_fit, y_fit, residual, peak_utilisation = c.match_peaks(
-    best_p,
-    tolerance=10.,
-    convergence=1e-10,
-    method='Nelder-Mead',
-    robust_refit=True)
+best_p, rms, residual, peak_utilisation = c.fit(max_tries=250)
 
 # Plot the solution
-c.plot_fit(spectrum, best_p, plot_atlas=True, log_spectrum=False, tolerance=5.)
+c.plot_fit(best_p, spectrum, plot_atlas=True, log_spectrum=False, tolerance=5.)
 
 # Show the parameter space for searching possible solution
-c.plot_search_space(top_n=5)
+c.plot_search_space()
 
-fit_diff = c.polyval(x_fit, best_p) - y_fit
-rms = np.sqrt(np.sum(fit_diff**2 / len(x_fit)))
-
-print("Stdev error: {} A".format(fit_diff.std()))
+print("Stdev error: {} A".format(residual.std()))
 print("Peaks utilisation rate: {}%".format(peak_utilisation * 100))

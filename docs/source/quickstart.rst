@@ -1,7 +1,7 @@
 Quickstart
 ==========
 
-To demonstrate a more custom-built general reduction, we are extending on the bare minimum example code on the homepage. 
+To demonstrate a more custom-built general reduction, we are extending on the bare minimum example code on the homepage. Please bear in mind this does not include all the example configurability of RASCAL.
 
 To begin, we need to import all the necessary libraries and load the spectrum:
 
@@ -57,8 +57,7 @@ To distinguish from the Hough transform and fitting from the calibrator, in manu
                            range_tolerance=500.,
                            linearity_tolerance=50)
 
-    c.set_ransac_properties(num_slopes=10000,
-                            sample_size=8,
+    c.set_ransac_properties(sample_size=8,
                             top_n_candidate=10)
 
 The calibration still does not know what it is calibrating against, so we have to provide the arc lines or use the built-in library by providing the Chemical symbols.
