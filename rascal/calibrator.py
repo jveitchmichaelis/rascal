@@ -605,6 +605,49 @@ class Calibrator:
 
         self.candidates.append((x_match, y_match, w_match))
 
+    def _match_bijective(self, candidates, peaks, fit_coeff):
+
+        err = []
+        matched_x = []
+        matched_y = []
+
+        for peak in peaks:
+
+            fit = self.polyval(peak, fit_coeff)
+
+            # Get closest match for this peak
+            errs = np.abs(fit - candidates[peak])
+            idx = np.argmin(errs)
+
+            err.append(errs[idx])
+            matched_x.append(peak)
+            matched_y.append(candidates[peak][idx])
+
+        err = np.array(err)
+        matched_x = np.array(matched_x)
+        matched_y = np.array(matched_y)
+
+        # Now we also need to resolve duplicate y's
+        filtered_x = []
+        filtered_y = []
+        filtered_err = []
+
+        for wavelength in np.unique(matched_y):
+
+            mask = matched_y == wavelength
+            filtered_y.append(wavelength)
+
+            err_idx = np.argmin(err[mask])
+            filtered_x.append(matched_x[mask][err_idx])
+            filtered_err.append(err[mask][err_idx])
+
+        # overwrite
+        err = np.array(filtered_err)
+        matched_x = np.array(filtered_x)
+        matched_y = np.array(filtered_y)
+
+        return err, matched_x, matched_y
+
     def _solve_candidate_ransac(self, fit_deg, fit_coeff, max_tries,
                                 candidate_tolerance, brute_force, progress):
         '''
@@ -684,16 +727,6 @@ class Calibrator:
             y = y[separation_mask].flatten()
             x = x[separation_mask].flatten()
 
-
-        if fit_coeff is not None:
-            # TODO: Fix this, this will cause errors because 
-            # there may be multiple y's for each x
-            raise NotImplementedError
-            fit = self.polyval(x, fit_coeff)
-            err = np.abs(fit - y)
-            best_cost = sum(err)
-            best_err = np.sqrt(np.mean(err**2.))
-
         # If the number of lines is smaller than the number of degree of
         # polynomial fit, return failed fit.
         if len(np.unique(x)) <= self.fit_deg:
@@ -742,6 +775,12 @@ class Calibrator:
             twoditp = interpolate.RectBivariateSpline(
                 self.ht.xedges[1:] - xbin_size, self.ht.yedges[1:] - ybin_size,
                 self.ht.hist)
+
+        # Calculate initial error given pre-existing fit
+        if fit_coeff is not None:
+            err, _, _ = self._match_bijective(candidates, peaks, fit_coeff)
+            best_cost = sum(err)
+            best_err = np.sqrt(np.mean(err**2.))
 
         # The histogram is fixed, so pre-computed outside the loop
         if not brute_force:
@@ -836,43 +875,10 @@ class Calibrator:
 
                 
                 # Compute error and filter out many-to-one matches
-                # TODO: make this faster
-                err = []
-                matched_x = []
-                matched_y = []
-                for peak in peaks:
+                err, matched_x, matched_y = self._match_bijective(candidates, peaks, fit_coeffs)
 
-                    fit = self.polyval(peak, fit_coeffs)
-
-                    # Get closest match for this peak
-                    errs = np.abs(fit - candidates[peak])
-                    idx = np.argmin(errs)
-
-                    err.append(errs[idx])
-                    matched_x.append(peak)
-                    matched_y.append(candidates[peak][idx])
-
-                err = np.array(err)
-                matched_x = np.array(matched_x)
-                matched_y = np.array(matched_y)
-
-                # Now we also need to resolve duplicate y's
-                filtered_x = []
-                filtered_y = []
-                filtered_err = []
-
-                for wavelength in np.unique(matched_y):
-                    mask = matched_y == wavelength
-                    filtered_y.append(wavelength)
-
-                    err_idx = np.argmin(err[mask])
-                    filtered_x.append(matched_x[mask][err_idx])
-                    filtered_err.append(err[mask][err_idx])
-
-                # overwrite
-                err = np.array(filtered_err)
-                matched_x = np.array(filtered_x)
-                matched_y = np.array(filtered_y)
+                if len(matched_x) == 0:
+                    continue
 
                 # M-SAC Estimator (Torr and Zisserman, 1996)
                 err[err > self.ransac_tolerance] = self.ransac_tolerance
@@ -2318,8 +2324,8 @@ class Calibrator:
             ax3.set_xlabel('Wavelength / A')
             ax3.set_ylabel('Pixel')
             ax3.legend(loc='lower right')
-            w_min = self.polyval(min(fitted_peaks), fit)
-            w_max = self.polyval(max(fitted_peaks), fit)
+            w_min = self.polyval(min(fitted_peaks), fit_coeff)
+            w_max = self.polyval(max(fitted_peaks), fit_coeff)
             ax3.set_xlim(
                 w_min - 0.1 * (w_max - w_min),
                 w_max + 0.1 * (w_max - w_min))
