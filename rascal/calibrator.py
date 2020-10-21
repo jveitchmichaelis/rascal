@@ -914,9 +914,12 @@ class Calibrator:
                 if cost <= best_cost:
 
                     # Now we do a robust fit
-                    #self.logger.info((x[best_mask], y[best_mask]))
-                    best_p = models.robust_polyfit(matched_x[best_mask], matched_y[best_mask],
-                                                   self.fit_deg)
+                    try:
+                        best_p = models.robust_polyfit(matched_x[best_mask], matched_y[best_mask],
+                                                    self.fit_deg)
+                    except np.linalg.LinAlgError:
+                        self.logger.warn("Linear algebra error in robust fit")
+                        continue
 
                     best_cost = cost
 
