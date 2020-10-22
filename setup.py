@@ -8,7 +8,7 @@ install_requires = [
 __packagename__ = "rascal"
 
 setup(name=__packagename__,
-      version='0.1.0',
+      version='0.2.0',
       packages=find_packages(),
       author='Josh Veitch-Michaelis',
       author_email='j.veitchmichaelis@gmail.com',
