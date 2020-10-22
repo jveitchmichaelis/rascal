@@ -31,7 +31,6 @@ class HoughTransform:
     This handles the hough transform operations on the pixel-wavelength space.
 
     '''
-
     def __init__(self):
 
         self.hough_points = None
@@ -49,6 +48,17 @@ class HoughTransform:
         '''
         Define the minimum and maximum of the intercepts (wavelength) and
         gradients (wavelength/pixel) that Hough pairs will be generated.
+
+        Parameters
+        ----------
+        min_slope: int or float
+            Minimum gradient for wavelength/pixel
+        max_slope: int or float
+            Maximum gradient for wavelength/pixel
+        min_intercept: int/float
+            Minimum interception point of the Hough line
+        max_intercept: int/float
+            Maximum interception point of the Hough line
 
         '''
 
@@ -107,8 +117,6 @@ class HoughTransform:
 
         Parameters
         ----------
-        hough_points: 2D numpy array
-            A 2D Hough hough_points array.
         xbins: int
             The number of bins in the pixel direction.
         ybins: int
@@ -246,6 +254,19 @@ class HoughTransform:
                 return None
 
     def load(self, filename='hough_transform', filetype='npy'):
+        '''
+        Store the binned Hough space and/or the raw Hough pairs.
+
+        Parameters
+        ----------
+        filename: str (default: 'hough_transform')
+            The filename of the output, not used if to_disk is False. It will be
+            appended with the content type.
+        filetype: str (default: 'npy')
+            The file type of the saved hough transform. Choose from 'npy' and
+            'json'.
+
+        '''
 
         if filetype == 'npy':
 
@@ -298,7 +319,6 @@ class HoughTransform:
 
 
 class Calibrator:
-
     def __init__(self, peaks, spectrum=None):
         '''
         Initialise the calibrator object.
@@ -324,6 +344,8 @@ class Calibrator:
         self.pix_known = None
         self.wave_known = None
         self.set_calibrator_properties()
+        self.set_hough_properties()
+        self.set_ransac_properties()
 
     def _import_matplotlib(self):
         '''
@@ -606,6 +628,19 @@ class Calibrator:
         self.candidates.append((x_match, y_match, w_match))
 
     def _match_bijective(self, candidates, peaks, fit_coeff):
+        '''
+        ???        
+
+        parameters
+        ----------
+        candidates:
+
+        peaks:
+
+        fit_coeff:
+
+
+        '''
 
         err = []
         matched_x = []
@@ -712,7 +747,7 @@ class Calibrator:
 
             self.sample_size = self.fit_deg + 1
 
-        # Note that there may be multiple matches for 
+        # Note that there may be multiple matches for
         # each peak, that is len(x) > len(np.unique(x))
         x = np.array(self.candidate_peak)
         y = np.array(self.candidate_arc)
@@ -733,13 +768,11 @@ class Calibrator:
 
             return (best_p, best_err, sum(best_mask), 0, False)
 
-        
-
         # Brute force check all combinations. If the request sample_size is
         # the same or larger than the available lines, it is essentially a
         # brute force.
         if brute_force or (self.sample_size >= len(np.unique(x))):
-            
+
             idx = range(len(x))
             sampler = itertools.combinations(idx, self.sample_size)
             self.sample_size = len(np.unique(x))
@@ -747,7 +780,6 @@ class Calibrator:
         else:
 
             sampler = range(int(max_tries))
-
 
         if tdqm_imported & progress:
 
@@ -863,7 +895,7 @@ class Calibrator:
                 pix_min = peaks[0] - np.ptp(peaks) * 0.2
                 pix_max = peaks[-1] + np.ptp(peaks) * 0.2
                 self.logger.debug((pix_min, pix_max))
-                
+
                 if not np.all(
                         np.diff(
                             self.polyval(np.arange(pix_min, pix_max, 1),
@@ -873,9 +905,9 @@ class Calibrator:
                         'Solution is not monotonically increasing.')
                     continue
 
-                
                 # Compute error and filter out many-to-one matches
-                err, matched_x, matched_y = self._match_bijective(candidates, peaks, fit_coeffs)
+                err, matched_x, matched_y = self._match_bijective(
+                    candidates, peaks, fit_coeffs)
 
                 if len(matched_x) == 0:
                     continue
@@ -899,7 +931,8 @@ class Calibrator:
 
                     weight = 1.
 
-                cost = sum(err) / (len(err) - len(fit_coeffs) + 1) / (weight + 1e-9)
+                cost = sum(err) / (len(err) - len(fit_coeffs) + 1) / (weight +
+                                                                      1e-9)
 
                 # reject lines outside the rms limit (ransac_tolerance)
                 best_mask = err < self.ransac_tolerance
@@ -915,14 +948,17 @@ class Calibrator:
 
                     # Now we do a robust fit
                     #self.logger.info((x[best_mask], y[best_mask]))
-                    best_p = models.robust_polyfit(matched_x[best_mask], matched_y[best_mask],
+                    best_p = models.robust_polyfit(matched_x[best_mask],
+                                                   matched_y[best_mask],
                                                    self.fit_deg)
 
                     best_cost = cost
 
                     # Get the residual of the fit
-                    err = self.polyval(matched_x[best_mask], best_p) - matched_y[best_mask]
-                    err[np.abs(err) > self.ransac_tolerance] = self.ransac_tolerance
+                    err = self.polyval(matched_x[best_mask],
+                                       best_p) - matched_y[best_mask]
+                    err[np.abs(err) >
+                        self.ransac_tolerance] = self.ransac_tolerance
 
                     best_err = np.sqrt(np.mean(err**2))
                     best_residual = err
@@ -1075,7 +1111,6 @@ class Calibrator:
             self.plot_with_plotly = True
             self.plot_with_matplotlib = False
 
-
     def set_calibrator_properties(self,
                                   num_pix=None,
                                   pixel_list=None,
@@ -1171,6 +1206,8 @@ class Calibrator:
                              range_tolerance=500,
                              linearity_tolerance=50):
         '''
+        parameters
+        ----------
         num_slopes: int (default: 1000)
             Number of slopes to consider during Hough transform
         xbins: int (default: 50)
@@ -1683,6 +1720,10 @@ class Calibrator:
             raise ValueError(
                 'fit_type must be: (1) poly, (2) legendre or (3) chebyshev')
 
+        if (self.hough_lines is None) or (self.hough_points is None):
+
+            self.do_hough_transform()
+
         fit_coeff, rms, residual, n_inliers, valid = self._solve_candidate_ransac(
             fit_deg=self.fit_deg,
             fit_coeff=self.fit_coeff,
@@ -1716,7 +1757,6 @@ class Calibrator:
         self.peak_utilisation = peak_utilisation
 
         return self.fit_coeff, self.rms, self.residual, self.peak_utilisation
-
 
     def match_peaks(self,
                     fit_coeff,
@@ -1849,7 +1889,7 @@ class Calibrator:
         if robust_refit:
 
             fit_coeff = models.robust_polyfit(peak_matched, atlas_matched,
-                                                  fit_deg)
+                                              fit_deg)
 
             if np.any(np.isnan(fit_coeff)):
                 warnings.warn('robust_polyfit() returns None. '
@@ -1867,6 +1907,12 @@ class Calibrator:
         '''
         Plots the 1D spectrum of the extracted arc
 
+        parameters
+        ----------
+        log_spectrum: boolean (default: False)
+            Set to true to display the wavelength calibrated arc spectrum in
+            logarithmic space.
+
         '''
 
         plt.figure(figsize=(18, 5))
@@ -1876,7 +1922,7 @@ class Calibrator:
                 plt.plot(np.log10(self.spectrum / self.spectrum.max()))
                 plt.vlines(self.peaks, -2, 0, colors='C1')
                 plt.ylabel("log(Normalised Count)")
-                plt.ylim(-2,0)
+                plt.ylim(-2, 0)
             else:
                 plt.plot(self.spectrum / self.spectrum.max())
                 plt.ylabel("Normalised Count")
@@ -1935,8 +1981,10 @@ class Calibrator:
         '''
 
         # Get top linear estimates and combine
-        candidate_peak, candidate_arc =\
-            self._get_most_common_candidates(self.candidates, top_n_candidate=top_n_candidate, weighted=weighted)
+        candidate_peak, candidate_arc = self._get_most_common_candidates(
+            self.candidates,
+            top_n_candidate=top_n_candidate,
+            weighted=weighted)
 
         # Get the search space boundaries
         x = self.pixel_list
@@ -2170,6 +2218,9 @@ class Calibrator:
                  json=False,
                  renderer='default'):
         '''
+        Plots of the wavelength calibrated arc spectrum, the residual and the
+        pixel-to-wavelength solution.
+
         Parameters
         ----------
         fit_coeff: 1D numpy array or list
@@ -2326,9 +2377,8 @@ class Calibrator:
             ax3.legend(loc='lower right')
             w_min = self.polyval(min(fitted_peaks), fit_coeff)
             w_max = self.polyval(max(fitted_peaks), fit_coeff)
-            ax3.set_xlim(
-                w_min - 0.1 * (w_max - w_min),
-                w_max + 0.1 * (w_max - w_min))
+            ax3.set_xlim(w_min - 0.1 * (w_max - w_min),
+                         w_max + 0.1 * (w_max - w_min))
 
             plt.show()
 
