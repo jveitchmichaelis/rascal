@@ -1,5 +1,7 @@
 # Rascal
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4117517.svg)](https://doi.org/10.5281/zenodo.4117517)
+
 Rascal is a library for automated spectrometer wavelength calibration. It has been designed primarily for astrophysics applications, but should be usable with spectra captured from any similar spectrometer.
 
 Given a set of peaks located in your spectrum, Rascal will attempt to determine a model for your spectrometer to convert between pixels and wavelengths.
