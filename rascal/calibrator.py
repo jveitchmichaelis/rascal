@@ -951,7 +951,6 @@ class Calibrator:
 
                         best_p = models.robust_polyfit(matched_x[best_mask],
                                                        matched_y[best_mask],
-                                          
                                                        self.fit_deg)
 
                     except np.linalg.LinAlgError:
@@ -1910,7 +1909,12 @@ class Calibrator:
 
             return fit_coeff_new, peak_matched, atlas_matched, residual, peak_utilisation
 
-    def plot_arc(self, log_spectrum=False):
+    def plot_arc(self,
+                 log_spectrum=False,
+                 savefig=False,
+                 filename=None,
+                 json=False,
+                 renderer='default'):
         '''
         Plots the 1D spectrum of the extracted arc
 
@@ -1919,31 +1923,120 @@ class Calibrator:
         log_spectrum: boolean (default: False)
             Set to true to display the wavelength calibrated arc spectrum in
             logarithmic space.
+        savefig: boolean (default: False)
+            Save a png image if set to True. Other matplotlib.pyplot.savefig()
+            support format type are possible through providing the extension
+            in the filename.
+        filename: string (default: None)
+            Provide a filename or full path. If the extension is not provided
+            it is defaulted to png.
+        json: boolean (default: False)
+            Set to True to return json strings if using plotly as the plotting
+            library.
+        renderer: string (default: 'default')
+            Indicate the Plotly renderer. Nothing gets displayed if json is
+            set to True.
+
+        Returns
+        -------
+        Return json strings if using plotly as the plotting library and json
+        is True.
 
         '''
 
-        plt.figure(figsize=(18, 5))
+        if self.plot_with_matplotlib:
 
-        if self.spectrum is not None:
-            if log_spectrum:
-                plt.plot(np.log10(self.spectrum / self.spectrum.max()))
-                plt.vlines(self.peaks, -2, 0, colors='C1')
-                plt.ylabel("log(Normalised Count)")
-                plt.ylim(-2, 0)
+            plt.figure(figsize=(18, 5))
+
+            if self.spectrum is not None:
+                if log_spectrum:
+                    plt.plot(np.log10(self.spectrum / self.spectrum.max()))
+                    plt.vlines(self.peaks, -2, 0, colors='C1')
+                    plt.ylabel("log(Normalised Count)")
+                    plt.ylim(-2, 0)
+                else:
+                    plt.plot(self.spectrum / self.spectrum.max())
+                    plt.ylabel("Normalised Count")
+                    plt.vlines(self.peaks, 0, 1.05, colors='C1')
+                plt.title('Number of pixels: ' + str(self.spectrum.shape[0]))
+                plt.xlim(0, self.spectrum.shape[0])
+
             else:
-                plt.plot(self.spectrum / self.spectrum.max())
-                plt.ylabel("Normalised Count")
-                plt.vlines(self.peaks, 0, 1.05, colors='C1')
-            plt.title('Number of pixels: ' + str(self.spectrum.shape[0]))
-            plt.xlim(0, self.spectrum.shape[0])
 
-        else:
+                plt.xlim(0, max(self.peaks))
 
-            plt.xlim(0, max(self.peaks))
+            plt.xlabel("Pixel (Spectral Direction)")
+            plt.grid()
+            plt.tight_layout()
 
-        plt.xlabel("Pixel (Spectral Direction)")
-        plt.grid()
-        plt.tight_layout()
+            plt.show()
+
+            if savefig:
+
+                if filename is not None:
+
+                    fig.savefig(filename)
+
+                else:
+
+                    fig.savefig()
+
+        if self.plot_with_plotly:
+
+            fig = go.Figure()
+
+            if log_spectrum:
+
+                # Plot all-pairs
+                fig.add_trace(
+                    go.Scatter(
+                        x=list(np.arange(len(self.spectrum))),
+                        y=list(np.log10(self.spectrum / self.spectrum.max())),
+                        mode='lines',
+                        name='Arc',
+                        marker=dict(color='royalblue')))
+                xmin = min(np.log10(self.spectrum / self.spectrum.max()))
+                xmax = max(np.log10(self.spectrum / self.spectrum.max()))
+
+            else:
+
+                # Plot all-pairs
+                fig.add_trace(
+                    go.Scatter(x=list(np.arange(len(self.spectrum))),
+                               y=list(self.spectrum / self.spectrum.max()),
+                               mode='lines',
+                               name='Arc',
+                               marker=dict(color='royalblue')))
+                xmin = min(self.spectrum / self.spectrum.max())
+                xmax = max(self.spectrum / self.spectrum.max())
+
+            # Layout, Title, Grid config
+            fig.update_layout(autosize=True,
+                              yaxis=dict(title='Normalised Count',
+                                         range=[xmin, xmax],
+                                         showgrid=True),
+                              xaxis=dict(
+                                  title='Pixel',
+                                  zeroline=False,
+                                  range=[0., len(self.spectrum)],
+                                  showgrid=True,
+                              ),
+                              hovermode='closest',
+                              showlegend=True,
+                              height=800,
+                              width=1000)
+
+            if renderer == 'default':
+
+                fig.show()
+
+            else:
+
+                fig.show(renderer)
+
+            if json:
+
+                return fig.to_json()
 
     def plot_search_space(self,
                           fit_coeff=None,
@@ -2199,8 +2292,8 @@ class Calibrator:
                 ),
                 hovermode='closest',
                 showlegend=True,
-                height=height,
-                width=width)
+                height=800,
+                width=1000)
 
             if renderer == 'default':
 
@@ -2393,7 +2486,7 @@ class Calibrator:
 
                 if filename is not None:
 
-                    fig.savefig(output)
+                    fig.savefig(filename)
 
                 else:
 

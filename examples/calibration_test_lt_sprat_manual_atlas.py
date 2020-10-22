@@ -28,6 +28,7 @@ peaks = util.refine_peaks(spectrum, peaks, window_width=5)
 
 # Initialise the calibrator
 c = Calibrator(peaks, spectrum=spectrum)
+c.use_plotly()
 c.plot_arc()
 c.set_hough_properties(num_slopes=5000,
                        range_tolerance=500.,
