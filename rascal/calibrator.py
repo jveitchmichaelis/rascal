@@ -629,16 +629,25 @@ class Calibrator:
 
     def _match_bijective(self, candidates, peaks, fit_coeff):
         '''
-        ???        
+    
+        Internal function used to return a list of inliers with a 
+        one-to-one relationship between peaks and wavelengths. This
+        is critical as often we have several potential candidate lines
+        for each peak. This function first iterates through each peak
+        and selects the wavelength with the smallest error. It then
+        iterates through this list and does the same for duplicate
+        wavelengths.
 
         parameters
         ----------
-        candidates:
+        candidates: dict
+            match candidates, internal to ransac
 
-        peaks:
+        peaks: list
+            list of peaks [px]
 
-        fit_coeff:
-
+        fit_coeff: list
+            polynomial fit coefficients
 
         '''
 
