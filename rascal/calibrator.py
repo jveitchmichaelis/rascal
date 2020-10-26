@@ -406,20 +406,20 @@ class Calibrator:
                                    min_atlas_wavelength,
                                    max_atlas_wavelength)
 
-    def _generate_pairs(self, constrain_poly, candidate_tolerance):
+    def _generate_pairs(self, candidate_tolerance, constrain_poly):
         '''
         Generate pixel-wavelength pairs without the allowed regions set by the
         linearity limit. This assumes a relatively linear spectrograph.
 
         Parameters
         ----------
-        constrain_poly: boolean
-            Apply a polygonal constraint on possible peak/atlas pairs
         candidate_tolerance: float (default: 10)
             toleranceold  (Angstroms) for considering a point to be an inlier
             during candidate peak/line selection. This should be reasonable
             small as we want to search for candidate points which are
             *locally* linear.
+        constrain_poly: boolean
+            Apply a polygonal constraint on possible peak/atlas pairs
 
         '''
 
@@ -1581,7 +1581,8 @@ class Calibrator:
         assert len(elements) == len(intensities), ValueError(
             'Input elements and intensities have different length.')
 
-        self.add_user_atlas(elements, wavelengths, intensities, vacuum,
+        self.add_user_atlas(elements, wavelengths, intensities, 
+                            candidate_tolerance, constrain_poly, vacuum,
                             pressure, temperature, relative_humidity)
         # Create a list of all possible pairs of detected peaks and lines
         # from atlas
