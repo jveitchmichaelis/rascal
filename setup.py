@@ -1,3 +1,5 @@
+# Licensed under a 3-clause BSD style license - see LICENSE.rst
+
 from setuptools import setup, find_packages
 
 install_requires = [
@@ -12,7 +14,7 @@ setup(name=__packagename__,
       packages=find_packages(),
       author='Josh Veitch-Michaelis',
       author_email='j.veitchmichaelis@gmail.com',
-      license='BSD',
+      license='bsd-3-clause',
       long_description=open('README.md').read(),
       zip_safe=False,
       include_package_data=True,
