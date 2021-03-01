@@ -5,9 +5,10 @@ from matplotlib import pyplot as plt
 import os
 
 from rascal.calibrator import Calibrator
-from rascal import models
 from rascal import util
 
+plt.ion()
+__file__ = 'examples/calibration_test_lt_sprat_manual_atlas.py'
 # Load the LT SPRAT data
 base_dir = os.path.dirname(__file__)
 fits_file = fits.open(
@@ -23,7 +24,7 @@ pressure = fits_file.header['REFPRES'] * 100.
 relative_humidity = fits_file.header['REFHUMID']
 
 # Identify the peaks
-peaks, _ = find_peaks(spectrum, height=500, distance=5, threshold=None)
+peaks, _ = find_peaks(spectrum, height=300, distance=5, threshold=None)
 peaks = util.refine_peaks(spectrum, peaks, window_width=5)
 
 # Initialise the calibrator
@@ -72,3 +73,12 @@ c.plot_search_space()
 
 print("Stdev error: {} A".format(residual.std()))
 print("Peaks utilisation rate: {}%".format(peak_utilisation * 100))
+
+c.use_matplotlib()
+c.plot_arc()
+
+# Plot the solution
+c.plot_fit(best_p, spectrum, plot_atlas=True, log_spectrum=False, tolerance=5.)
+
+# Show the parameter space for searching possible solution
+c.plot_search_space()

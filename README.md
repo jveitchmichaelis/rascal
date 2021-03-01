@@ -1,5 +1,8 @@
 # Rascal
-
+[![Python package](https://github.com/jveitchmichaelis/rascal/actions/workflows/python-package.yml/badge.svg)](https://github.com/jveitchmichaelis/rascal/actions/workflows/python-package.yml)
+[![Coverage Status](https://coveralls.io/repos/github/jveitchmichaelis/rascal/badge.svg?branch=main)](https://coveralls.io/github/jveitchmichaelis/rascal?branch=main)
+[![Readthedocs Status](https://readthedocs.org/projects/rascal/badge/?version=latest&style=flat)](https://rascal.readthedocs.io/en/latest/)
+[![PyPI version](https://badge.fury.io/py/rascal.svg)](https://badge.fury.io/py/rascal)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4117517.svg)](https://doi.org/10.5281/zenodo.4117517)
 
 Rascal is a library for automated spectrometer wavelength calibration. It has been designed primarily for astrophysics applications, but should be usable with spectra captured from any similar spectrometer.
@@ -14,16 +17,26 @@ Unlike other calibration methods, rascal does not require you to manually select
 
 You don't need to know the dispersion and start wavelength exactly. Often this information is provided by the observatory, but if you don't know it, you can take a rough guess. The closer you are to the actual system settings, the more likely it is that Rascal will be able to solve the calibration. Blind calibration, where no parameters are known, is possible but challenging currently. If you don't know the lamp, you can try iterating over the various combinations of sources. Generally when you do get a correct fit, with most astronomical instruments the errors will be extremely low.
 
-## Testing
+More background information can be referred to this [arXiv article](https://ui.adsabs.harvard.edu/abs/2019arXiv191205883V/abstract).
 
-To run the unit test suite without installing rascal, `cd` to the root directory and run:
 
-```
-python -m pytest test
-```
+## Dependencies
+* python >= 3.6
+* numpy
+* scipy
+* [astropy](https://github.com/astropy/astropy)
+* [plotly](https://github.com/plotly/plotly.py) >= 4.0
 
-To view logging output during testing, run:
+## Installation
+Instructions can be found [here](https://rascal.readthedocs.io/en/latest/installation/installation.html).
 
-```
-python -m pytest test -s
-```
+## Reporting issues/feature requests
+Please use the [issue tracker](https://github.com/jveitchmichaelis/rascal/issues) to report any issues or support questions.
+
+## Getting started
+The [quickstart guide](https://rascal.readthedocs.io/en/latest/tutorial/quickstart.html) will show you how to reduce the example dataset.
+
+## Contributing Code/Documentation
+If you are interested in contributing code to the project, thank you! For those unfamiliar with the process of contributing to an open-source project, you may want to read through Github’s own short informational section on how to submit a [contribution](https://opensource.guide/how-to-contribute/#how-to-submit-a-contribution) or send me a message.
+
+Style -- as long as it passes flake8.
