@@ -1,9 +1,7 @@
 import warnings
 import itertools
-from collections import Counter
 import logging
 
-import astropy.units as u
 import json
 import numpy as np
 from scipy.spatial import Delaunay
@@ -14,13 +12,13 @@ from .util import load_calibration_lines
 from .util import derivative
 from .util import gauss
 from .util import vacuum_to_air_wavelength
-from .synthetic import SyntheticSpectrum
 from . import models
 
 try:
     from tqdm.autonotebook import tqdm
     tdqm_imported = True
-except:
+except Exception as e:
+    warnings.warn(e)
     warnings.warn(
         'tqdm package not available. Progress bar will not be shown.')
     tdqm_imported = False
@@ -162,8 +160,8 @@ class HoughTransform:
         Parameters
         ----------
         filename: str
-            The filename of the output, not used if to_disk is False. It will be
-            appended with the content type.
+            The filename of the output, not used if to_disk is False. It
+            will be appended with the content type.
         format: str (default: 'npy')
             Choose from 'npy' and json'
         content: str (default: 'hp_constraints+hp_hist')
@@ -260,11 +258,11 @@ class HoughTransform:
         Parameters
         ----------
         filename: str (default: 'hough_transform')
-            The filename of the output, not used if to_disk is False. It will be
-            appended with the content type.
+            The filename of the output, not used if to_disk is False. It
+            will be appended with the content type.
         filetype: str (default: 'npy')
-            The file type of the saved hough transform. Choose from 'npy' and
-            'json'.
+            The file type of the saved hough transform. Choose from 'npy'
+            and 'json'.
 
         '''
 
@@ -468,7 +466,7 @@ class Calibrator:
     def _get_most_common_candidates(self, candidates, top_n_candidate,
                                     weighted):
         '''
-        Takes a number of candidate pair sets and returns the most common 
+        Takes a number of candidate pair sets and returns the most common
         pair for each wavelength
 
         Parameters
@@ -478,7 +476,7 @@ class Calibrator:
         top_n_candidate: int
             Top ranked lines to be fitted.
         weighted: boolean
-            If True, the distance from the atlas wavelength will be used to 
+            If True, the distance from the atlas wavelength will be used to
             compute the probilitiy based on how far it is from the Gaussian
             distribution from the known line.
 
@@ -539,8 +537,8 @@ class Calibrator:
 
         (wavelength - gradient * x + intercept) < tolerance
 
-        Note: depending on the toleranceold set, one peak may match with multiple
-        wavelengths.
+        Note: depending on the toleranceold set, one peak may match with
+        multiple wavelengths.
 
         Parameters
         ----------
@@ -582,8 +580,8 @@ class Calibrator:
 
         (wavelength - gradient * x + intercept) < tolerance
 
-        Note: depending on the toleranceold set, one peak may match with multiple
-        wavelengths.
+        Note: depending on the toleranceold set, one peak may match with
+        multiple wavelengths.
 
         Parameters
         ----------
@@ -612,7 +610,7 @@ class Calibrator:
             x = self.polyval(p, self.fit_coeff)
             diff = np.abs(self.atlas - x)
 
-            weight = gauss(self.atlas[diff < andidate_tolerance], 1., x,
+            weight = gauss(self.atlas[diff < candidate_tolerance], 1., x,
                            self.range_tolerance)
 
             for y, w in zip(self.atlas[diff < candidate_tolerance], weight):
@@ -629,8 +627,8 @@ class Calibrator:
 
     def _match_bijective(self, candidates, peaks, fit_coeff):
         '''
-    
-        Internal function used to return a list of inliers with a 
+
+        Internal function used to return a list of inliers with a
         one-to-one relationship between peaks and wavelengths. This
         is critical as often we have several potential candidate lines
         for each peak. This function first iterates through each peak
@@ -740,7 +738,9 @@ class Calibrator:
 
         self.candidate_peak, self.candidate_arc =\
             self._get_most_common_candidates(
-               self.candidates, top_n_candidate=self.top_n_candidate, weighted=self.candidate_weighted)
+               self.candidates,
+               top_n_candidate=self.top_n_candidate,
+               weighted=self.candidate_weighted)
 
         self.fit_deg = fit_deg
 
@@ -894,8 +894,8 @@ class Calibrator:
                 fit_coeffs = self.polyfit(x_hat, y_hat, self.fit_deg)
 
                 # Check the intercept.
-                if ((fit_coeffs[0] < self.min_intercept) |
-                    (fit_coeffs[0] > self.max_intercept)):
+                if ((fit_coeffs[0] < self.min_intercept)
+                        | (fit_coeffs[0] > self.max_intercept)):
 
                     self.logger.debug('Intercept exceeds bounds.')
                     continue
@@ -924,13 +924,13 @@ class Calibrator:
                 # M-SAC Estimator (Torr and Zisserman, 1996)
                 err[err > self.ransac_tolerance] = self.ransac_tolerance
 
-                # compute the hough space density as weights for the cost function
+                # use the Hough space density as weights for the cost function
                 wave = self.polyval(self.pixel_list, fit_coeffs)
                 gradient = self.polyval(self.pixel_list,
                                         derivative(fit_coeffs))
                 intercept = wave - gradient * self.pixel_list
 
-                # modified cost function weighted by the histogram in hough space
+                # modified cost function weighted by the Hough space density
                 if np.isfinite(self.hough_weight):
 
                     weight = self.hough_weight * np.sum(
@@ -964,7 +964,8 @@ class Calibrator:
 
                     except np.linalg.LinAlgError:
 
-                        self.logger.warn("Linear algebra error in robust fit")
+                        self.logger.warning(
+                            "Linear algebra error in robust fit")
                         continue
 
                     best_cost = cost
@@ -1053,13 +1054,13 @@ class Calibrator:
         x_matched = np.array(x_matched)
         y_matched = np.array(y_matched)
 
-        dof = len(x_match) - len(fit_new) - 1
+        dof = len(x_matched) - len(fit_new) - 1
 
         if dof < 1:
 
             return np.inf
 
-        if len(x_match) < len(self.peaks) * min_frac:
+        if len(x_matched) < len(self.peaks) * min_frac:
 
             return np.inf
 
@@ -1069,7 +1070,7 @@ class Calibrator:
             self.logger.info('not monotonic')
             return np.inf
 
-        lsq = np.sum((y_match - self.polyval(x_matched, fit_new))**2.) / dof
+        lsq = np.sum((y_matched - self.polyval(x_matched, fit_new))**2.) / dof
 
         return lsq
 
@@ -1090,7 +1091,7 @@ class Calibrator:
 
         else:
 
-            self.logger.warn('Neither maplotlib nor plotly are imported.')
+            self.logger.warning('Neither maplotlib nor plotly are imported.')
 
     def use_matplotlib(self):
         '''
@@ -1160,8 +1161,9 @@ class Calibrator:
 
                 self.num_pix = len(self.spectrum)
 
-            except:
+            except Exception as e:
 
+                self.logger.warning(e)
                 self.logger.warning('Neither num_pix nor spectrum is given, '
                                     'it uses 1.1 times max(peaks) as the '
                                     'maximum pixel value.')
@@ -1308,7 +1310,7 @@ class Calibrator:
 
         if self.sample_size > len(self.atlas):
 
-            self.logger.warn(
+            self.logger.warning(
                 'Size of sample_size is larger than the size of atlas, ' +
                 'the sample_size is set to match the size of atlas = ' +
                 str(len(self.atlas)) + '.')
@@ -1350,14 +1352,14 @@ class Calibrator:
         '''
         Adds an atlas of arc lines to the calibrator, given an element.
 
-        Arc lines are taken from a general list of NIST lines and can be filtered
-        using the minimum relative intensity (note this may not be accurate due to
-        instrumental effects such as detector response, dichroics, etc) and
-        minimum line separation.
+        Arc lines are taken from a general list of NIST lines and can be
+        filtered using the minimum relative intensity (note this may not be
+        accurate due to instrumental effects such as detector response,
+        dichroics, etc) and minimum line separation.
 
-        Lines are filtered first by relative intensity, then by separation. This
-        is to improve robustness in the case where there is a strong line very
-        close to a weak line (which is within the separation limit).
+        Lines are filtered first by relative intensity, then by separation.
+        This is to improve robustness in the case where there is a strong
+        line very close to a weak line (which is within the separation limit).
 
         The vacuum to air wavelength conversion is deafult to False because
         observatories usually provide the line lists in the respective air
@@ -1373,7 +1375,8 @@ class Calibrator:
         max_atlas_wavelength: float (default: None)
             Maximum wavelength of the arc lines.
         min_intensity: float (default: None)
-            Minimum intensity of the arc lines. Refer to NIST for the intensity.
+            Minimum intensity of the arc lines. Refer to NIST for the
+            intensity.
         min_distance: float (default: None)
             Minimum separation between neighbouring arc lines.
         candidate_tolerance: float (default: 10)
@@ -1413,7 +1416,8 @@ class Calibrator:
             atlas_elements_tmp, atlas_tmp, atlas_intensities_tmp =\
                 load_calibration_lines(
                     element, min_atlas_wavelength, max_atlas_wavelength,
-                    min_intensity, min_distance, vacuum, pressure, temperature, relative_humidity)
+                    min_intensity, min_distance, vacuum, pressure, temperature,
+                    relative_humidity)
 
             self.atlas_elements.extend(atlas_elements_tmp)
             self.atlas.extend(atlas_tmp)
@@ -1542,8 +1546,8 @@ class Calibrator:
                         temperature=273.15,
                         relative_humidity=0.):
         '''
-        *Remove* all the arc lines loaded to the Calibrator and then use the user
-        supplied arc lines instead.
+        *Remove* all the arc lines loaded to the Calibrator and then use
+        the user supplied arc lines instead.
 
         The vacuum to air wavelength conversion is deafult to False because
         observatories usually provide the line lists in the respective air
@@ -1739,13 +1743,14 @@ class Calibrator:
 
             self.do_hough_transform()
 
-        fit_coeff, rms, residual, n_inliers, valid = self._solve_candidate_ransac(
-            fit_deg=self.fit_deg,
-            fit_coeff=self.fit_coeff,
-            max_tries=self.max_tries,
-            candidate_tolerance=candidate_tolerance,
-            brute_force=self.brute_force,
-            progress=self.progress)
+        fit_coeff, rms, residual, n_inliers, valid =\
+            self._solve_candidate_ransac(
+                fit_deg=self.fit_deg,
+                fit_coeff=self.fit_coeff,
+                max_tries=self.max_tries,
+                candidate_tolerance=candidate_tolerance,
+                brute_force=self.brute_force,
+                progress=self.progress)
 
         if len(self.peaks) < len(self.atlas):
 
@@ -1757,11 +1762,11 @@ class Calibrator:
 
         if not valid:
 
-            self.logger.warn('Invalid fit')
+            self.logger.warning('Invalid fit')
 
         if rms > self.fit_tolerance:
 
-            self.logger.warn('RMS too large {} > {}'.format(
+            self.logger.warning('RMS too large {} > {}'.format(
                 rms, self.fit_tolerance))
 
         assert (fit_coeff is not None), 'Couldn\'t fit'
@@ -1910,13 +1915,16 @@ class Calibrator:
                 warnings.warn('robust_polyfit() returns None. '
                               'Input solution is returned.')
 
-                return fit_coeff_new, peak_matched, atlas_matched, residual, peak_utilisation
+                return (fit_coeff_new, peak_matched, atlas_matched, residual,
+                        peak_utilisation)
 
-            return fit_coeff, peak_matched, atlas_matched, residual, peak_utilisation
+            return (fit_coeff, peak_matched, atlas_matched, residual,
+                    peak_utilisation)
 
         else:
 
-            return fit_coeff_new, peak_matched, atlas_matched, residual, peak_utilisation
+            return (fit_coeff_new, peak_matched, atlas_matched, residual,
+                    peak_utilisation)
 
     def plot_arc(self,
                  log_spectrum=False,
@@ -1984,11 +1992,11 @@ class Calibrator:
 
                 if filename is not None:
 
-                    fig.savefig(filename)
+                    plt.savefig(filename)
 
                 else:
 
-                    fig.savefig()
+                    plt.savefig()
 
         if self.plot_with_plotly:
 
@@ -2072,7 +2080,7 @@ class Calibrator:
             Draw sample based on the distance from the matched known wavelength
             of the atlas.
         savefig: (default: False)
-            Set to True to save figure to the destination as provided in 
+            Set to True to save figure to the destination as provided in
             'filename'.
         filename: (default: None)
             The destination to save the image.
@@ -2370,8 +2378,9 @@ class Calibrator:
 
                 spectrum = self.spectrum
 
-            except:
+            except Exception as e:
 
+                self.logger.error(e)
                 self.logger.error('Spectrum is not provided, it cannot be '
                                   'plotted.')
 
@@ -2408,9 +2417,9 @@ class Calibrator:
             # Plot the atlas
             if plot_atlas:
 
-                #spec = SyntheticSpectrum(
+                # spec = SyntheticSpectrum(
                 #    fit, model_type='poly', degree=len(fit)-1)
-                #x_locs = spec.get_pixels(self.atlas)
+                # x_locs = spec.get_pixels(self.atlas)
                 ax1.vlines(self.atlas, 0, vline_max, colors='C2')
 
             fitted_peaks = []
@@ -2575,6 +2584,18 @@ class Calibrator:
                            y=[0, 0],
                            mode='lines',
                            line=dict(color='royalblue', dash='dash'),
+                           yaxis='y2'))
+            fig.add_trace(
+                go.Scatter(x=[wave.min(), wave.max()],
+                           y=[rms, rms],
+                           mode='lines',
+                           line=dict(color='black', dash='dash'),
+                           yaxis='y2'))
+            fig.add_trace(
+                go.Scatter(x=[wave.min(), wave.max()],
+                           y=[-rms, -rms],
+                           mode='lines',
+                           line=dict(color='black', dash='dash'),
                            yaxis='y2'))
 
             # Bottom plot - Polynomial fit for Pixel to Wavelength
