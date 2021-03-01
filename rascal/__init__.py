@@ -4,7 +4,10 @@ from . import synthetic
 from . import util
 
 __all__ = [
-    'calibrator', 'models', 'synthetic', 'util',
+    'calibrator',
+    'models',
+    'synthetic',
+    'util',
 ]
 
 __author__ = ["Josh Veitch-Michaelis", "Marco C Lam"]

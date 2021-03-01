@@ -55,14 +55,13 @@ def robust_polyfit(x, y, degree=3, x0=None, bounds=None):
         x0 /= y.std()
     else:
         x0 = np.ones(degree + 1)
-
     '''
     if bounds is None:
         bounds = np.inf * np.ones(degree + 1)
 
     assert len(bounds) > 0
     '''
-    
+
     res = scipy.optimize.least_squares(poly_cost_function,
                                        x0,
                                        args=(x_n, y_n, degree),
@@ -87,6 +86,6 @@ def pprint_coefficients(coeffs):
             if i == 0:
                 expr += "+ {}*x".format(round(c, 3))
             else:
-                expr += "+ {}*x^{}".format(round(c, 3), i+1)
+                expr += "+ {}*x^{}".format(round(c, 3), i + 1)
 
     return expr

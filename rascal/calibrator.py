@@ -341,6 +341,8 @@ class Calibrator:
         self.atlas_intensities = []
         self.pix_known = None
         self.wave_known = None
+        self.hough_lines = None
+        self.hough_points = None
         self.set_calibrator_properties()
         self.set_hough_properties()
         self.set_ransac_properties()
@@ -698,8 +700,7 @@ class Calibrator:
         Parameters
         ----------
         fit_deg: int
-            The order of polynomial (the polynomial type is definted in the
-            set_fit_constraints).
+            The order of polynomial.
         fit_coeff: None or 1D numpy array
             Initial polynomial fit fit_coefficients.
         max_tries: int
@@ -1594,7 +1595,7 @@ class Calibrator:
         assert len(elements) == len(intensities), ValueError(
             'Input elements and intensities have different length.')
 
-        self.add_user_atlas(elements, wavelengths, intensities, 
+        self.add_user_atlas(elements, wavelengths, intensities,
                             candidate_tolerance, constrain_poly, vacuum,
                             pressure, temperature, relative_humidity)
         # Create a list of all possible pairs of detected peaks and lines
@@ -1813,7 +1814,7 @@ class Calibrator:
         fit_coeff: list
             List of polynomial fit fit_coefficients.
         n_delta: int (default: None)
-            The number of the highest polynomial order to be adjusted
+            The number of the lowest polynomial order to be adjusted
         refine: boolean (default: True)
             Set to True to refine solution.
         tolerance: float (default: 10.)
@@ -1852,11 +1853,11 @@ class Calibrator:
 
             fit_deg = len(fit_coeff) - 1
 
-        if n_delta is None:
-
-            n_delta = len(fit_coeff) - 1
-
         if refine:
+
+            if n_delta is None:
+
+                n_delta = len(fit_coeff) - 1
 
             # fit everything
             fitted_delta = minimize(self._adjust_polyfit,

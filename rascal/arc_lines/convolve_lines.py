@@ -1,7 +1,6 @@
 import numpy as np
 from scipy import signal
-from matplotlib.pyplot import *
-ion()
+from matplotlib import pyplot as plt
 
 
 def gaus(x, a, b, x0, sigma):
@@ -59,14 +58,14 @@ gaussian = gaus(x, a=1., b=0., x0=0., sigma=sigma)
 # Convolve to simulate the arc spectrum
 model_spectrum = signal.convolve(intensity, gaussian, 'same')
 
-figure(1, figsize=(8, 8))
-clf()
-plot(wavelength, intensity, color='grey', label='NIST values')
-plot(wavelength, model_spectrum, label='Convolved Arc')
-xlabel('Vacuum Wavelength / A')
-ylabel('NIST intensity')
-grid()
-xlim(3800, 8200)
-ylim(0, 1000)
-legend()
-tight_layout()
+plt.figure(1, figsize=(8, 8))
+plt.clf()
+plt.plot(wavelength, intensity, color='grey', label='NIST values')
+plt.plot(wavelength, model_spectrum, label='Convolved Arc')
+plt.xlabel('Vacuum Wavelength / A')
+plt.ylabel('NIST intensity')
+plt.grid()
+plt.xlim(3800, 8200)
+plt.ylim(0, 1000)
+plt.legend()
+plt.tight_layout()

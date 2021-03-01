@@ -1,25 +1,34 @@
-import os
 import logging
+import os
 
 from astropy.io import fits
-from matplotlib import pyplot as plt
 import numpy as np
-import pytest
 from scipy.signal import find_peaks
 
 from rascal.calibrator import Calibrator
 from rascal import util
-from rascal import models
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger()
 
+# Line list
+atlas = [
+    4193.5, 4385.77, 4500.98, 4524.68, 4582.75, 4624.28, 4671.23, 4697.02,
+    4734.15, 4807.02, 4921.48, 5028.28, 5618.88, 5823.89, 5893.29, 5934.17,
+    6182.42, 6318.06, 6472.841, 6595.56, 6668.92, 6728.01, 6827.32, 6976.18,
+    7119.60, 7257.9, 7393.8, 7584.68, 7642.02, 7740.31, 7802.65, 7887.40,
+    7967.34, 8057.258
+]
+element = ['Xe'] * len(atlas)
 
-def run_sprat_calibration(polydeg):
+def run_sprat_calibration(fit_deg):
 
     # Load the LT SPRAT data
     base_dir = os.path.dirname(__file__)
-    spectrum2D = fits.open(os.path.join(base_dir, '..', 'examples/data_lt_sprat/v_a_20190516_57_1_0_1.fits'))[0].data
+    spectrum2D = fits.open(
+        os.path.join(
+            base_dir, '..',
+            'examples/data_lt_sprat/v_a_20190516_57_1_0_1.fits'))[0].data
 
     # Collapse into 1D spectrum between row 110 and 120
     spectrum = np.median(spectrum2D[110:120], axis=0)
@@ -29,34 +38,24 @@ def run_sprat_calibration(polydeg):
     peaks = util.refine_peaks(spectrum, peaks, window_width=5)
 
     # Initialise the calibrator
-    c = Calibrator(peaks, num_pix=1024, min_wavelength=3500., max_wavelength=8000.)
-    c.set_fit_constraints(num_slopes=10000,
-                          range_tolerance=500.,
-                          xbins=100,
-                          ybins=100,
-                          polydeg=polydeg)
-    c.add_atlas(elements='Xe')
+    c = Calibrator(peaks)
+    c.set_calibrator_properties(num_pix=1024)
+    c.set_hough_properties(num_slopes=500,
+                           range_tolerance=500.,
+                           xbins=100,
+                           ybins=100,
+                           min_wavelength=3500.,
+                           max_wavelength=8000.)
+    c.add_user_atlas(element=element, atlas=atlas)
 
     # Run the wavelength calibration
-    best_p, rms, residual, peak_utilisation = c.fit(max_tries=10000)
+    best_p, rms, residual, peak_utilisation = c.fit(max_tries=200,
+                                                    fit_deg=fit_deg)
 
     # Refine solution
-    # First set is to refine only the 0th and 1st coefficient (i.e. the 2 lowest orders)
     best_p, x_fit, y_fit, residual, peak_utilisation = c.match_peaks(
         best_p,
-        delta=best_p[:1] * 0.001,
-        tolerance=10.,
-        convergence=1e-10,
-        method='Nelder-Mead',
-        robust_refit=True)
-
-    # Second set is to refine all the coefficients
-    best_p, x_fit, y_fit, residual, peak_utilisation = c.match_peaks(
-        best_p,
-        delta=best_p * 0.001,
-        tolerance=10.,
-        convergence=1e-10,
-        method='Nelder-Mead',
+        refine=False,
         robust_refit=True)
 
     fit_diff = c.polyval(x_fit, best_p) - y_fit
@@ -67,10 +66,11 @@ def run_sprat_calibration(polydeg):
 
 def test_sprat_calibration():
 
-    logger.info("Test if LT/SPRAT Xe calibration return the order of polynomial properly.")
+    logger.info("Test if LT/SPRAT Xe calibration return the order of "
+                "polynomial properly.")
 
     for i in range(3, 6):
-        best_p, _, _, _ = run_sprat_calibration(polydeg=i)
+        best_p, _, _, _ = run_sprat_calibration(fit_deg=i)
         assert (len(best_p) == (i + 1))
 
 
@@ -99,6 +99,3 @@ def test_sprat_calibration_multirun():
     assert np.std(c4) < 0.01
     assert np.std(peak_utilisation) < 10.
     assert np.std(rms) < 5.
-
-
-
