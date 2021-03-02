@@ -70,24 +70,30 @@ def test_sprat_manual_atlas():
     # Run the wavelength calibration
     best_p, rms, residual, peak_utilisation = c.fit(max_tries=250)
 
-    # Plot the solution
-    c.plot_fit(best_p,
-               spectrum,
-               plot_atlas=True,
-               log_spectrum=False,
-               tolerance=5.)
+    if os.name != 'nt':
+
+        # Plot the solution
+        c.plot_fit(best_p,
+                spectrum,
+                plot_atlas=True,
+                log_spectrum=False,
+                tolerance=5.)
 
     fit_coeff_new, peak_matched, atlas_matched, residual,\
         peak_utilisation = c.match_peaks(best_p)
 
-    c.plot_fit(fit_coeff_new,
-               spectrum,
-               plot_atlas=True,
-               log_spectrum=False,
-               tolerance=5.)
+    if os.name != 'nt':
+
+        c.plot_fit(fit_coeff_new,
+                spectrum,
+                plot_atlas=True,
+                log_spectrum=False,
+                tolerance=5.)
 
     # Show the parameter space for searching possible solution
-    c.plot_search_space()
+    if os.name != 'nt':
+
+        c.plot_search_space()
 
     print("Stdev error: {} A".format(residual.std()))
     print("Peaks utilisation rate: {}%".format(peak_utilisation * 100))
