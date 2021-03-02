@@ -41,7 +41,7 @@ def test_linear_model():
     s = SyntheticSpectrum(np.arange(2))
     assert s.degree == 1
 
-    p = s.get_pixels(wave1)
+    s.get_pixels(wave1)
 
 
 def test_cubic_model():

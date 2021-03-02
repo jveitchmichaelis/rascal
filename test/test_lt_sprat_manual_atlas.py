@@ -7,13 +7,17 @@ import os
 from rascal.calibrator import Calibrator
 from rascal import util
 
+plt.ion()
+
 
 def test_sprat_manual_atlas():
 
     # Load the LT SPRAT data
     base_dir = os.path.dirname(__file__)
+    abs_dir = os.path.abspath(os.path.join(base_dir))
     fits_file = fits.open(
-        os.path.join(base_dir, 'data_lt_sprat/v_a_20190516_57_1_0_1.fits'))[0]
+        os.path.join(abs_dir, '..', 'examples', 'data_lt_sprat',
+                     'v_a_20190516_57_1_0_1.fits'))[0]
 
     spectrum2D = fits_file.data
 
@@ -33,7 +37,9 @@ def test_sprat_manual_atlas():
     c.use_plotly()
     assert c.which_plotting_library() == 'plotly'
 
-    c.plot_arc()
+    if os.name != 'nt':
+        c.plot_arc()
+
     c.set_hough_properties(num_slopes=5000,
                            range_tolerance=500.,
                            xbins=100,
@@ -74,10 +80,10 @@ def test_sprat_manual_atlas():
 
         # Plot the solution
         c.plot_fit(best_p,
-                spectrum,
-                plot_atlas=True,
-                log_spectrum=False,
-                tolerance=5.)
+                   spectrum,
+                   plot_atlas=True,
+                   log_spectrum=False,
+                   tolerance=5.)
 
     fit_coeff_new, peak_matched, atlas_matched, residual,\
         peak_utilisation = c.match_peaks(best_p)
@@ -85,10 +91,10 @@ def test_sprat_manual_atlas():
     if os.name != 'nt':
 
         c.plot_fit(fit_coeff_new,
-                spectrum,
-                plot_atlas=True,
-                log_spectrum=False,
-                tolerance=5.)
+                   spectrum,
+                   plot_atlas=True,
+                   log_spectrum=False,
+                   tolerance=5.)
 
     # Show the parameter space for searching possible solution
     if os.name != 'nt':
@@ -100,6 +106,19 @@ def test_sprat_manual_atlas():
 
     c.use_matplotlib()
     assert c.which_plotting_library() == 'matplotlib'
+
+    c.plot_arc(display=False)
+
+    # Plot the solution
+    c.plot_fit(best_p,
+               spectrum,
+               plot_atlas=True,
+               log_spectrum=False,
+               tolerance=5.,
+               display=False)
+
+    # Show the parameter space for searching possible solution
+    c.plot_search_space(display=False)
 
     c.plot_arc()
 

@@ -1911,7 +1911,8 @@ class Calibrator:
                  savefig=False,
                  filename=None,
                  json=False,
-                 renderer='default'):
+                 renderer='default',
+                 display=True):
         '''
         Plots the 1D spectrum of the extracted arc
 
@@ -1977,7 +1978,9 @@ class Calibrator:
             plt.grid()
             plt.tight_layout()
 
-            plt.show()
+            if display:
+
+                plt.show()
 
             if savefig:
 
@@ -2044,13 +2047,15 @@ class Calibrator:
                               height=800,
                               width=1000)
 
-            if renderer == 'default':
+            if display:
 
-                fig.show()
+                if renderer == 'default':
 
-            else:
+                    fig.show()
 
-                fig.show(renderer)
+                else:
+
+                    fig.show(renderer)
 
             if json:
 
@@ -2063,7 +2068,8 @@ class Calibrator:
                           savefig=False,
                           filename=None,
                           json=False,
-                          renderer='default'):
+                          renderer='default',
+                          display=True):
         '''
         Plots the peak/arc line pairs that are considered as potential match
         candidates.
@@ -2209,7 +2215,10 @@ class Calibrator:
             plt.legend()
             plt.grid()
             plt.tight_layout()
-            plt.show()
+
+            if display:
+
+                plt.show()
 
         elif self.plot_with_plotly:
 
@@ -2352,13 +2361,15 @@ class Calibrator:
                 height=800,
                 width=1000)
 
-            if renderer == 'default':
+            if display:
 
-                fig.show()
+                if renderer == 'default':
 
-            else:
+                    fig.show()
 
-                fig.show(renderer)
+                else:
+
+                    fig.show(renderer)
 
             if json:
 
@@ -2373,7 +2384,8 @@ class Calibrator:
                  savefig=False,
                  filename=None,
                  json=False,
-                 renderer='default'):
+                 renderer='default',
+                 display=True):
         '''
         Plots of the wavelength calibrated arc spectrum, the residual and the
         pixel-to-wavelength solution.
@@ -2567,8 +2579,17 @@ class Calibrator:
             w_max = self.polyval(max(fitted_peaks), fit_coeff)
             ax3.set_xlim(w_min * 0.95, w_max * 1.05)
 
-            plt.show()
             plt.tight_layout()
+
+            if display:
+
+                if renderer == 'default':
+
+                    fig.show()
+
+                else:
+
+                    fig.show(renderer)
 
             if savefig:
 
@@ -2727,13 +2748,15 @@ class Calibrator:
                 height=800,
                 width=1000)
 
-            if renderer == 'default':
+            if display:
 
-                fig.show()
+                if renderer == 'default':
 
-            else:
+                    fig.show()
 
-                fig.show(renderer)
+                else:
+
+                    fig.show(renderer)
 
             if json:
 
