@@ -10,18 +10,16 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger()
 
 
-def test_no_elements():
+@pytest.mark.xfail()
+def test_loading_empty_calibrator_expect_fail():
+    logger.info("Testing load without peaks.")
+    Calibrator()
+
     logger.info("Testing loading.")
     cal = Calibrator(peaks=np.arange(10))
     assert len(cal.peaks) == 10
     assert len(cal.atlas) == 0
     assert len(cal.atlas_elements) == 0
-
-
-@pytest.mark.xfail()
-def test_empty_elements():
-    logger.info("Testing load without peaks.")
-    Calibrator()
 
 
 def test_load_single_line():

@@ -151,7 +151,6 @@ class HoughTransform:
     def save(self,
              filename='hough_transform',
              fileformat='npy',
-             content='hp_hist',
              delimiter='+',
              to_disk=True):
         '''
@@ -164,10 +163,6 @@ class HoughTransform:
             will be appended with the content type.
         format: str (default: 'npy')
             Choose from 'npy' and json'
-        content: str (default: 'hp_constraints+hp_hist')
-            Choose from 'hp', 'hp_hist'
-                hp: all the hough points
-                hp_hist: the binned 2d histogram of the houghspace
         delimiter: str (default: '+')
             Delimiter for format and content types
         to_disk: boolean
@@ -181,26 +176,19 @@ class HoughTransform:
         '''
 
         fileformat_split = fileformat.split(delimiter)
-        content_split = content.split(delimiter)
 
         if 'npy' in fileformat_split:
 
             output_npy = []
 
-            if 'hp' in content_split:
-
-                output_npy.append(self.hough_points)
-
-            if 'hp_hist' in content_split:
-
-                output_npy.append(self.hist)
-                output_npy.append(self.xedges)
-                output_npy.append(self.yedges)
-
+            output_npy.append(self.hough_points)
+            output_npy.append(self.hist)
+            output_npy.append(self.xedges)
+            output_npy.append(self.yedges)
             output_npy.append([self.min_slope])
             output_npy.append([self.max_slope])
             output_npy.append([self.min_intercept])
-            output_npy.append([self.min_intercept])
+            output_npy.append([self.max_intercept])
 
             if to_disk:
 
@@ -210,16 +198,10 @@ class HoughTransform:
 
             output_json = {}
 
-            if 'hp' in content_split:
-
-                output_json['hough_points'] = self.hough_points.tolist()
-
-            if 'hp_hist' in content_split:
-
-                output_json['hist'] = self.hist.tolist()
-                output_json['xedges'] = self.xedges.tolist()
-                output_json['yedges'] = self.yedges.tolist()
-
+            output_json['hough_points'] = self.hough_points.tolist()
+            output_json['hist'] = self.hist.tolist()
+            output_json['xedges'] = self.xedges.tolist()
+            output_json['yedges'] = self.yedges.tolist()
             output_json['min_slope'] = self.min_slope
             output_json['max_slope'] = self.max_slope
             output_json['min_intercept'] = self.min_intercept
@@ -269,39 +251,21 @@ class HoughTransform:
         if filetype == 'npy':
 
             input_npy = np.load(filename, allow_pickle=True)
-            len_npy = len(input_npy)
 
-            if len_npy == 7:
-
-                shift = 0
-
-            elif len_npy == 8:
-
-                shift = 1
-                self.hough_points = input_npy[0]
-
-            else:
-
-                raise ValueError('The npy files has a length of %s.' %
-                                 len(input_npy))
-
-            self.hist = input_npy[0 + shift].astype('float')
-            self.xedges = input_npy[1 + shift].astype('float')
-            self.yedges = input_npy[2 + shift].astype('float')
-            self.min_slope = float(input_npy[3 + shift][0])
-            self.max_slope = float(input_npy[4 + shift][0])
-            self.min_intercept = float(input_npy[5 + shift][0])
-            self.max_intercept = float(input_npy[6 + shift][0])
+            self.hough_points = input_npy[0]
+            self.hist = input_npy[1].astype('float')
+            self.xedges = input_npy[2].astype('float')
+            self.yedges = input_npy[3].astype('float')
+            self.min_slope = float(input_npy[4][0])
+            self.max_slope = float(input_npy[5][0])
+            self.min_intercept = float(input_npy[6][0])
+            self.max_intercept = float(input_npy[7][0])
 
         elif filetype == 'json':
 
             input_json = json.load(open(filename))
-            len_json = len(input_json.keys())
 
-            if len_json == 8:
-
-                self.hough_points = input_json['hough_points']
-
+            self.hough_points = input_json['hough_points']
             self.hist = np.array(input_json['hist']).astype('float')
             self.xedges = np.array(input_json['xedges']).astype('float')
             self.yedges = np.array(input_json['yedges']).astype('float')
@@ -1092,14 +1056,17 @@ class Calibrator:
         if self.plot_with_matplotlib:
 
             self.logger.info('Using matplotlib.')
+            return 'matplotlib'
 
         elif self.plot_with_plotly:
 
             self.logger.info('Using plotly.')
+            return 'plotly'
 
         else:
 
             self.logger.warning('Neither maplotlib nor plotly are imported.')
+            return None
 
     def use_matplotlib(self):
         '''
@@ -1344,6 +1311,10 @@ class Calibrator:
 
         self.hough_points = self.ht.hough_points
         self.hough_lines = self.ht.hough_lines
+
+    def load_hough_transform(self):
+        # to be implemented
+        pass
 
     def add_atlas(self,
                   elements,

@@ -21,6 +21,7 @@ atlas = [
 ]
 element = ['Xe'] * len(atlas)
 
+
 def run_sprat_calibration(fit_deg):
 
     # Load the LT SPRAT data
@@ -40,10 +41,10 @@ def run_sprat_calibration(fit_deg):
     # Initialise the calibrator
     c = Calibrator(peaks)
     c.set_calibrator_properties(num_pix=1024)
-    c.set_hough_properties(num_slopes=500,
-                           range_tolerance=500.,
-                           xbins=100,
-                           ybins=100,
+    c.set_hough_properties(num_slopes=200,
+                           range_tolerance=200.,
+                           xbins=50,
+                           ybins=50,
                            min_wavelength=3500.,
                            max_wavelength=8000.)
     c.add_user_atlas(element=element, atlas=atlas)
@@ -54,9 +55,7 @@ def run_sprat_calibration(fit_deg):
 
     # Refine solution
     best_p, x_fit, y_fit, residual, peak_utilisation = c.match_peaks(
-        best_p,
-        refine=False,
-        robust_refit=True)
+        best_p, refine=False, robust_refit=True)
 
     fit_diff = c.polyval(x_fit, best_p) - y_fit
     rms = np.sqrt(np.sum(fit_diff**2 / len(x_fit)))

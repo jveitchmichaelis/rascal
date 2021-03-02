@@ -33,6 +33,8 @@ def test_sprat_manual_atlas():
     # Initialise the calibrator
     c = Calibrator(peaks, spectrum=spectrum)
     c.use_plotly()
+    assert c.which_plotting_library() == 'plotly'
+
     c.plot_arc()
     c.set_hough_properties(num_slopes=5000,
                            range_tolerance=500.,
@@ -77,6 +79,15 @@ def test_sprat_manual_atlas():
                log_spectrum=False,
                tolerance=5.)
 
+    fit_coeff_new, peak_matched, atlas_matched, residual,\
+        peak_utilisation = c.match_peaks(best_p)
+
+    c.plot_fit(fit_coeff_new,
+               spectrum,
+               plot_atlas=True,
+               log_spectrum=False,
+               tolerance=5.)
+
     # Show the parameter space for searching possible solution
     c.plot_search_space()
 
@@ -84,6 +95,8 @@ def test_sprat_manual_atlas():
     print("Peaks utilisation rate: {}%".format(peak_utilisation * 100))
 
     c.use_matplotlib()
+    assert c.which_plotting_library() == 'matplotlib'
+
     c.plot_arc()
 
     # Plot the solution

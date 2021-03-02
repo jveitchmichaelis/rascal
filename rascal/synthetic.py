@@ -4,64 +4,112 @@ from . import models
 
 
 class SyntheticSpectrum:
-    def __init__(self, coefficients, model_type='cubic', degree=None):
+    def __init__(self,
+                 coefficients=None,
+                 min_wavelength=200.,
+                 max_wavelength=1200.):
         """
         Creates a synthetic spectrum generator which, given a suitable model,
-        outputs the expected pixel locations of input wavelengths.
+        outputs the expected pixel locations of input wavelengths.  It is
+        expected that this will be used mainly for model testing.
 
         Parameters
         ----------
-        coefficients:
-          list, coefficients for the model
-        model_type:
-           str, model type (linear, quadratic, cubic or poly)
-        degree:
-           int, if using a general poly model, its degree, default None
+        coefficients: list
+            coefficients for the model
 
-        It is
-        expected that this will be used mainly for model testing, but
-        you can alsus
         """
-        self.model = None
 
         # Default is approx. range of Silicon
-        self.min_wavelength = 200
-        self.max_wavelength = 1200
+        self.set_wavelength_limit(min_wavelength, max_wavelength)
 
-        # Model to fit
-        if model_type == 'quadratic':
-            self.model = models.quadratic(coefficients)
-        elif model_type == 'cubic':
-            self.model = models.cubic(coefficients)
-        elif model_type == 'poly':
+        if coefficients is not None:
 
-            if degree is None:
-                raise ValueError("You should specify a polynomial degree.")
+            self.set_model(coefficients)
 
-            self.model = models.polynomial(coefficients, degree)
         else:
-            raise NotImplementedError
 
-    def set_wavelength_limit(self, min_w, max_w):
+            self.model = None
+            self.degree = None
+
+    def set_model(self, coefficients):
         """
-        Set a wavelength filter for the `get_pixels` function.
+        Set the model to fit
         """
-        self.min_wavelength = min_w
-        self.max_wavelength = max_w
+
+        if isinstance(coefficients, (list, np.ndarray)):
+
+            self.degree = len(coefficients) - 1
+            self.model = models.polynomial(a=coefficients, degree=self.degree)
+
+        else:
+
+            raise TypeError('Please provide a list or an numpy array.')
+
+    def set_wavelength_limit(self, min_wavelength=None, max_wavelength=None):
+        """
+        Set a wavelength filter for the 'get_pixels' function.
+        """
+
+        if (not isinstance(min_wavelength, float)
+                and min_wavelength is not None):
+
+            raise TypeError('Please provide a numeric value or None to '
+                            'retain the min_wavelength.')
+
+        else:
+
+            # Placeholder Min/Max
+            if min_wavelength is not None:
+
+                new_min_wavelength = min_wavelength
+
+            else:
+
+                new_min_wavelength = self.min_wavelength
+
+        if (not isinstance(max_wavelength, float)
+                and max_wavelength is not None):
+
+            raise TypeError('Please provide a numeric value or None to '
+                            'retain the max_wavelength.')
+
+        else:
+            if max_wavelength is not None:
+
+                new_max_wavelength = max_wavelength
+
+            else:
+
+                new_max_wavelength = self.max_wavelength
+
+        # Check if Max > Min
+        if new_max_wavelength > new_min_wavelength:
+
+            self.min_wavelength = new_min_wavelength
+            self.max_wavelength = new_max_wavelength
+
+        else:
+
+            raise RuntimeError('Minimum wavelength cannot be larger than '
+                               'the maximum wavelength.')
 
     def get_pixels(self, wavelengths):
         """
         Returns a list of pixel locations for the wavelengths provided
         """
 
-        if self.model is None:
-            raise ValueError("Model not initiated")
+        if not isinstance(wavelengths, (list, np.ndarray)):
+
+            raise TypeError('Please provide a list or an numpy array.')
 
         wavelengths = np.array(wavelengths)
         wavelengths = wavelengths[wavelengths > self.min_wavelength]
         wavelengths = wavelengths[wavelengths < self.max_wavelength]
 
-        return pynverse.inversefunc(self.model, wavelengths)
+        pixels = pynverse.inversefunc(self.model, wavelengths)
+
+        return pixels
 
 
 '''

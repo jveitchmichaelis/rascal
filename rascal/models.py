@@ -78,6 +78,8 @@ def robust_polyfit(x, y, degree=3, x0=None, bounds=None):
     return p[::-1]
 
 
+# What is this for?
+"""
 def pprint_coefficients(coeffs):
     expr = "{} ".format(round(coeffs[0], 3))
 
@@ -89,3 +91,4 @@ def pprint_coefficients(coeffs):
                 expr += "+ {}*x^{}".format(round(c, 3), i + 1)
 
     return expr
+"""
