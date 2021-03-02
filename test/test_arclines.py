@@ -15,6 +15,8 @@ def test_loading_empty_calibrator_expect_fail():
     logger.info("Testing load without peaks.")
     Calibrator()
 
+
+def test_initialisation():
     logger.info("Testing loading.")
     cal = Calibrator(peaks=np.arange(10))
     assert len(cal.peaks) == 10

@@ -41,10 +41,10 @@ def run_sprat_calibration(fit_deg):
     # Initialise the calibrator
     c = Calibrator(peaks)
     c.set_calibrator_properties(num_pix=1024)
-    c.set_hough_properties(num_slopes=200,
-                           range_tolerance=200.,
-                           xbins=50,
-                           ybins=50,
+    c.set_hough_properties(num_slopes=1000,
+                           range_tolerance=500.,
+                           xbins=100,
+                           ybins=100,
                            min_wavelength=3500.,
                            max_wavelength=8000.)
     c.add_user_atlas(element=element, atlas=atlas)
