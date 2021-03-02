@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from rascal.calibrator import HoughTransform
+from rascal.calibrator import HoughTransform, Calibrator
 
 ht = HoughTransform()
 ht.set_constraints(min_slope=1,
@@ -99,3 +99,9 @@ def test_extending_ht():
 def test_extending_ht_expect_fail():
 
     ht.add_hough_points(np.ones(100))
+
+
+def test_loading_ht_into_calibrator():
+    c = Calibrator(np.arange(10))
+    c.load_hough_transform('test/test_hough_transform_npy')
+    c.save_hough_transform('test/test_hough_transform_npy_2')

@@ -64,12 +64,12 @@ def test_sprat_manual_atlas():
     ]
     element = ['Xe'] * len(atlas)
 
-    c.load_user_atlas(element,
-                      atlas,
-                      constrain_poly=True,
-                      pressure=pressure,
-                      temperature=temperature,
-                      relative_humidity=relative_humidity)
+    c.add_user_atlas(element,
+                     atlas,
+                     constrain_poly=True,
+                     pressure=pressure,
+                     temperature=temperature,
+                     relative_humidity=relative_humidity)
 
     c.do_hough_transform()
 

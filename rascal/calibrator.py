@@ -278,6 +278,10 @@ class HoughTransform:
 
         if filetype == 'npy':
 
+            if filename[-4:] != '.npy':
+
+                filename += '.npy'
+
             input_npy = np.load(filename, allow_pickle=True)
 
             self.hough_points = input_npy[0]
@@ -290,6 +294,10 @@ class HoughTransform:
             self.max_intercept = float(input_npy[7][0])
 
         elif filetype == 'json':
+
+            if filename[-5:] != '.json':
+
+                filename += '.json'
 
             input_json = json.load(open(filename))
 
@@ -335,6 +343,7 @@ class Calibrator:
         self.wave_known = None
         self.hough_lines = None
         self.hough_points = None
+        self.ht = HoughTransform()
         self.set_calibrator_properties()
         self.set_hough_properties()
         self.set_ransac_properties()
@@ -1301,28 +1310,6 @@ class Calibrator:
         self.candidate_weighted = candidate_weighted
         self.hough_weight = hough_weight
 
-    def do_hough_transform(self):
-
-        # Generate the hough_points from the pairs
-        self.ht = HoughTransform()
-        self.ht.set_constraints(self.min_slope, self.max_slope,
-                                self.min_intercept, self.max_intercept)
-        self.ht.generate_hough_points(self.pairs[:, 0],
-                                      self.pairs[:, 1],
-                                      num_slopes=self.num_slopes)
-        self.ht.bin_hough_points(self.xbins, self.ybins)
-
-        self.hough_points = self.ht.hough_points
-        self.hough_lines = self.ht.hough_lines
-
-    def save_hough_transform(self):
-        # to be implemented
-        pass
-
-    def load_hough_transform(self):
-        # to be implemented
-        pass
-
     def add_atlas(self,
                   elements,
                   min_atlas_wavelength=None,
@@ -1544,6 +1531,34 @@ class Calibrator:
         self.atlas_elements = []
         self.atlas = []
         self.atlas_intensities = []
+
+    def do_hough_transform(self):
+
+        # Generate the hough_points from the pairs
+        self.ht.set_constraints(self.min_slope, self.max_slope,
+                                self.min_intercept, self.max_intercept)
+        self.ht.generate_hough_points(self.pairs[:, 0],
+                                      self.pairs[:, 1],
+                                      num_slopes=self.num_slopes)
+        self.ht.bin_hough_points(self.xbins, self.ybins)
+
+        self.hough_points = self.ht.hough_points
+        self.hough_lines = self.ht.hough_lines
+
+    def save_hough_transform(self,
+                             filename='hough_transform',
+                             fileformat='npy',
+                             delimiter='+',
+                             to_disk=True):
+
+        self.ht.save(filename=filename,
+                     fileformat=fileformat,
+                     delimiter=delimiter,
+                     to_disk=to_disk)
+
+    def load_hough_transform(self, filename='hough_transform', filetype='npy'):
+
+        self.ht.load(filename=filename, filetype=filetype)
 
     def set_known_pairs(self, pix=(), wave=()):
         '''
