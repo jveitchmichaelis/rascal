@@ -59,7 +59,7 @@ def test_load_fail():
                  filetype='lalala')
 
 
-def test_hf_not_saved_to_disk():
+def test_ht_not_saved_to_disk():
     a = ht.save(filename='test/test_hough_transform_npy',
                 fileformat='npy',
                 to_disk=False)
@@ -71,3 +71,31 @@ def test_hf_not_saved_to_disk():
                    to_disk=False)
     assert a == c
     assert b == d
+
+
+def test_extending_ht():
+
+    ht2 = HoughTransform()
+    ht2.set_constraints(min_slope=1,
+                        max_slope=4,
+                        min_intercept=7000.,
+                        max_intercept=9000.)
+    ht2.generate_hough_points(x=(np.random.random(1000) * 3 + 1),
+                              y=(np.random.random(1000) * 2000 + 7000),
+                              num_slopes=1000)
+
+    ht2.add_hough_points(ht)
+
+    assert set(ht.hough_points[:, 0]).issubset(set(ht2.hough_points[:, 0]))
+    assert set(ht.hough_points[:, 1]).issubset(set(ht2.hough_points[:, 1]))
+
+    shape_now = np.shape(ht2.hough_points)
+
+    ht2.add_hough_points(np.ones((100, 2)))
+    assert np.shape(ht2.hough_points) == (shape_now[0] + 100, 2)
+
+
+@pytest.mark.xfail()
+def test_extending_ht_expect_fail():
+
+    ht.add_hough_points(np.ones(100))

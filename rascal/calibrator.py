@@ -109,6 +109,34 @@ class HoughTransform:
         # Create an array of Hough Points
         self.hough_points = np.column_stack((gradients, intercepts))
 
+    def add_hough_points(self, hp):
+        '''
+        Extending the Hough pairs with an externally supplied HoughTransform
+        object. This can be useful if the arc lines are very concentrated in
+        some wavelength ranges while nothing in available in another part.
+
+        Parameters
+        ----------
+        hp: numpy.ndarray with 2 columns or HoughTransform object
+            An externally supplied HoughTransform object that contains
+            hough_points.
+
+        '''
+
+        if isinstance(hp, HoughTransform):
+
+            points = hp.hough_points
+
+        elif isinstance(hp, np.ndarray):
+
+            points = hp
+
+        else:
+
+            raise TypeError('Unsupported type for extending hough points.')
+
+        self.hough_points = np.vstack((self.hough_points, points))
+
     def bin_hough_points(self, xbins, ybins):
         '''
         Bin up data by using a 2D histogram method.
@@ -351,31 +379,6 @@ class Calibrator:
         except ImportError:
 
             self.logger.error('plotly package not available.')
-
-    def _get_atlas(self, elements, min_atlas_wavelength, max_atlas_wavelength,
-                   min_intensity, min_distance):
-        '''
-        Load lines.
-
-        Parameters
-        ----------
-        elements: string or list of string
-            Element name in form of chemical symbol. Case insensitive.
-        min_atlas_wavelength: float
-            Minimum wavelength of the arc lines.
-        max_atlas_wavelength: float
-            Maximum wavelength of the arc lines.
-        min_intensity: float
-            Minimum intensity of the lines.
-        min_distance: float
-            Minimum separation between neighbouring lines.
-
-        '''
-
-        self.atlas_elements, self.atlas, self.atlas_intensities = \
-            load_calibration_lines(elements,
-                                   min_atlas_wavelength,
-                                   max_atlas_wavelength)
 
     def _generate_pairs(self, candidate_tolerance, constrain_poly):
         '''
@@ -1312,6 +1315,10 @@ class Calibrator:
         self.hough_points = self.ht.hough_points
         self.hough_lines = self.ht.hough_lines
 
+    def save_hough_transform(self):
+        # to be implemented
+        pass
+
     def load_hough_transform(self):
         # to be implemented
         pass
@@ -1406,28 +1413,6 @@ class Calibrator:
         # from atlas
         self._generate_pairs(candidate_tolerance, constrain_poly)
 
-    def list_atlas(self):
-        '''
-        List all the lines loaded to the Calibrator.
-
-        '''
-
-        for i in range(len(self.atlas)):
-
-            print('Element ' + str(self.atlas_elements[i]) + ' at ' +
-                  str(self.atlas[i]) + ' with intensity ' +
-                  str(self.atlas_intensities[i]))
-
-    def clear_atlas(self):
-        '''
-        Remove all the lines loaded to the Calibrator.
-
-        '''
-
-        self.atlas_elements = []
-        self.atlas = []
-        self.atlas_intensities = []
-
     def add_user_atlas(self,
                        element,
                        atlas,
@@ -1514,72 +1499,6 @@ class Calibrator:
         # from atlas
         self._generate_pairs(candidate_tolerance, constrain_poly)
 
-    def load_user_atlas(self,
-                        elements,
-                        wavelengths,
-                        intensities=None,
-                        candidate_tolerance=10.,
-                        constrain_poly=False,
-                        vacuum=False,
-                        pressure=101325.,
-                        temperature=273.15,
-                        relative_humidity=0.):
-        '''
-        *Remove* all the arc lines loaded to the Calibrator and then use
-        the user supplied arc lines instead.
-
-        The vacuum to air wavelength conversion is deafult to False because
-        observatories usually provide the line lists in the respective air
-        wavelength, as the corrections from temperature and humidity are
-        small. See https://emtoolbox.nist.gov/Wavelength/Documentation.asp
-
-        Parameters
-        ----------
-        elements: list
-            Element (required). Preferably a standard (i.e. periodic table)
-            name for convenience with built-in atlases
-        wavelengths: list
-            Wavelength to add (Angstrom)
-        intensities: list
-            Relative line intensities
-        candidate_tolerance: float (default: 15)
-            toleranceold  (Angstroms) for considering a point to be an inlier
-            during candidate peak/line selection. This should be reasonable
-            small as we want to search for candidate points which are
-            *locally* linear.
-        constrain_poly: boolean
-            Apply a polygonal constraint on possible peak/atlas pairs
-        vacuum: boolean
-            Set to true to convert the input wavelength to air-wavelengths
-            based on the given pressure, temperature and humidity.
-        pressure: float
-            Pressure when the observation took place, in Pascal.
-            If it is not known, assume 10% decrement per 1000 meter altitude
-        temperature: float
-            Temperature when the observation took place, in Kelvin.
-        relative_humidity: float
-            In percentage.
-
-        '''
-
-        self.clear_atlas()
-
-        if intensities is None:
-
-            intensities = [0] * len(wavelengths)
-
-        assert len(elements) == len(wavelengths), ValueError(
-            'Input elements and wavelengths have different length.')
-        assert len(elements) == len(intensities), ValueError(
-            'Input elements and intensities have different length.')
-
-        self.add_user_atlas(elements, wavelengths, intensities,
-                            candidate_tolerance, constrain_poly, vacuum,
-                            pressure, temperature, relative_humidity)
-        # Create a list of all possible pairs of detected peaks and lines
-        # from atlas
-        self._generate_pairs(candidate_tolerance, constrain_poly)
-
     def remove_atlas_lines_range(self, wavelength, tolerance=10):
         '''
         Remove arc lines within a certain wavelength range.
@@ -1603,6 +1522,28 @@ class Calibrator:
 
                 self.logger.info('Removed {} line: {} A'.format(
                     removed_element, removed_peak))
+
+    def list_atlas(self):
+        '''
+        List all the lines loaded to the Calibrator.
+
+        '''
+
+        for i in range(len(self.atlas)):
+
+            print('Element ' + str(self.atlas_elements[i]) + ' at ' +
+                  str(self.atlas[i]) + ' with intensity ' +
+                  str(self.atlas_intensities[i]))
+
+    def clear_atlas(self):
+        '''
+        Remove all the lines loaded to the Calibrator.
+
+        '''
+
+        self.atlas_elements = []
+        self.atlas = []
+        self.atlas_intensities = []
 
     def set_known_pairs(self, pix=(), wave=()):
         '''
