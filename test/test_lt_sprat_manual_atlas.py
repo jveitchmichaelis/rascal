@@ -7,11 +7,9 @@ import os
 from rascal.calibrator import Calibrator
 from rascal import util
 
-plt.ion()
-
 
 def test_sprat_manual_atlas():
-    __file__ = 'examples/calibration_test_lt_sprat_manual_atlas.py'
+
     # Load the LT SPRAT data
     base_dir = os.path.dirname(__file__)
     fits_file = fits.open(

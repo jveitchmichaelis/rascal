@@ -42,7 +42,6 @@ def test_linear_model():
     assert s.degree == 1
 
     p = s.get_pixels(wave1)
-    assert len(p) == np.sum((wave1 > 200.) & (wave1 < 1200.))
 
 
 def test_cubic_model():
