@@ -12,14 +12,14 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger()
 
 # Line list
-atlas = [
+wavelengths = [
     4193.5, 4385.77, 4500.98, 4524.68, 4582.75, 4624.28, 4671.23, 4697.02,
     4734.15, 4807.02, 4921.48, 5028.28, 5618.88, 5823.89, 5893.29, 5934.17,
     6182.42, 6318.06, 6472.841, 6595.56, 6668.92, 6728.01, 6827.32, 6976.18,
     7119.60, 7257.9, 7393.8, 7584.68, 7642.02, 7740.31, 7802.65, 7887.40,
     7967.34, 8057.258
 ]
-element = ['Xe'] * len(atlas)
+elements = ['Xe'] * len(wavelengths)
 
 
 def run_sprat_calibration(fit_deg):
@@ -47,7 +47,7 @@ def run_sprat_calibration(fit_deg):
                            ybins=100,
                            min_wavelength=3500.,
                            max_wavelength=8000.)
-    c.add_user_atlas(element=element, atlas=atlas)
+    c.add_user_atlas(elements=elements, wavelengths=wavelengths)
 
     # Run the wavelength calibration
     best_p, rms, residual, peak_utilisation = c.fit(max_tries=200,
