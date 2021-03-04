@@ -1592,13 +1592,13 @@ class Calibrator:
             'and wave has size {}.'.format(pix.size, wave.size))
 
         if not all(
-                isinstance(p, (float, int)) & (np.isnan(p) is False)
+                isinstance(p, (float, int)) & (not np.isnan(p))
                 for p in pix):
 
             raise ValueError("All pix elements have to be numeric.")
 
         if not all(
-                isinstance(w, (float, int)) & (np.isnan(w) is False)
+                isinstance(w, (float, int)) & (not np.isnan(w))
                 for w in wave):
 
             raise ValueError("All wave elements have to be numeric.")
