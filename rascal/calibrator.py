@@ -1401,10 +1401,10 @@ class Calibrator:
         self._generate_pairs(candidate_tolerance, constrain_poly)
 
     def add_user_atlas(self,
-                       element,
-                       atlas,
-                       intensity=None,
-                       candidate_tolerance=10,
+                       elements,
+                       wavelengths,
+                       intensities=None,
+                       candidate_tolerance=10.,
                        constrain_poly=False,
                        vacuum=False,
                        pressure=101325.,
@@ -1424,12 +1424,12 @@ class Calibrator:
         Parameters
         ----------
         elements: list/str
-            Element (required). Preferably a standard (i.e. periodic table)
+            Elements (required). Preferably a standard (i.e. periodic table)
             name for convenience with built-in atlases
-        atlas: list/float
-            Wavelength to add (Angstrom)
-        intensity: list/float
-            Relative line intensity (NIST value)
+        wavelengths: list/float
+            Wavelengths to add (Angstrom)
+        intensities: list/float
+            Relative line intensities (NIST value)
         candidate_tolerance: float (default: 15)
             toleranceold  (Angstroms) for considering a point to be an inlier
             during candidate peak/line selection. This should be reasonable
@@ -1450,37 +1450,37 @@ class Calibrator:
 
         '''
 
-        if not isinstance(element, list):
+        if not isinstance(elements, list):
 
-            element = list(element)
+            elements = list(elements)
 
-        if not isinstance(atlas, list):
+        if not isinstance(wavelengths, list):
 
-            atlas = list(atlas)
+            wavelengths = list(wavelengths)
 
-        if intensity is None:
+        if intensities is None:
 
-            intensity = [0] * len(atlas)
+            intensities = [0] * len(wavelengths)
 
         else:
 
-            if not isinstance(intensity, list):
+            if not isinstance(intensities, list):
 
-                intensity = list(intensity)
+                intensities = list(intensities)
 
-        assert len(element) == len(atlas), ValueError(
-            'Input element and atlas have different length.')
-        assert len(element) == len(intensity), ValueError(
-            'Input element and intensity have different length.')
+        assert len(elements) == len(wavelengths), ValueError(
+            'Input elements and wavelengths have different length.')
+        assert len(elements) == len(intensities), ValueError(
+            'Input elements and intensities have different length.')
 
         if vacuum:
 
-            atlas = vacuum_to_air_wavelength(atlas, temperature, pressure,
-                                             relative_humidity)
+            wavelengths = vacuum_to_air_wavelength(wavelengths, temperature,
+                                                   pressure, relative_humidity)
 
-        self.atlas_elements.extend(element)
-        self.atlas.extend(atlas)
-        self.atlas_intensities.extend(intensity)
+        self.atlas_elements.extend(elements)
+        self.atlas.extend(wavelengths)
+        self.atlas_intensities.extend(intensities)
 
         # Create a list of all possible pairs of detected peaks and lines
         # from atlas
@@ -1566,10 +1566,13 @@ class Calibrator:
         list of pixel-wavelength pairs after the random sample being drawn from
         the RANSAC step, i.e. they are ALWAYS PRESENT in the fitting step. Use
         with caution because it can skew or bias the fit significantly, make
-        sure the pixel value is accurate to at least 1/10 of a pixel.
+        sure the pixel value is accurate to at least 1/10 of a pixel. We do not
+        recommend supplying more than a coupld of known pairs unless you are
+        very confident with the solution and intend to skew with the known
+        pairs.
 
         This can be used for example for low intensity lines at the edge of
-        the spectrum.
+        the spectrum. Or saturated lines where peaks cannot be well positioned.
 
         Parameters
         ----------
@@ -1581,22 +1584,27 @@ class Calibrator:
 
         '''
 
-        pix = np.asarray(pix, dtype='float')
-        wave = np.asarray(wave, dtype='float')
+        pix = np.asarray(pix, dtype='float').reshape(-1)
+        wave = np.asarray(wave, dtype='float').reshape(-1)
 
         assert pix.size == wave.size, ValueError(
             'Please check the length of the input arrays. pix has size {} '
             'and wave has size {}.'.format(pix.size, wave.size))
 
-        if pix.size == 1:
+        if not all(
+                isinstance(p, (float, int)) & (np.isnan(p) is False)
+                for p in pix):
 
-            self.pix_known = np.array([pix])
-            self.wave_known = np.array([wave])
+            raise ValueError("All pix elements have to be numeric.")
 
-        else:
+        if not all(
+                isinstance(w, (float, int)) & (np.isnan(w) is False)
+                for w in wave):
 
-            self.pix_known = pix
-            self.wave_known = wave
+            raise ValueError("All wave elements have to be numeric.")
+
+        self.pix_known = pix
+        self.wave_known = wave
 
     def fit(self,
             max_tries=500,
