@@ -17,9 +17,9 @@ sys.path.insert(0, os.path.abspath('../..'))
 # -- Project information -----------------------------------------------------
 
 project = 'RASCAL'
-copyright = '2019-2020, Josh Veitch-Michaelis, Marco Lam'
+copyright = '2019-2021, Josh Veitch-Michaelis, Marco Lam'
 author = 'Josh Veitch-Michaelis, Marco Lam'
-__version__ = '0.2.0'
+__version__ = '0.3.0-rc'
 
 # The full version, including alpha/beta/rc tags
 version = __version__
@@ -31,8 +31,8 @@ release = __version__
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.todo', 'sphinx.ext.viewcode', 'sphinx.ext.autodoc',
-    'sphinx.ext.autosectionlabel', 'sphinx.ext.coverage', 'sphinx.ext.mathjax'
+    'sphinx.ext.autodoc', 'sphinx.ext.autosectionlabel', 'sphinx.ext.coverage',
+    'sphinx.ext.napoleon', 'sphinx.ext.todo', 'sphinx.ext.viewcode'
 ]
 
 # Add any paths that contain templates here, relative to this directory.

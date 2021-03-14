@@ -77,16 +77,16 @@ def test_quadratic_fit_legendre():
     c.set_ransac_properties(sample_size=10)
 
     # Run the wavelength calibration
-    best_p, rms, residual, peak_utilisation = c.fit(max_tries=1000,
+    best_p, rms, residual, peak_utilisation = c.fit(max_tries=2000,
                                                     fit_tolerance=5.,
                                                     candidate_tolerance=2.,
                                                     fit_deg=2,
                                                     fit_type='legendre')
 
     # Legendre 2nd order takes the form
-    assert (best_p[2] > 1e-3 * 0.999) & (best_p[2] < 1e-3 * 1.001)
-    assert (best_p[1] > 4. * 0.999) & (best_p[1] < 4. * 1.001)
-    assert (best_p[0] > 3000. * 0.999) & (best_p[0] < 3000. * 1.001)
+    assert (best_p[2] > 1e-3 * 0.99) & (best_p[2] < 1e-3 * 1.01)
+    assert (best_p[1] > 4. * 0.99) & (best_p[1] < 4. * 1.01)
+    assert (best_p[0] > 3000. * 0.99) & (best_p[0] < 3000. * 1.01)
 
 
 def test_quadratic_fit_chebyshev():
@@ -105,12 +105,12 @@ def test_quadratic_fit_chebyshev():
     c.set_ransac_properties(sample_size=10)
 
     # Run the wavelength calibration
-    best_p, rms, residual, peak_utilisation = c.fit(max_tries=1000,
+    best_p, rms, residual, peak_utilisation = c.fit(max_tries=2000,
                                                     fit_tolerance=5.,
                                                     candidate_tolerance=2.,
                                                     fit_deg=2,
                                                     fit_type='chebyshev')
 
-    assert (best_p[2] > 1e-3 * 0.999) & (best_p[2] < 1e-3 * 1.001)
-    assert (best_p[1] > 4. * 0.999) & (best_p[1] < 4. * 1.001)
-    assert (best_p[0] > 3000. * 0.999) & (best_p[0] < 3000. * 1.001)
+    assert (best_p[2] > 1e-3 * 0.99) & (best_p[2] < 1e-3 * 1.01)
+    assert (best_p[1] > 4. * 0.99) & (best_p[1] < 4. * 1.01)
+    assert (best_p[0] > 3000. * 0.99) & (best_p[0] < 3000. * 1.01)
