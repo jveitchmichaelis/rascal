@@ -111,6 +111,6 @@ def test_quadratic_fit_chebyshev():
                                                     fit_deg=2,
                                                     fit_type='chebyshev')
 
-    assert (best_p[2] > 1e-3 * 0.99) & (best_p[2] < 1e-3 * 1.01)
-    assert (best_p[1] > 4. * 0.99) & (best_p[1] < 4. * 1.01)
-    assert (best_p[0] > 3000. * 0.99) & (best_p[0] < 3000. * 1.01)
+    assert (best_p[2] > 1e-3 * 0.9) & (best_p[2] < 1e-3 * 1.1)
+    assert (best_p[1] > 4. * 0.9) & (best_p[1] < 4. * 1.1)
+    assert (best_p[0] > 3000. * 0.9) & (best_p[0] < 3000. * 1.1)
