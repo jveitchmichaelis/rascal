@@ -1,13 +1,10 @@
 import numpy as np
 from astropy.io import fits
 from scipy.signal import find_peaks
-from matplotlib import pyplot as plt
 import os
 
 from rascal.calibrator import Calibrator
 from rascal import util
-
-plt.ion()
 
 
 def test_sprat_manual_atlas():
@@ -37,8 +34,7 @@ def test_sprat_manual_atlas():
     c.use_plotly()
     assert c.which_plotting_library() == 'plotly'
 
-    if os.name != 'nt':
-        c.plot_arc()
+    c.plot_arc(display=False)
 
     c.set_hough_properties(num_slopes=5000,
                            range_tolerance=500.,
@@ -46,9 +42,6 @@ def test_sprat_manual_atlas():
                            ybins=100,
                            min_wavelength=3500.,
                            max_wavelength=8000.)
-    c.set_ransac_properties(sample_size=5,
-                            top_n_candidate=5,
-                            filter_close=True)
     # blend: 4829.71, 4844.33
     # blend: 5566.62, 5581.88
     # blend: 6261.212, 6265.302
@@ -71,35 +64,35 @@ def test_sprat_manual_atlas():
                      temperature=temperature,
                      relative_humidity=relative_humidity)
 
+    c.set_ransac_properties(sample_size=5,
+                            top_n_candidate=5,
+                            filter_close=True)
+
     c.do_hough_transform()
 
     # Run the wavelength calibration
     best_p, rms, residual, peak_utilisation = c.fit(max_tries=250)
 
-    if os.name != 'nt':
-
-        # Plot the solution
-        c.plot_fit(best_p,
-                   spectrum,
-                   plot_atlas=True,
-                   log_spectrum=False,
-                   tolerance=5.)
+    # Plot the solution
+    c.plot_fit(best_p,
+               spectrum,
+               plot_atlas=True,
+               log_spectrum=False,
+               display=False,
+               tolerance=5.)
 
     fit_coeff_new, peak_matched, atlas_matched, residual,\
         peak_utilisation = c.match_peaks(best_p)
 
-    if os.name != 'nt':
-
-        c.plot_fit(fit_coeff_new,
-                   spectrum,
-                   plot_atlas=True,
-                   log_spectrum=False,
-                   tolerance=5.)
+    c.plot_fit(fit_coeff_new,
+               spectrum,
+               plot_atlas=True,
+               log_spectrum=False,
+               display=False,
+               tolerance=5.)
 
     # Show the parameter space for searching possible solution
-    if os.name != 'nt':
-
-        c.plot_search_space()
+    c.plot_search_space(display=False)
 
     print("Stdev error: {} A".format(residual.std()))
     print("Peaks utilisation rate: {}%".format(peak_utilisation * 100))
@@ -107,7 +100,11 @@ def test_sprat_manual_atlas():
     c.use_matplotlib()
     assert c.which_plotting_library() == 'matplotlib'
 
-    c.plot_arc(display=False)
+    c.plot_arc(display=False, savefig=True, filename='test/test_lt_sprat_arc')
+    c.plot_arc(log_spectrum=True,
+               display=False,
+               savefig=True,
+               filename='test/test_lt_sprat_arc_log')
 
     # Plot the solution
     c.plot_fit(best_p,
@@ -115,19 +112,24 @@ def test_sprat_manual_atlas():
                plot_atlas=True,
                log_spectrum=False,
                tolerance=5.,
-               display=False)
+               display=False,
+               savefig=True,
+               filename='test/test_lt_sprat_fit')
 
     # Show the parameter space for searching possible solution
     c.plot_search_space(display=False)
 
-    c.plot_arc()
+    c.plot_arc(display=False)
 
     # Plot the solution
     c.plot_fit(best_p,
                spectrum,
                plot_atlas=True,
-               log_spectrum=False,
-               tolerance=5.)
+               log_spectrum=True,
+               tolerance=5.,
+               savefig=True,
+               display=False,
+               filename='test/test_lt_sprat_fit_log')
 
     # Show the parameter space for searching possible solution
-    c.plot_search_space()
+    c.plot_search_space(display=False)

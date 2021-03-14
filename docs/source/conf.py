@@ -32,8 +32,7 @@ release = __version__
 # ones.
 extensions = [
     'sphinx.ext.todo', 'sphinx.ext.viewcode', 'sphinx.ext.autodoc',
-    'sphinx.ext.autosectionlabel', 'sphinx.ext.coverage',
-    'sphinx.ext.mathjax'
+    'sphinx.ext.autosectionlabel', 'sphinx.ext.coverage', 'sphinx.ext.mathjax'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -43,6 +42,25 @@ templates_path = ['_templates']
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = []
+
+# The suffix of source filenames.
+source_suffix = '.rst'
+
+# The encoding of source files.
+source_encoding = 'utf-8-sig'
+
+# Produce API reference automatically for every public and private methods
+apidoc_args = [
+    '--force',  # Overwrite existing files
+    '--no-toc',  # Don't create a table of contents file
+    '--output-dir=.',  # Directory to place all output
+]
+
+autodoc_mock_imports = [
+    'matplotlib', 'plotly', 'pynverse', 'tdqm', 'numpy', 'scipy'
+]
+
+autoclass_content = 'both'
 
 mathjax_path = "https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"
 

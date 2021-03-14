@@ -344,9 +344,10 @@ class Calibrator:
         self.hough_lines = None
         self.hough_points = None
         self.ht = HoughTransform()
+
         self.set_calibrator_properties()
         self.set_hough_properties()
-        self.set_ransac_properties()
+        self.set_ransac_properties(sample_size=0)
 
     def _import_matplotlib(self):
         '''
@@ -1592,14 +1593,12 @@ class Calibrator:
             'and wave has size {}.'.format(pix.size, wave.size))
 
         if not all(
-                isinstance(p, (float, int)) & (not np.isnan(p))
-                for p in pix):
+                isinstance(p, (float, int)) & (not np.isnan(p)) for p in pix):
 
             raise ValueError("All pix elements have to be numeric.")
 
         if not all(
-                isinstance(w, (float, int)) & (not np.isnan(w))
-                for w in wave):
+                isinstance(w, (float, int)) & (not np.isnan(w)) for w in wave):
 
             raise ValueError("All wave elements have to be numeric.")
 

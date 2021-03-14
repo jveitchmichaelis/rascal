@@ -3,4 +3,4 @@ scipy
 pynverse
 matplotlib
 tqdm
-pytest
+astropy
