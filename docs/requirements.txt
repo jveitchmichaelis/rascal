@@ -5,3 +5,4 @@ plotly
 tqdm
 numpy
 scipy
+pynverse
