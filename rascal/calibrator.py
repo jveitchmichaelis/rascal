@@ -7,21 +7,13 @@ import numpy as np
 from scipy.spatial import Delaunay
 from scipy.optimize import minimize
 from scipy import interpolate
+from tqdm.autonotebook import tqdm
 
 from .util import load_calibration_lines
 from .util import derivative
 from .util import gauss
 from .util import vacuum_to_air_wavelength
 from . import models
-
-try:
-    from tqdm.autonotebook import tqdm
-    tdqm_imported = True
-except Exception as e:
-    warnings.warn(e)
-    warnings.warn(
-        'tqdm package not available. Progress bar will not be shown.')
-    tdqm_imported = False
 
 
 class HoughTransform:
@@ -330,6 +322,9 @@ class Calibrator:
 
         '''
 
+        self.logger = None
+        self.log_level = None
+
         self.peaks = peaks
         self.spectrum = spectrum
         self.matplotlib_imported = False
@@ -345,13 +340,36 @@ class Calibrator:
         self.hough_points = None
         self.ht = HoughTransform()
 
+        # calibrator_properties
+        self.num_pix = None
+        self.pixel_list = None
+        self.plotting_library = None
+
+        # hough_properties
+        self.num_slopes = None
+        self.xbins = None
+        self.ybins = None
+        self.min_wavelength = None
+        self.max_wavelength = None
+        self.range_tolerance = None
+        self.linearity_tolerance = None
+
+        # ransac_properties
+        self.sample_size = None
+        self.top_n_candidate = None
+        self.linear = None
+        self.filter_close = None
+        self.ransac_tolerance = None
+        self.candidate_weighted = None
+        self.hough_weight = None
+
         self.set_calibrator_properties()
         self.set_hough_properties()
-        self.set_ransac_properties(sample_size=0)
+        self.set_ransac_properties()
 
     def _import_matplotlib(self):
         '''
-        Call to import plotly.
+        Call to import matplotlib.
 
         '''
 
@@ -737,10 +755,6 @@ class Calibrator:
         best_residual = None
         best_inliers = 0
 
-        if self.sample_size <= self.fit_deg:
-
-            self.sample_size = self.fit_deg + 1
-
         # Note that there may be multiple matches for
         # each peak, that is len(x) > len(np.unique(x))
         x = np.array(self.candidate_peak)
@@ -775,13 +789,9 @@ class Calibrator:
 
             sampler = range(int(max_tries))
 
-        if tdqm_imported & progress:
+        if progress:
 
             sampler_list = tqdm(sampler)
-
-        else:
-
-            sampler_list = sampler
 
         peaks = np.sort(np.unique(x))
         idx = range(len(peaks))
@@ -965,7 +975,7 @@ class Calibrator:
                     best_residual = err
                     best_inliers = n_inliers
 
-                    if tdqm_imported & progress:
+                    if progress:
 
                         sampler_list.set_description(
                             'Most inliers: {:d}, best error: {:1.4f}'.format(
@@ -1090,13 +1100,9 @@ class Calibrator:
         if not self.matplotlib_imported:
 
             self._import_matplotlib()
-            self.plot_with_matplotlib = True
-            self.plot_with_plotly = False
 
-        else:
-
-            self.plot_with_matplotlib = True
-            self.plot_with_plotly = False
+        self.plot_with_matplotlib = True
+        self.plot_with_plotly = False
 
     def use_plotly(self):
         '''
@@ -1107,18 +1113,15 @@ class Calibrator:
         if not self.plotly_imported:
 
             self._import_plotly()
-            self.plot_with_plotly = True
-            self.plot_with_matplotlib = False
 
-        else:
-
-            self.plot_with_plotly = True
-            self.plot_with_matplotlib = False
+        self.plot_with_plotly = True
+        self.plot_with_matplotlib = False
 
     def set_calibrator_properties(self,
                                   num_pix=None,
                                   pixel_list=None,
-                                  plotting_library='matplotlib',
+                                  plotting_library=None,
+                                  logger_name='Calibrator',
                                   log_level='info'):
         '''
         Initialise the calibrator object.
@@ -1138,12 +1141,26 @@ class Calibrator:
         '''
 
         # initialise the logger
-        self.logger = logging.getLogger(__name__)
+        self.logger = logging.getLogger(logger_name)
         level = logging.getLevelName(log_level.upper())
         logging.basicConfig(level=level)
+        self.log_level = level
+
+        formatter = logging.Formatter(
+            '[%(asctime)s] %(levelname)s [%(filename)s:%(lineno)d] '
+            '%(message)s',
+            datefmt='%a, %d %b %Y %H:%M:%S')
+
+        handler = logging.StreamHandler()
+        handler.setFormatter(formatter)
+        self.logger.addHandler(handler)
 
         # set the num_pix
-        if num_pix is None:
+        if num_pix is not None:
+
+            self.num_pix = num_pix
+
+        elif self.num_pix is None:
 
             try:
 
@@ -1159,18 +1176,22 @@ class Calibrator:
 
         else:
 
-            self.num_pix = num_pix
+            pass
 
         self.logger.info('num_pix is set to {}.'.format(num_pix))
 
         # set the pixel_list
-        if pixel_list is None:
+        if pixel_list is not None:
+
+            self.pixel_list = np.asarray(pixel_list)
+
+        elif self.pixel_list is None:
 
             self.pixel_list = np.arange(self.num_pix)
 
         else:
 
-            self.pixel_list = np.asarray(pixel_list)
+            pass
 
         self.logger.info('pixel_list is set to {}.'.format(pixel_list))
 
@@ -1178,9 +1199,24 @@ class Calibrator:
         self.pix_to_rawpix = interpolate.interp1d(
             self.pixel_list, np.arange(len(self.pixel_list)))
 
-        # set the plotting library
-        self.plotting_library = plotting_library
+        # if the plotting library is supplied
+        if plotting_library is not None:
 
+            # set the plotting library
+            self.plotting_library = plotting_library
+
+        # if the plotting library is not supplied but the calibrator does not
+        # know which library to use yet.
+        elif self.plotting_library is None:
+
+            self.plotting_library = 'matplotlib'
+
+        # everything is good
+        else:
+
+            pass
+
+        # check the choice of plotting library is available and used.
         if self.plotting_library == 'matplotlib':
 
             self.use_matplotlib()
@@ -1191,10 +1227,6 @@ class Calibrator:
             self.use_plotly()
             self.logger.info('Plotting with plotly.')
 
-        elif self.plotting_library == 'none':
-
-            self.logger.info('Plotting is disabled.')
-
         else:
 
             self.logger.warning(
@@ -1203,13 +1235,13 @@ class Calibrator:
                 'use_plotly() to manually select the library.')
 
     def set_hough_properties(self,
-                             num_slopes=5000,
-                             xbins=500,
-                             ybins=500,
-                             min_wavelength=3000,
-                             max_wavelength=9000,
-                             range_tolerance=500,
-                             linearity_tolerance=50):
+                             num_slopes=None,
+                             xbins=None,
+                             ybins=None,
+                             min_wavelength=None,
+                             max_wavelength=None,
+                             range_tolerance=None,
+                             linearity_tolerance=None):
         '''
         parameters
         ----------
@@ -1234,13 +1266,96 @@ class Calibrator:
 
         '''
 
-        self.num_slopes = int(num_slopes)
-        self.xbins = xbins
-        self.ybins = ybins
-        self.min_wavelength = min_wavelength
-        self.max_wavelength = max_wavelength
-        self.range_tolerance = range_tolerance
-        self.linearity_tolerance = linearity_tolerance
+        # set the num_slopes
+        if num_slopes is not None:
+
+            self.num_slopes = int(num_slopes)
+
+        elif self.num_slopes is None:
+
+            self.num_slopes = 2000
+
+        else:
+
+            pass
+
+        # set the xbins
+        if xbins is not None:
+
+            self.xbins = xbins
+
+        elif self.xbins is None:
+
+            self.xbins = 100
+
+        else:
+
+            pass
+
+        # set the ybins
+        if ybins is not None:
+
+            self.ybins = ybins
+
+        elif self.ybins is None:
+
+            self.ybins = 100
+
+        else:
+
+            pass
+
+        # set the min_wavelength
+        if min_wavelength is not None:
+
+            self.min_wavelength = min_wavelength
+
+        elif self.min_wavelength is None:
+
+            self.min_wavelength = 3000
+
+        else:
+
+            pass
+
+        # set the max_wavelength
+        if max_wavelength is not None:
+
+            self.max_wavelength = max_wavelength
+
+        elif self.max_wavelength is None:
+
+            self.max_wavelength = 9000
+
+        else:
+
+            pass
+
+        # Set the range_tolerance
+        if range_tolerance is not None:
+
+            self.range_tolerance = range_tolerance
+
+        elif self.range_tolerance is None:
+
+            self.range_tolerance = 500
+
+        else:
+
+            pass
+
+        # Set the linearity_tolerance
+        if linearity_tolerance is not None:
+
+            self.linearity_tolerance = linearity_tolerance
+
+        elif self.linearity_tolerance is None:
+
+            self.linearity_tolerance = 100
+
+        else:
+
+            pass
 
         # Start wavelength in the spectrum, +/- some tolerance
         self.min_intercept = self.min_wavelength - self.range_tolerance
@@ -1257,13 +1372,13 @@ class Calibrator:
                            self.linearity_tolerance)) / self.pixel_list.max()
 
     def set_ransac_properties(self,
-                              sample_size=5,
-                              top_n_candidate=5,
-                              linear=True,
-                              filter_close=False,
-                              ransac_tolerance=5,
-                              candidate_weighted=True,
-                              hough_weight=1.0):
+                              sample_size=None,
+                              top_n_candidate=None,
+                              linear=None,
+                              filter_close=None,
+                              ransac_tolerance=None,
+                              candidate_weighted=None,
+                              hough_weight=None):
         '''
         Configure the Calibrator. This may require some manual twiddling before
         the calibrator can work efficiently. However, in theory, a large
@@ -1294,22 +1409,96 @@ class Calibrator:
 
         '''
 
-        self.sample_size = sample_size
+        # Setting the sample_size
+        if sample_size is not None:
 
-        if self.sample_size > len(self.atlas):
+            self.sample_size = sample_size
 
-            self.logger.warning(
-                'Size of sample_size is larger than the size of atlas, ' +
-                'the sample_size is set to match the size of atlas = ' +
-                str(len(self.atlas)) + '.')
-            self.sample_size = len(self.atlas)
+        elif self.sample_size is None:
 
-        self.top_n_candidate = top_n_candidate
-        self.linear = linear
-        self.filter_close = filter_close
-        self.ransac_tolerance = ransac_tolerance
-        self.candidate_weighted = candidate_weighted
-        self.hough_weight = hough_weight
+            self.sample_size = 5
+
+        else:
+
+            pass
+
+        # Set top_n_candidate
+        if top_n_candidate is not None:
+
+            self.top_n_candidate = top_n_candidate
+
+        elif self.top_n_candidate is None:
+
+            self.top_n_candidate = 5
+
+        else:
+
+            pass
+
+        # Set linear
+        if linear is not None:
+
+            self.linear = linear
+
+        elif self.linear is None:
+
+            self.linear = True
+
+        else:
+
+            pass
+
+        # Set to filter closely spaced lines
+        if filter_close is not None:
+
+            self.filter_close = filter_close
+
+        elif self.filter_close is None:
+
+            self.filter_close = False
+
+        else:
+
+            pass
+
+        # Set the ransac_tolerance
+        if ransac_tolerance is not None:
+
+            self.ransac_tolerance = ransac_tolerance
+
+        elif self.ransac_tolerance is None:
+
+            self.ransac_tolerance = 5
+
+        else:
+
+            pass
+
+        # Set to weigh the candidate pairs by the density (pixel)
+        if candidate_weighted is not None:
+
+            self.candidate_weighted = candidate_weighted
+
+        elif self.candidate_weighted is None:
+
+            self.candidate_weighted = True
+
+        else:
+
+            pass
+
+        # Set the multiplier of the weight of the hough density
+        if hough_weight is not None:
+
+            self.hough_weight = hough_weight
+
+        elif self.hough_weight is None:
+
+            self.hough_weight = 1.0
+
+        else:
+
+            pass
 
     def add_atlas(self,
                   elements,
@@ -1681,6 +1870,19 @@ class Calibrator:
 
             raise ValueError(
                 'fit_type must be: (1) poly, (2) legendre or (3) chebyshev')
+
+        # Reduce sample_size if it is larger than the number of atlas available
+        if self.sample_size > len(self.atlas):
+
+            self.logger.warning(
+                'Size of sample_size is larger than the size of atlas, ' +
+                'the sample_size is set to match the size of atlas = ' +
+                str(len(self.atlas)) + '.')
+            self.sample_size = len(self.atlas)
+
+        if self.sample_size <= fit_deg:
+
+            self.sample_size = fit_deg + 1
 
         if (self.hough_lines is None) or (self.hough_points is None):
 
@@ -2424,7 +2626,8 @@ class Calibrator:
             # Plot fitted spectrum
             ax1.plot(wave, spectrum, label='Arc Spectrum')
             ax1.vlines(self.polyval(self.peaks, fit_coeff),
-                       spectrum[self.pix_to_rawpix(self.peaks).astype('int')],
+                       np.array(spectrum)[self.pix_to_rawpix(
+                           self.peaks).astype('int')],
                        vline_max,
                        linestyles='dashed',
                        colors='C1',
