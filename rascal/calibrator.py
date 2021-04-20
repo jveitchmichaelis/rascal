@@ -2074,6 +2074,7 @@ class Calibrator:
     def plot_arc(self,
                  log_spectrum=False,
                  savefig=False,
+                 fig_type='png',
                  filename=None,
                  json=False,
                  renderer='default',
@@ -2087,9 +2088,12 @@ class Calibrator:
             Set to true to display the wavelength calibrated arc spectrum in
             logarithmic space.
         savefig: boolean (default: False)
-            Save a png image if set to True. Other matplotlib.pyplot.savefig()
-            support format type are possible through providing the extension
-            in the filename.
+            Save an image if set to True. matplotlib uses the pyplot.savefig()
+            while the plotly uses the pio.write_html() or fig.write_image().
+            The support format types should be provided in fig_type.
+        fig_type: string (default: 'png')
+            Image type to be saved, choose from:
+            jpg, png, svg, pdf and iframe. Delimiter is '+'.
         filename: string (default: None)
             Provide a filename or full path. If the extension is not provided
             it is defaulted to png.
@@ -2099,6 +2103,8 @@ class Calibrator:
         renderer: string (default: 'default')
             Indicate the Plotly renderer. Nothing gets displayed if json is
             set to True.
+        display: boolean (Default: False)
+            Set to True to display disgnostic plot.
 
         Returns
         -------
@@ -2143,19 +2149,27 @@ class Calibrator:
             plt.grid()
             plt.tight_layout()
 
-            if display:
-
-                plt.show()
-
             if savefig:
 
-                if filename is not None:
+                fig_type = fig_type.split('+')
 
-                    plt.savefig(filename)
+                if filename is None:
+
+                    filename_output = 'rascal_arc'
 
                 else:
 
-                    plt.savefig()
+                    filename_output = filename
+
+                for t in fig_type:
+
+                    if t in ['jpg', 'png', 'svg', 'pdf']:
+
+                        plt.savefig(filename_output + '.' + t, format=t)
+
+            if display:
+
+                plt.show()
 
         if self.plot_with_plotly:
 
@@ -2212,6 +2226,28 @@ class Calibrator:
                               height=800,
                               width=1000)
 
+            if savefig:
+
+                fig_type = fig_type.split('+')
+
+                if filename is None:
+
+                    filename_output = 'rascal_arc'
+
+                else:
+
+                    filename_output = filename
+
+                for t in fig_type:
+
+                    if t == 'iframe':
+
+                        pio.write_html(fig, filename_output + '.' + t)
+
+                    elif t in ['jpg', 'png', 'svg', 'pdf']:
+
+                        pio.write_image(fig, filename_output + '.' + t)
+
             if display:
 
                 if renderer == 'default':
@@ -2231,6 +2267,7 @@ class Calibrator:
                           top_n_candidate=3,
                           weighted=True,
                           savefig=False,
+                          fig_type='png',
                           filename=None,
                           json=False,
                           renderer='default',
@@ -2251,9 +2288,13 @@ class Calibrator:
         weighted: (default: True)
             Draw sample based on the distance from the matched known wavelength
             of the atlas.
-        savefig: (default: False)
-            Set to True to save figure to the destination as provided in
-            'filename'.
+        savefig: boolean (default: False)
+            Save an image if set to True. matplotlib uses the pyplot.savefig()
+            while the plotly uses the pio.write_html() or fig.write_image().
+            The support format types should be provided in fig_type.
+        fig_type: string (default: 'png')
+            Image type to be saved, choose from:
+            jpg, png, svg, pdf and iframe. Delimiter is '+'.
         filename: (default: None)
             The destination to save the image.
         json: (default: False)
@@ -2262,6 +2303,8 @@ class Calibrator:
         renderer: (default: 'default')
             Set the rendered for the plotly display. Ignored if matplotlib is
             used.
+        display: boolean (Default: False)
+            Set to True to display disgnostic plot.
 
         Return
         ------
@@ -2380,6 +2423,24 @@ class Calibrator:
             plt.legend()
             plt.grid()
             plt.tight_layout()
+
+            if savefig:
+
+                fig_type = fig_type.split('+')
+
+                if filename is None:
+
+                    filename_output = 'rascal_hough_search_space'
+
+                else:
+
+                    filename_output = filename
+
+                for t in fig_type:
+
+                    if t in ['jpg', 'png', 'svg', 'pdf']:
+
+                        plt.savefig(filename_output + '.' + t, format=t)
 
             if display:
 
@@ -2526,6 +2587,28 @@ class Calibrator:
                 height=800,
                 width=1000)
 
+            if savefig:
+
+                fig_type = fig_type.split('+')
+
+                if filename is None:
+
+                    filename_output = 'rascal_hough_search_space'
+
+                else:
+
+                    filename_output = filename
+
+                for t in fig_type:
+
+                    if t == 'iframe':
+
+                        pio.write_html(fig, filename_output + '.' + t)
+
+                    elif t in ['jpg', 'png', 'svg', 'pdf']:
+
+                        pio.write_image(fig, filename_output + '.' + t)
+
             if display:
 
                 if renderer == 'default':
@@ -2547,6 +2630,7 @@ class Calibrator:
                  plot_atlas=True,
                  log_spectrum=False,
                  savefig=False,
+                 fig_type='png',
                  filename=None,
                  json=False,
                  renderer='default',
@@ -2569,9 +2653,12 @@ class Calibrator:
         log_spectrum: boolean (default: False)
             Display the arc in log-space if set to True.
         savefig: boolean (default: False)
-            Save a png image if set to True. Other matplotlib.pyplot.savefig()
-            support format type are possible through providing the extension
-            in the filename.
+            Save an image if set to True. matplotlib uses the pyplot.savefig()
+            while the plotly uses the pio.write_html() or fig.write_image().
+            The support format types should be provided in fig_type.
+        fig_type: string (default: 'png')
+            Image type to be saved, choose from:
+            jpg, png, svg, pdf and iframe. Delimiter is '+'.
         filename: string (default: None)
             Provide a filename or full path. If the extension is not provided
             it is defaulted to png.
@@ -2581,6 +2668,8 @@ class Calibrator:
         renderer: string (default: 'default')
             Indicate the Plotly renderer. Nothing gets displayed if json is
             set to True.
+        display: boolean (Default: False)
+            Set to True to display disgnostic plot.
 
         Returns
         -------
@@ -2747,25 +2836,27 @@ class Calibrator:
 
             plt.tight_layout()
 
-            if display:
-
-                if renderer == 'default':
-
-                    fig.show()
-
-                else:
-
-                    fig.show(renderer)
-
             if savefig:
 
-                if filename is not None:
+                fig_type = fig_type.split('+')
 
-                    fig.savefig(filename)
+                if filename is None:
+
+                    filename_output = 'rascal_solution'
 
                 else:
 
-                    fig.savefig()
+                    filename_output = filename
+
+                for t in fig_type:
+
+                    if t in ['jpg', 'png', 'svg', 'pdf']:
+
+                        plt.savefig(filename_output + '.' + t, format=t)
+
+            if display:
+
+                fig.show()
 
         elif self.plot_with_plotly:
 
@@ -2913,6 +3004,28 @@ class Calibrator:
                 showlegend=True,
                 height=800,
                 width=1000)
+
+            if savefig:
+
+                fig_type = fig_type.split('+')
+
+                if filename is None:
+
+                    filename_output = 'rascal_solution'
+
+                else:
+
+                    filename_output = filename
+
+                for t in fig_type:
+
+                    if t == 'iframe':
+
+                        pio.write_html(fig, filename_output + '.' + t)
+
+                    elif t in ['jpg', 'png', 'svg', 'pdf']:
+
+                        pio.write_image(fig, filename_output + '.' + t)
 
             if display:
 
