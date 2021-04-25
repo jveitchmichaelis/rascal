@@ -2690,17 +2690,24 @@ class Calibrator:
                 self.logger.error('Spectrum is not provided, it cannot be '
                                   'plotted.')
 
-        if log_spectrum:
+        if spectrum is not None:
 
-            spectrum[spectrum < 0] = 1e-100
-            spectrum = np.log10(spectrum)
-            vline_max = np.nanmax(spectrum) * 2.0
-            text_box_pos = 1.2 * max(spectrum)
+            if log_spectrum:
+
+                spectrum[spectrum < 0] = 1e-100
+                spectrum = np.log10(spectrum)
+                vline_max = np.nanmax(spectrum) * 2.0
+                text_box_pos = 1.2 * max(spectrum)
+
+            else:
+
+                vline_max = np.nanmax(spectrum) * 1.2
+                text_box_pos = 0.8 * max(spectrum)
 
         else:
 
-            vline_max = np.nanmax(spectrum) * 1.2
-            text_box_pos = 0.8 * max(spectrum)
+            vline_max = 1.0
+            text_box_pos = 0.5
 
         wave = self.polyval(self.pixel_list, fit_coeff)
 
@@ -2713,14 +2720,16 @@ class Calibrator:
             fig.tight_layout()
 
             # Plot fitted spectrum
-            ax1.plot(wave, spectrum, label='Arc Spectrum')
-            ax1.vlines(self.polyval(self.peaks, fit_coeff),
-                       np.array(spectrum)[self.pix_to_rawpix(
-                           self.peaks).astype('int')],
-                       vline_max,
-                       linestyles='dashed',
-                       colors='C1',
-                       label='Detected Peaks')
+            if spectrum is not None:
+
+                ax1.plot(wave, spectrum, label='Arc Spectrum')
+                ax1.vlines(self.polyval(self.peaks, fit_coeff),
+                        np.array(spectrum)[self.pix_to_rawpix(
+                            self.peaks).astype('int')],
+                        vline_max,
+                        linestyles='dashed',
+                        colors='C1',
+                        label='Detected Peaks')
 
             # Plot the atlas
             if plot_atlas:
@@ -2754,21 +2763,24 @@ class Calibrator:
                     fitted_diff.append(diff[idx])
                     self.logger.info('- matched to {} A'.format(
                         self.atlas[idx]))
-                    if first_one:
-                        ax1.vlines(
-                            self.polyval(p, fit_coeff),
-                            spectrum[self.pix_to_rawpix(p).astype('int')],
-                            vline_max,
-                            colors='C1',
-                            label='Fitted Peaks')
-                        first_one = False
 
-                    else:
-                        ax1.vlines(
-                            self.polyval(p, fit_coeff),
-                            spectrum[self.pix_to_rawpix(p).astype('int')],
-                            vline_max,
-                            colors='C1')
+                    if spectrum is not None:
+
+                        if first_one:
+                            ax1.vlines(
+                                self.polyval(p, fit_coeff),
+                                spectrum[self.pix_to_rawpix(p).astype('int')],
+                                vline_max,
+                                colors='C1',
+                                label='Fitted Peaks')
+                            first_one = False
+
+                        else:
+                            ax1.vlines(
+                                self.polyval(p, fit_coeff),
+                                spectrum[self.pix_to_rawpix(p).astype('int')],
+                                vline_max,
+                                colors='C1')
 
                     ax1.text(x - 3,
                              text_box_pos,
@@ -2781,13 +2793,16 @@ class Calibrator:
 
             ax1.grid(linestyle=':')
             ax1.set_ylabel('Electron Count / e-')
-            if log_spectrum:
 
-                ax1.set_ylim(0, vline_max)
+            if spectrum is not None:
 
-            else:
+                if log_spectrum:
 
-                ax1.set_ylim(np.nanmin(spectrum), vline_max)
+                    ax1.set_ylim(0, vline_max)
+
+                else:
+
+                    ax1.set_ylim(np.nanmin(spectrum), vline_max)
 
             ax1.legend(loc='center right')
 
@@ -2863,14 +2878,15 @@ class Calibrator:
             fig = go.Figure()
 
             # Top plot - arc spectrum and matched peaks
-            fig.add_trace(
-                go.Scatter(x=wave,
-                           y=spectrum,
-                           mode='lines',
-                           yaxis='y3',
-                           name='Arc Spectrum'))
+            if spectrum is not None:
+                fig.add_trace(
+                    go.Scatter(x=wave,
+                            y=spectrum,
+                            mode='lines',
+                            yaxis='y3',
+                            name='Arc Spectrum'))
 
-            spec_max = np.nanmax(spectrum) * 1.05
+                spec_max = np.nanmax(spectrum) * 1.05
 
             fitted_peaks = []
             fitted_peaks_adu = []
@@ -2902,11 +2918,12 @@ class Calibrator:
                 if np.abs(diff[idx]) < tolerance:
 
                     fitted_peaks.append(p)
-                    fitted_peaks_adu.append(spectrum[int(
-                        self.pix_to_rawpix(p))])
-                    fitted_diff.append(diff[idx])
-                    self.logger.info('- matched to {} A'.format(
-                        self.atlas[idx]))
+                    if spectrum is not None:
+                        fitted_peaks_adu.append(spectrum[int(
+                            self.pix_to_rawpix(p))])
+                        fitted_diff.append(diff[idx])
+                        self.logger.info('- matched to {} A'.format(
+                            self.atlas[idx]))
 
             x_fitted = self.polyval(fitted_peaks, fit_coeff)
 
@@ -2972,16 +2989,20 @@ class Calibrator:
                     name='Solution'))
 
             # Layout, Title, Grid config
+            if spectrum is not None:
+
+                fig.update_layout(
+                    yaxis3=dict(title='Electron Count / e-',
+                                range=[
+                                    np.log10(np.percentile(spectrum, 15)),
+                                    np.log10(spec_max)
+                                ],
+                                domain=[0.67, 1.0],
+                                showgrid=True,
+                                type='log'))
+
             fig.update_layout(
                 autosize=True,
-                yaxis3=dict(title='Electron Count / e-',
-                            range=[
-                                np.log10(np.percentile(spectrum, 15)),
-                                np.log10(spec_max)
-                            ],
-                            domain=[0.67, 1.0],
-                            showgrid=True,
-                            type='log'),
                 yaxis2=dict(title='Residual / A',
                             range=[min(fitted_diff),
                                    max(fitted_diff)],
