@@ -876,7 +876,7 @@ class Calibrator:
 
                 if stop_n_candidateow:
 
-                    continue
+                    break
 
                 # insert user given known pairs
                 if self.pix_known is not None:
