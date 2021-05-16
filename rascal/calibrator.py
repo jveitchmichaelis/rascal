@@ -793,6 +793,10 @@ class Calibrator:
 
             sampler_list = tqdm(sampler)
 
+        else:
+
+            sampler_list = sampler
+
         peaks = np.sort(np.unique(x))
         idx = range(len(peaks))
 
@@ -1122,7 +1126,7 @@ class Calibrator:
                                   pixel_list=None,
                                   plotting_library=None,
                                   logger_name='Calibrator',
-                                  log_level='info'):
+                                  log_level='warning'):
         '''
         Initialise the calibrator object.
 
