@@ -215,7 +215,6 @@ fig5.legend(loc='bottom')
 fig5.tight_layout()
 fig5.savefig('figure_5_wavelengths.png')
 
-
 # Figure 6 - 2D heatmap of the solution
 fig6, ax6 = plt.subplot(1, 2, sharex=True, sharey=True)
 
@@ -229,8 +228,7 @@ for j in range(N):
     best_p_manual = best_p_manual_mt[i][j]
     for k, p in enumerate(pix):
         wave[k][j] = np.polynomial.polynomial.polyval(p, best_p)
-        wave_manual[k][j] = np.polynomial.polynomial.polyval(
-            p, best_p_manual)
+        wave_manual[k][j] = np.polynomial.polynomial.polyval(p, best_p_manual)
 
 delta_wave = wave - np.nanmedian(wave, axis=1)
 delta_wave_manual = wave_manual - np.nanmedian(wave, axis=1)
@@ -242,12 +240,17 @@ delta_wave_heatmap = []
 delta_wave_manual_heatmap = []
 
 for i in range(N):
-    delta_wave_heatmap.append(np.histogram(delta_wave[:, 0], bins=50, range=(dw_min, dw_max))[0])
-    delta_wave_manual_heatmap.append(np.histogram(delta_wave_manual[:, 0], bins=50, range=(dw_manual_min, dw_manual_max))[0])
-
+    delta_wave_heatmap.append(
+        np.histogram(delta_wave[:, 0], bins=50, range=(dw_min, dw_max))[0])
+    delta_wave_manual_heatmap.append(
+        np.histogram(delta_wave_manual[:, 0],
+                     bins=50,
+                     range=(dw_manual_min, dw_manual_max))[0])
 
 dw_yedges = np.histogram(delta_wave[:, 0], bins=50, range=(dw_min, dw_max))[0]
-dw_manual_yedges = np.histogram(delta_wave_manual[:, 0], bins=50, range=(dw_manual_min, dw_manual_max))[0]
+dw_manual_yedges = np.histogram(delta_wave_manual[:, 0],
+                                bins=50,
+                                range=(dw_manual_min, dw_manual_max))[0]
 
 ax6[0, 0].imshow(delta_wave_heatmap, origin='lower', aspect='auto')
 ax6[0, 1].imshow(delta_wave_manual_heatmap, origin='lower', aspect='auto')
@@ -261,7 +264,7 @@ ax6[0, 1].set_ylabels(r'$\Delta(\lambda) / \AA$')
 ax6[0, 1].set_xlabels('Pixel')
 ax6b = ax6[0, 1].twiny()
 ax6b.set_xticks(wave[::200])
-ax6b.set_xticklabels(wavewave[::200])
+ax6b.set_xticklabels(wave[::200])
 ax6b.set_xlabels(r'Wavelength / $\AA$')
 
 fig6.tight_layout()
