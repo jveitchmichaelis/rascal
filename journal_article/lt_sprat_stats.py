@@ -1,11 +1,9 @@
 import numpy as np
 import os
 from astropy.io import fits
-from matplotlib import pyplot as plt
 from scipy.signal import find_peaks
 
 from rascal.calibrator import Calibrator
-from rascal import models
 from rascal import util
 
 # Load the LT SPRAT data
@@ -15,7 +13,8 @@ else:
     base_dir = os.getcwd()
 
 fits_file = fits.open(
-    os.path.join(base_dir, '..', 'examples/data_lt_sprat/v_a_20190516_57_1_0_1.fits'))[0]
+    os.path.join(base_dir, '..',
+                 'examples/data_lt_sprat/v_a_20190516_57_1_0_1.fits'))[0]
 
 spectrum2D = fits_file.data
 
@@ -53,16 +52,18 @@ for mt in max_tries:
 
     for i in range(N):
 
-        print('max_tries: {}, repetition: {} of 1000'.format(mt, i+1))
+        print('max_tries: {}, repetition: {} of 1000'.format(mt, i + 1))
         # Initialise the calibrator
         c = Calibrator(peaks, spectrum=spectrum)
         c.set_hough_properties(num_slopes=5000,
-                            range_tolerance=500.,
-                            xbins=100,
-                            ybins=100,
-                            min_wavelength=3800.,
-                            max_wavelength=8200.)
-        c.set_ransac_properties(sample_size=5, top_n_candidate=5, filter_close=True)
+                               range_tolerance=500.,
+                               xbins=100,
+                               ybins=100,
+                               min_wavelength=3800.,
+                               max_wavelength=8200.)
+        c.set_ransac_properties(sample_size=5,
+                                top_n_candidate=5,
+                                filter_close=True)
         c.add_atlas(elements=["Xe"],
                     min_intensity=10.,
                     min_distance=5,
@@ -90,4 +91,7 @@ for mt in max_tries:
     residual_mt.append(residual)
     peak_utilisation_mt.append(peak_utilisation)
 
-
+np.save(os.path.join(base_dir, 'best_p_mt'), best_p_mt)
+np.save(os.path.join(base_dir, 'rms_mt'), rms_mt)
+np.save(os.path.join(base_dir, 'residual_mt'), residual_mt)
+np.save(os.path.join(base_dir, 'peak_utilisation_mt'), peak_utilisation_mt)

@@ -2728,12 +2728,12 @@ class Calibrator:
 
                 ax1.plot(wave, spectrum, label='Arc Spectrum')
                 ax1.vlines(self.polyval(self.peaks, fit_coeff),
-                        np.array(spectrum)[self.pix_to_rawpix(
-                            self.peaks).astype('int')],
-                        vline_max,
-                        linestyles='dashed',
-                        colors='C1',
-                        label='Detected Peaks')
+                           np.array(spectrum)[self.pix_to_rawpix(
+                               self.peaks).astype('int')],
+                           vline_max,
+                           linestyles='dashed',
+                           colors='C1',
+                           label='Detected Peaks')
 
             # Plot the atlas
             if plot_atlas:
@@ -2885,10 +2885,10 @@ class Calibrator:
             if spectrum is not None:
                 fig.add_trace(
                     go.Scatter(x=wave,
-                            y=spectrum,
-                            mode='lines',
-                            yaxis='y3',
-                            name='Arc Spectrum'))
+                               y=spectrum,
+                               mode='lines',
+                               yaxis='y3',
+                               name='Arc Spectrum'))
 
                 spec_max = np.nanmax(spectrum) * 1.05
 
