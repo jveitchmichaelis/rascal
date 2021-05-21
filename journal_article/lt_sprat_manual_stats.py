@@ -74,11 +74,11 @@ for mt in max_tries:
                                 top_n_candidate=5,
                                 filter_close=True)
         c.add_user_atlas(element,
-                        atlas,
-                        constrain_poly=True,
-                        pressure=pressure,
-                        temperature=temperature,
-                        relative_humidity=relative_humidity)
+                         atlas,
+                         constrain_poly=True,
+                         pressure=pressure,
+                         temperature=temperature,
+                         relative_humidity=relative_humidity)
 
         c.do_hough_transform()
 
@@ -97,7 +97,8 @@ for mt in max_tries:
     residual_mt.append(residual)
     peak_utilisation_mt.append(peak_utilisation)
 
-np.save(os.path.join(base_dir, 'best_p_mt'), best_p_mt)
-np.save(os.path.join(base_dir, 'rms_mt'), rms_mt)
-np.save(os.path.join(base_dir, 'residual_mt'), residual_mt)
-np.save(os.path.join(base_dir, 'peak_utilisation_mt'), peak_utilisation_mt)
+np.save(os.path.join(base_dir, 'best_p_manual_mt'), best_p_mt)
+np.save(os.path.join(base_dir, 'rms_manual_mt'), rms_mt)
+np.save(os.path.join(base_dir, 'residual_manual_mt'), residual_mt)
+np.save(os.path.join(base_dir, 'peak_utilisation_manual_mt'),
+        peak_utilisation_mt)

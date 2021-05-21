@@ -1,4 +1,5 @@
 from matplotlib import pyplot as plt
+import itertools
 import matplotlib as mpl
 import numpy as np
 import os
