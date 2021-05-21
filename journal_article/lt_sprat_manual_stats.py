@@ -64,12 +64,6 @@ for mt in max_tries:
         print('max_tries: {}, repetition: {} of 1000'.format(mt, i + 1))
         # Initialise the calibrator
         c = Calibrator(peaks, spectrum=spectrum)
-        c.add_user_atlas(element,
-                         atlas,
-                         constrain_poly=True,
-                         pressure=pressure,
-                         temperature=temperature,
-                         relative_humidity=relative_humidity)
         c.set_hough_properties(num_slopes=5000,
                                range_tolerance=500.,
                                xbins=100,
@@ -79,6 +73,13 @@ for mt in max_tries:
         c.set_ransac_properties(sample_size=5,
                                 top_n_candidate=5,
                                 filter_close=True)
+        c.add_user_atlas(element,
+                         atlas,
+                         constrain_poly=True,
+                         pressure=pressure,
+                         temperature=temperature,
+                         relative_humidity=relative_humidity)
+
         c.do_hough_transform()
 
         # Run the wavelength calibration
