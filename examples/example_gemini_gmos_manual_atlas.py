@@ -24,7 +24,7 @@ spectrum2D = fits.open(
     os.path.join(base_dir,
                  'data_gemini_gmos/N20181115S0215_flattened.fits'))[0].data
 
-# Collapse into 1D spectrum between row 110 and 120
+# Collapse into 1D spectrum between row 300 and 310
 spectrum = np.median(spectrum2D[300:310], axis=0)[::-1]
 
 # Identify the peaks
