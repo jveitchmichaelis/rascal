@@ -99,7 +99,7 @@ fit_deg = 4
 N = 1000
 
 # Using NIST lines
-max_tries = [25, 50, 75, 100, 150, 200, 250, 500, 1000, 2000, 5000]
+max_tries = [50, 100, 150, 200, 250, 500, 1000, 2000, 5000]
 best_p_mt = []
 rms_mt = []
 residual_mt = []
@@ -113,39 +113,36 @@ for mt in max_tries:
     residual = []
     peak_utilisation = []
 
+    # Initialise the calibrator
+    c = Calibrator(peaks, spectrum=spectrum)
+    c.set_hough_properties(num_slopes=5000,
+                           range_tolerance=500.,
+                           xbins=200,
+                           ybins=200,
+                           min_wavelength=5000.,
+                           max_wavelength=9500.)
+    c.set_ransac_properties(sample_size=5,
+                            top_n_candidate=5,
+                            filter_close=True)
+    c.add_user_atlas(element,
+                     atlas,
+                     constrain_poly=True,
+                     vacuum=True,
+                     pressure=pressure,
+                     temperature=temperature,
+                     relative_humidity=relative_humidity)
+
+    c.do_hough_transform()
+
     for i in range(N):
 
         print('max_tries: {}, repetition: {} of 1000'.format(mt, i + 1))
-        # Initialise the calibrator
-        c = Calibrator(peaks, spectrum=spectrum)
-        c.set_hough_properties(num_slopes=5000,
-                               range_tolerance=500.,
-                               xbins=200,
-                               ybins=200,
-                               min_wavelength=5000.,
-                               max_wavelength=9500.)
-        c.set_ransac_properties(sample_size=5,
-                                top_n_candidate=5,
-                                filter_close=True)
-        c.add_user_atlas(element,
-                         atlas,
-                         constrain_poly=True,
-                         vacuum=True,
-                         pressure=pressure,
-                         temperature=temperature,
-                         relative_humidity=relative_humidity)
-
-        c.do_hough_transform()
-
         # Run the wavelength calibration
         solution = c.fit(max_tries=mt, fit_deg=fit_deg, progress=False)
         best_p.append(solution[0])
         rms.append(solution[1])
         residual.append(solution[2])
         peak_utilisation.append(solution[3])
-
-        del c
-        c = None
 
     best_p_mt.append(best_p)
     rms_mt.append(rms)

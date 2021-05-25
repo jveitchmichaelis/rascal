@@ -76,10 +76,10 @@ class HoughTransform:
         Parameters
         ----------
         x: 1D numpy array
-            The x-axis represents slope.
+            The x-axis represents peaks (pixel).
         y: 1D numpy array
-            The y-axis represents intercept. Vertical lines (infinite gradient)
-            are not accommodated.
+            The y-axis represents lines (wavelength). Vertical lines
+            (i.e. infinite gradient) are not accommodated.
         num_slopes: int
             The number of slopes to be generated.
 
@@ -97,6 +97,50 @@ class HoughTransform:
                 (intercepts <= self.max_intercept))
         intercepts = intercepts[mask]
         gradients = gradients[mask]
+
+        # Create an array of Hough Points
+        self.hough_points = np.column_stack((gradients, intercepts))
+
+    def generate_hough_points_brute_force(self, x, y):
+        '''
+        Calculate the Hough transform for a set of input points and returns the
+        2D Hough hough_points matrix.
+
+        Parameters
+        ----------
+        x: 1D numpy array
+            The x-axis represents peaks (pixel).
+        y: 1D numpy array
+            The y-axis represents lines (wavelength). Vertical lines
+            (i.e. infinite gradient) are not accommodated.
+        num_slopes: int
+            The number of slopes to be generated.
+
+        '''
+
+        idx_sort = np.argsort(x)
+        x = x[idx_sort]
+        y = y[idx_sort]
+
+        gradients = []
+        intercepts = []
+
+        for i in range(len(x) - 1):
+
+            gradient_tmp = (y[i + 1:] - y[i]) / (x[i + 1:] - x[i])
+            intercept_tmp = y[i + 1:] - gradient_tmp * x[i + 1:]
+
+            gradients.append(gradient_tmp)
+            intercepts.append(intercept_tmp)
+
+        gradients = np.concatenate(gradients)
+        intercepts = np.concatenate(intercepts)
+
+        mask = ((gradients > self.min_slope) & (gradients < self.max_slope) &
+                (intercepts > self.min_intercept) &
+                (intercepts < self.max_intercept))
+        gradients = gradients[mask]
+        intercepts = intercepts[mask]
 
         # Create an array of Hough Points
         self.hough_points = np.column_stack((gradients, intercepts))
@@ -1726,14 +1770,18 @@ class Calibrator:
         self.atlas = []
         self.atlas_intensities = []
 
-    def do_hough_transform(self):
+    def do_hough_transform(self, brute_force=True):
 
         # Generate the hough_points from the pairs
         self.ht.set_constraints(self.min_slope, self.max_slope,
                                 self.min_intercept, self.max_intercept)
-        self.ht.generate_hough_points(self.pairs[:, 0],
-                                      self.pairs[:, 1],
-                                      num_slopes=self.num_slopes)
+        if brute_force:
+            self.ht.generate_hough_points_brute_force(self.pairs[:, 0],
+                                                      self.pairs[:, 1])
+        else:
+            self.ht.generate_hough_points(self.pairs[:, 0],
+                                          self.pairs[:, 1],
+                                          num_slopes=self.num_slopes)
         self.ht.bin_hough_points(self.xbins, self.ybins)
 
         self.hough_points = self.ht.hough_points

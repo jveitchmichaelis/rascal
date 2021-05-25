@@ -45,7 +45,7 @@ fit_deg = 4
 N = 1000
 
 # Using NIST lines
-max_tries = [25, 50, 75, 100, 150, 200, 250, 500, 1000, 2000, 5000]
+max_tries = [50, 100, 150, 200, 250, 500, 1000, 2000, 5000]
 best_p_mt = []
 rms_mt = []
 residual_mt = []
@@ -59,29 +59,29 @@ for mt in max_tries:
     residual = []
     peak_utilisation = []
 
+    # Initialise the calibrator
+    c = Calibrator(peaks, spectrum=spectrum)
+    c.set_hough_properties(num_slopes=5000,
+                           range_tolerance=500.,
+                           xbins=100,
+                           ybins=100,
+                           min_wavelength=3800.,
+                           max_wavelength=8200.)
+    c.set_ransac_properties(sample_size=5,
+                            top_n_candidate=5,
+                            filter_close=True)
+    c.add_user_atlas(element,
+                     atlas,
+                     constrain_poly=True,
+                     pressure=pressure,
+                     temperature=temperature,
+                     relative_humidity=relative_humidity)
+
+    c.do_hough_transform()
+
     for i in range(N):
 
         print('max_tries: {}, repetition: {} of 1000'.format(mt, i + 1))
-        # Initialise the calibrator
-        c = Calibrator(peaks, spectrum=spectrum)
-        c.set_hough_properties(num_slopes=5000,
-                               range_tolerance=500.,
-                               xbins=100,
-                               ybins=100,
-                               min_wavelength=3800.,
-                               max_wavelength=8200.)
-        c.set_ransac_properties(sample_size=5,
-                                top_n_candidate=5,
-                                filter_close=True)
-        c.add_user_atlas(element,
-                         atlas,
-                         constrain_poly=True,
-                         pressure=pressure,
-                         temperature=temperature,
-                         relative_humidity=relative_humidity)
-
-        c.do_hough_transform()
-
         # Run the wavelength calibration
         solution = c.fit(max_tries=mt, fit_deg=fit_deg, progress=False)
         best_p.append(solution[0])
@@ -89,16 +89,13 @@ for mt in max_tries:
         residual.append(solution[2])
         peak_utilisation.append(solution[3])
 
-        del c
-        c = None
-
     best_p_mt.append(best_p)
     rms_mt.append(rms)
     residual_mt.append(residual)
     peak_utilisation_mt.append(peak_utilisation)
 
-np.save(os.path.join(base_dir, 'best_p_manual_mt'), best_p_mt)
-np.save(os.path.join(base_dir, 'rms_manual_mt'), rms_mt)
-np.save(os.path.join(base_dir, 'residual_manual_mt'), residual_mt)
-np.save(os.path.join(base_dir, 'peak_utilisation_manual_mt'),
+np.save(os.path.join(base_dir, 'sprat_best_p_manual_mt'), best_p_mt)
+np.save(os.path.join(base_dir, 'sprat_rms_manual_mt'), rms_mt)
+np.save(os.path.join(base_dir, 'sprat_residual_manual_mt'), residual_mt)
+np.save(os.path.join(base_dir, 'sprat_peak_utilisation_manual_mt'),
         peak_utilisation_mt)
