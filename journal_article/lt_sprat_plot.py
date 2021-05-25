@@ -3,6 +3,7 @@ import itertools
 import matplotlib as mpl
 import numpy as np
 import os
+from scipy.stats import kurtosis
 
 # Load the LT SPRAT data
 if '__file__' in locals():
@@ -18,32 +19,26 @@ def flip(items, ncol):
     return itertools.chain(*[items[i::ncol] for i in range(ncol)])
 
 
-max_tries = [25, 50, 75, 100, 150, 200, 250, 500, 1000, 2000, 5000]
+max_tries = [50, 100, 150, 200, 250, 500, 1000, 2000, 5000]
 
 # Number of repetance
 N = 1000
 
-best_p_mt = np.load(os.path.join(base_dir, 'best_p_mt.npy'))
-rms_mt = np.load(os.path.join(base_dir, 'rms_mt.npy'))
-residual_mt = np.load(os.path.join(base_dir, 'residual_mt.npy'),
+best_p_mt = np.load(os.path.join(base_dir, 'sprat_best_p_auto_mt.npy'))
+rms_mt = np.load(os.path.join(base_dir, 'sprat_rms_auto_mt.npy'))
+residual_mt = np.load(os.path.join(base_dir, 'sprat_residual_auto_mt.npy'),
                       allow_pickle=True)
-peak_utilisation_mt = np.load(os.path.join(base_dir,
-                                           'peak_utilisation_mt.npy'))
-'''
-best_p_manual_mt = np.load(os.path.join(base_dir, 'best_p_manual_mt.npy'))
-rms_manual_mt = np.load(os.path.join(base_dir, 'rms_manual_mt.npy'))
-residual_manual_mt = np.load(
-    os.path.join(base_dir, 'residual_manual_mt.npy'), allow_pickle=True)
-peak_utilisation_manual_mt = np.load(
-    os.path.join(base_dir, 'peak_utilisation_manual_mt.npy'))
-'''
+peak_utilisation_mt = np.load(
+    os.path.join(base_dir, 'sprat_peak_utilisation_auto_mt.npy'))
 
-best_p_manual_mt = np.load(os.path.join(base_dir, 'best_p_mt.npy'))
-rms_manual_mt = np.load(os.path.join(base_dir, 'rms_mt.npy'))
-residual_manual_mt = np.load(os.path.join(base_dir, 'residual_mt.npy'),
+best_p_manual_mt = np.load(os.path.join(base_dir,
+                                        'sprat_best_p_manual_mt.npy'))
+rms_manual_mt = np.load(os.path.join(base_dir, 'sprat_rms_manual_mt.npy'))
+residual_manual_mt = np.load(os.path.join(base_dir,
+                                          'sprat_residual_manual_mt.npy'),
                              allow_pickle=True)
 peak_utilisation_manual_mt = np.load(
-    os.path.join(base_dir, 'peak_utilisation_mt.npy'))
+    os.path.join(base_dir, 'sprat_peak_utilisation_manual_mt.npy'))
 
 # Figure 2 - polynomial coefficients
 p0_range = np.nanpercentile(best_p_mt[-1][:, 0], [1., 99.])
@@ -57,6 +52,17 @@ p2_range_manual = np.nanpercentile(best_p_manual_mt[-1][:, 2], [1., 99.])
 p3_range_manual = np.nanpercentile(best_p_manual_mt[-1][:, 3], [1., 99.])
 p4_range_manual = np.nanpercentile(best_p_manual_mt[-1][:, 4], [1., 99.])
 
+p0_kurtosis = np.zeros(len(max_tries))
+p1_kurtosis = np.zeros(len(max_tries))
+p2_kurtosis = np.zeros(len(max_tries))
+p3_kurtosis = np.zeros(len(max_tries))
+p4_kurtosis = np.zeros(len(max_tries))
+p0_manual_kurtosis = np.zeros(len(max_tries))
+p1_manual_kurtosis = np.zeros(len(max_tries))
+p2_manual_kurtosis = np.zeros(len(max_tries))
+p3_manual_kurtosis = np.zeros(len(max_tries))
+p4_manual_kurtosis = np.zeros(len(max_tries))
+
 fig2, ax2 = plt.subplots(2, 5, sharey=True)
 fig2.set_figheight(10)
 fig2.set_figwidth(10)
@@ -67,43 +73,53 @@ for i, mt in enumerate(max_tries):
                    range=p0_range,
                    histtype='step',
                    label=str(mt))
+    p0_kurtosis[i] = kurtosis(best_p_mt[i][:, 0], bias=False)
     ax2[0, 1].hist(best_p_mt[i][:, 1],
                    bins=50,
                    range=p1_range,
                    histtype='step')
+    p1_kurtosis[i] = kurtosis(best_p_mt[i][:, 1], bias=False)
     ax2[0, 2].hist(best_p_mt[i][:, 2],
                    bins=50,
                    range=p2_range,
                    histtype='step')
+    p2_kurtosis[i] = kurtosis(best_p_mt[i][:, 2], bias=False)
     ax2[0, 3].hist(best_p_mt[i][:, 3],
                    bins=50,
                    range=p3_range,
                    histtype='step')
+    p3_kurtosis[i] = kurtosis(best_p_mt[i][:, 3], bias=False)
     ax2[0, 4].hist(best_p_mt[i][:, 4],
                    bins=50,
                    range=p4_range,
                    histtype='step')
+    p4_kurtosis[i] = kurtosis(best_p_mt[i][:, 4], bias=False)
     # Second row - manual lines
     ax2[1, 0].hist(best_p_manual_mt[i][:, 0],
                    bins=50,
                    range=p0_range_manual,
                    histtype='step')
+    p0_manual_kurtosis[i] = kurtosis(best_p_manual_mt[i][:, 0])
     ax2[1, 1].hist(best_p_manual_mt[i][:, 1],
                    bins=50,
                    range=p1_range_manual,
                    histtype='step')
+    p1_manual_kurtosis[i] = kurtosis(best_p_manual_mt[i][:, 1])
     ax2[1, 2].hist(best_p_manual_mt[i][:, 2],
                    bins=50,
                    range=p2_range_manual,
                    histtype='step')
+    p2_manual_kurtosis[i] = kurtosis(best_p_manual_mt[i][:, 2])
     ax2[1, 3].hist(best_p_manual_mt[i][:, 3],
                    bins=50,
                    range=p3_range_manual,
                    histtype='step')
+    p3_manual_kurtosis[i] = kurtosis(best_p_manual_mt[i][:, 3])
     ax2[1, 4].hist(best_p_manual_mt[i][:, 4],
                    bins=50,
                    range=p4_range_manual,
                    histtype='step')
+    p4_manual_kurtosis[i] = kurtosis(best_p_manual_mt[i][:, 4])
 
 ax2[0, 0].grid()
 ax2[0, 1].grid()
