@@ -49,6 +49,7 @@ def test_quadratic_fit():
     c.add_user_atlas(elements=elements_quadratic,
                      wavelengths=wavelengths_quadratic)
     c.set_ransac_properties()
+    c.do_hough_transform(brute_force=False)
 
     # Run the wavelength calibration
     best_p, rms, residual, peak_utilisation = c.fit(max_tries=1000, fit_deg=2)
@@ -75,6 +76,7 @@ def test_quadratic_fit_legendre():
     c.add_user_atlas(elements=elements_quadratic,
                      wavelengths=wavelengths_quadratic)
     c.set_ransac_properties(sample_size=10)
+    c.do_hough_transform(brute_force=False)
 
     # Run the wavelength calibration
     best_p, rms, residual, peak_utilisation = c.fit(max_tries=2000,
