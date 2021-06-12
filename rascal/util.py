@@ -261,7 +261,10 @@ def gauss(x, a, x0, sigma):
     return a * exp(-(x - x0)**2 / (2 * sigma**2 + 1e-9))
 
 
-def refine_peaks(spectrum, peaks, window_width=10):
+def refine_peaks(spectrum, peaks, window_width=10, distance=None):
+    if distance is None:
+        distance = window_width
+
     refined_peaks = []
 
     spectrum = np.array(spectrum)
@@ -297,7 +300,9 @@ def refine_peaks(spectrum, peaks, window_width=10):
     refined_peaks = np.array(refined_peaks)
     mask = (refined_peaks > 0) & (refined_peaks < len(spectrum))
 
-    return refined_peaks[mask]
+    distance_mask = filter_separation(refined_peaks, distance)
+
+    return refined_peaks[mask & distance_mask]
 
 
 def derivative(p):

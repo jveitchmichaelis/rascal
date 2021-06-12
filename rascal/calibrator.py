@@ -3043,15 +3043,25 @@ class Calibrator:
             # Layout, Title, Grid config
             if spectrum is not None:
 
-                fig.update_layout(
-                    yaxis3=dict(title='Electron Count / e-',
-                                range=[
-                                    np.log10(np.percentile(spectrum, 15)),
-                                    np.log10(spec_max)
-                                ],
-                                domain=[0.67, 1.0],
-                                showgrid=True,
-                                type='log'))
+                if log_spectrum:
+
+                    fig.update_layout(
+                        yaxis3=dict(title='Electron Count / e-',
+                                    range=[
+                                        np.log10(np.percentile(spectrum, 15)),
+                                        np.log10(spec_max)
+                                    ],
+                                    domain=[0.67, 1.0],
+                                    showgrid=True,
+                                    type='log'))
+
+                else:
+
+                    fig.update_layout(yaxis3=dict(
+                        title='Electron Count / e-',
+                        range=[np.percentile(spectrum, 15), spec_max],
+                        domain=[0.67, 1.0],
+                        showgrid=True))
 
             fig.update_layout(
                 autosize=True,
