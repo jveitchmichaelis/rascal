@@ -2125,7 +2125,7 @@ class Calibrator:
 
     def plot_arc(self,
                  log_spectrum=False,
-                 savefig=False,
+                 save_fig=False,
                  fig_type='png',
                  filename=None,
                  return_jsonstring=False,
@@ -2139,8 +2139,8 @@ class Calibrator:
         log_spectrum: boolean (default: False)
             Set to true to display the wavelength calibrated arc spectrum in
             logarithmic space.
-        savefig: boolean (default: False)
-            Save an image if set to True. matplotlib uses the pyplot.savefig()
+        save_fig: boolean (default: False)
+            Save an image if set to True. matplotlib uses the pyplot.save_fig()
             while the plotly uses the pio.write_html() or pio.write_image().
             The support format types should be provided in fig_type.
         fig_type: string (default: 'png')
@@ -2201,7 +2201,7 @@ class Calibrator:
             plt.grid()
             plt.tight_layout()
 
-            if savefig:
+            if save_fig:
 
                 fig_type = fig_type.split('+')
 
@@ -2278,7 +2278,7 @@ class Calibrator:
                               height=800,
                               width=1000)
 
-            if savefig:
+            if save_fig:
 
                 fig_type = fig_type.split('+')
 
@@ -2318,7 +2318,7 @@ class Calibrator:
                           fit_coeff=None,
                           top_n_candidate=3,
                           weighted=True,
-                          savefig=False,
+                          save_fig=False,
                           fig_type='png',
                           filename=None,
                           return_jsonstring=False,
@@ -2340,8 +2340,8 @@ class Calibrator:
         weighted: (default: True)
             Draw sample based on the distance from the matched known wavelength
             of the atlas.
-        savefig: boolean (default: False)
-            Save an image if set to True. matplotlib uses the pyplot.savefig()
+        save_fig: boolean (default: False)
+            Save an image if set to True. matplotlib uses the pyplot.save_fig()
             while the plotly uses the pio.write_html() or pio.write_image().
             The support format types should be provided in fig_type.
         fig_type: string (default: 'png')
@@ -2476,7 +2476,7 @@ class Calibrator:
             plt.grid()
             plt.tight_layout()
 
-            if savefig:
+            if save_fig:
 
                 fig_type = fig_type.split('+')
 
@@ -2639,7 +2639,7 @@ class Calibrator:
                 height=800,
                 width=1000)
 
-            if savefig:
+            if save_fig:
 
                 fig_type = fig_type.split('+')
 
@@ -2681,7 +2681,7 @@ class Calibrator:
                  tolerance=5.,
                  plot_atlas=True,
                  log_spectrum=False,
-                 savefig=False,
+                 save_fig=False,
                  fig_type='png',
                  filename=None,
                  return_jsonstring=False,
@@ -2704,8 +2704,8 @@ class Calibrator:
             Display all the relavent lines available in the atlas library.
         log_spectrum: boolean (default: False)
             Display the arc in log-space if set to True.
-        savefig: boolean (default: False)
-            Save an image if set to True. matplotlib uses the pyplot.savefig()
+        save_fig: boolean (default: False)
+            Save an image if set to True. matplotlib uses the pyplot.save_fig()
             while the plotly uses the pio.write_html() or pio.write_image().
             The support format types should be provided in fig_type.
         fig_type: string (default: 'png')
@@ -2903,7 +2903,7 @@ class Calibrator:
 
             plt.tight_layout()
 
-            if savefig:
+            if save_fig:
 
                 fig_type = fig_type.split('+')
 
@@ -3088,7 +3088,7 @@ class Calibrator:
                 height=800,
                 width=1000)
 
-            if savefig:
+            if save_fig:
 
                 fig_type = fig_type.split('+')
 

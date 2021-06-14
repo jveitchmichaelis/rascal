@@ -34,11 +34,11 @@ def test_sprat_manual_atlas():
     c.use_plotly()
     assert c.which_plotting_library() == 'plotly'
 
-    c.plot_arc(display=False, fig_type='png+html', savefig=True)
+    c.plot_arc(display=False, fig_type='png+html', save_fig=True)
     c.plot_arc(display=False,
                log_spectrum=True,
                fig_type='png+html',
-               savefig=True,
+               save_fig=True,
                filename='test/test_lt_sprat_arc_matplotlib')
 
     c.set_hough_properties(num_slopes=5000,
@@ -84,7 +84,7 @@ def test_sprat_manual_atlas():
                plot_atlas=True,
                log_spectrum=False,
                display=False,
-               savefig=True,
+               save_fig=True,
                fig_type='png+html',
                tolerance=5.)
 
@@ -97,14 +97,14 @@ def test_sprat_manual_atlas():
                log_spectrum=False,
                display=False,
                fig_type='png+html',
-               savefig=True,
+               save_fig=True,
                filename='test/test_lt_sprat_fit_matplotlib',
                tolerance=5.)
 
     # Show the parameter space for searching possible solution
     c.plot_search_space(display=False,
                         fig_type='png+html',
-                        savefig=True,
+                        save_fig=True,
                         filename='test/test_lt_sprat_search_space_matplotlib')
 
     print("Stdev error: {} A".format(residual.std()))
@@ -113,10 +113,10 @@ def test_sprat_manual_atlas():
     c.use_matplotlib()
     assert c.which_plotting_library() == 'matplotlib'
 
-    c.plot_arc(display=False, savefig=True)
+    c.plot_arc(display=False, save_fig=True)
     c.plot_arc(log_spectrum=True,
                display=False,
-               savefig=True,
+               save_fig=True,
                fig_type='png+html',
                filename='test/test_lt_sprat_arc_log_plotly')
 
@@ -127,7 +127,7 @@ def test_sprat_manual_atlas():
                log_spectrum=False,
                tolerance=5.,
                display=False,
-               savefig=True,
+               save_fig=True,
                fig_type='png+html')
 
     # Plot the solution
@@ -137,19 +137,19 @@ def test_sprat_manual_atlas():
                log_spectrum=False,
                tolerance=5.,
                display=False,
-               savefig=True,
+               save_fig=True,
                fig_type='png+html',
                filename='test/test_lt_sprat_fit_plotly')
 
     # Show the parameter space for searching possible solution
-    c.plot_search_space(savefig=True, fig_type='png+html', display=False)
+    c.plot_search_space(save_fig=True, fig_type='png+html', display=False)
 
-    c.plot_arc(savefig=True,
+    c.plot_arc(save_fig=True,
                fig_type='png+html',
                display=False,
                filename='test/test_lt_sprat_arc_plotly')
 
-    c.plot_arc(savefig=True, fig_type='png+html', display=False)
+    c.plot_arc(save_fig=True, fig_type='png+html', display=False)
 
     # Plot the solution
     c.plot_fit(best_p,
@@ -157,7 +157,7 @@ def test_sprat_manual_atlas():
                plot_atlas=True,
                log_spectrum=True,
                tolerance=5.,
-               savefig=True,
+               save_fig=True,
                fig_type='png+html',
                display=False)
     # Plot the solution
@@ -166,13 +166,13 @@ def test_sprat_manual_atlas():
                plot_atlas=True,
                log_spectrum=True,
                tolerance=5.,
-               savefig=True,
+               save_fig=True,
                fig_type='png+html',
                display=False,
                filename='test/test_lt_sprat_fit_log_plotly')
 
     # Show the parameter space for searching possible solution
-    c.plot_search_space(savefig=True,
+    c.plot_search_space(save_fig=True,
                         fig_type='png+html',
                         display=False,
                         filename='test/test_lt_sprat_search_space_plotly')
