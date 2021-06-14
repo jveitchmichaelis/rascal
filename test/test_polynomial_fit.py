@@ -52,7 +52,7 @@ def test_quadratic_fit():
     c.do_hough_transform(brute_force=False)
 
     # Run the wavelength calibration
-    best_p, rms, residual, peak_utilisation = c.fit(max_tries=1000, fit_deg=2)
+    best_p, rms, residual, peak_utilisation = c.fit(max_tries=2000, fit_deg=2)
     # Refine solution
     best_p, x_fit, y_fit, residual, peak_utilisation = c.match_peaks(
         best_p, refine=False, robust_refit=True)
