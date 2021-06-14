@@ -2128,7 +2128,7 @@ class Calibrator:
                  savefig=False,
                  fig_type='png',
                  filename=None,
-                 json=False,
+                 return_jsonstring=False,
                  renderer='default',
                  display=True):
         '''
@@ -2141,7 +2141,7 @@ class Calibrator:
             logarithmic space.
         savefig: boolean (default: False)
             Save an image if set to True. matplotlib uses the pyplot.savefig()
-            while the plotly uses the pio.write_html() or fig.write_image().
+            while the plotly uses the pio.write_html() or pio.write_image().
             The support format types should be provided in fig_type.
         fig_type: string (default: 'png')
             Image type to be saved, choose from:
@@ -2149,7 +2149,7 @@ class Calibrator:
         filename: string (default: None)
             Provide a filename or full path. If the extension is not provided
             it is defaulted to png.
-        json: boolean (default: False)
+        return_jsonstring: boolean (default: False)
             Set to True to return json strings if using plotly as the plotting
             library.
         renderer: string (default: 'default')
@@ -2321,7 +2321,7 @@ class Calibrator:
                           savefig=False,
                           fig_type='png',
                           filename=None,
-                          json=False,
+                          return_jsonstring=False,
                           renderer='default',
                           display=True):
         '''
@@ -2342,14 +2342,14 @@ class Calibrator:
             of the atlas.
         savefig: boolean (default: False)
             Save an image if set to True. matplotlib uses the pyplot.savefig()
-            while the plotly uses the pio.write_html() or fig.write_image().
+            while the plotly uses the pio.write_html() or pio.write_image().
             The support format types should be provided in fig_type.
         fig_type: string (default: 'png')
             Image type to be saved, choose from:
             jpg, png, svg, pdf and iframe. Delimiter is '+'.
         filename: (default: None)
             The destination to save the image.
-        json: (default: False)
+        return_jsonstring: (default: False)
             Set to True to save the plotly figure as json string. Ignored if
             matplotlib is used.
         renderer: (default: 'default')
@@ -2684,7 +2684,7 @@ class Calibrator:
                  savefig=False,
                  fig_type='png',
                  filename=None,
-                 json=False,
+                 return_jsonstring=False,
                  renderer='default',
                  display=True):
         '''
@@ -2706,7 +2706,7 @@ class Calibrator:
             Display the arc in log-space if set to True.
         savefig: boolean (default: False)
             Save an image if set to True. matplotlib uses the pyplot.savefig()
-            while the plotly uses the pio.write_html() or fig.write_image().
+            while the plotly uses the pio.write_html() or pio.write_image().
             The support format types should be provided in fig_type.
         fig_type: string (default: 'png')
             Image type to be saved, choose from:
@@ -2714,7 +2714,7 @@ class Calibrator:
         filename: string (default: None)
             Provide a filename or full path. If the extension is not provided
             it is defaulted to png.
-        json: boolean (default: False)
+        return_jsonstring: boolean (default: False)
             Set to True to return json strings if using plotly as the plotting
             library.
         renderer: string (default: 'default')
