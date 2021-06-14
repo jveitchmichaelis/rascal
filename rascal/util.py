@@ -262,7 +262,9 @@ def gauss(x, a, x0, sigma):
 
 
 def refine_peaks(spectrum, peaks, window_width=10, distance=None):
+
     if distance is None:
+
         distance = window_width
 
     refined_peaks = []
@@ -300,7 +302,7 @@ def refine_peaks(spectrum, peaks, window_width=10, distance=None):
     refined_peaks = np.array(refined_peaks)
     mask = (refined_peaks > 0) & (refined_peaks < len(spectrum))
 
-    distance_mask = filter_separation(refined_peaks, distance)
+    distance_mask = filter_separation(refined_peaks, min_separation=distance)
 
     return refined_peaks[mask & distance_mask]
 
