@@ -277,16 +277,21 @@ def refine_peaks(spectrum, peaks, window_width=10, distance=None):
         y = spectrum[max(0,
                          int(peak) -
                          window_width):min(int(peak) + window_width, length)]
-        y /= y.max()
-
+        y /= np.nanmax(y)
         x = np.arange(len(y))
 
-        n = len(x)
-        mean = sum(x * y) / n
-        sigma = sum(y * (x - mean)**2) / n
+        mask = np.isfinite(y) & ~np.isnan(y)
+        n = np.sum(mask)
+
+        if n == 0:
+            continue
+
+        mean = np.sum(x * y) / n
+        sigma = np.sum(y * (x - mean)**2) / n
 
         try:
-            popt, _ = curve_fit(gauss, x, y, p0=[1, mean, sigma])
+
+            popt, _ = curve_fit(gauss, x[mask], y[mask], p0=[1, mean, sigma])
             height, centre, _ = popt
 
             if height < 0:
@@ -296,7 +301,9 @@ def refine_peaks(spectrum, peaks, window_width=10, distance=None):
                 continue
 
             refined_peaks.append(peak - window_width + centre)
+
         except RuntimeError:
+
             continue
 
     refined_peaks = np.array(refined_peaks)

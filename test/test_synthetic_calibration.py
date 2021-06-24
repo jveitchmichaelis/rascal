@@ -1,8 +1,8 @@
 import numpy as np
-import pytest
 
 from rascal.synthetic import SyntheticSpectrum
 from rascal.calibrator import Calibrator
+
 
 def test_default():
 
@@ -11,10 +11,10 @@ def test_default():
     # 100 nm and the dispersion is set to 2.
     intercept = 100
     dispersion = 2.0
-    s = SyntheticSpectrum(coefficients = [dispersion, intercept])
+    s = SyntheticSpectrum(coefficients=[dispersion, intercept])
 
     # We add a bunch of wavelegnths between 200-1200 nm
-    waves = np.linspace(200,1200, num=20)
+    waves = np.linspace(200, 1200, num=20)
     peaks = s.get_pixels(waves)
     assert len(peaks) > 0
 
@@ -32,7 +32,7 @@ def test_default():
                            max_wavelength=1500.)
 
     # Add our fake lines as the atlas
-    c.add_user_atlas(elements=["Test"]*len(waves), wavelengths=waves)
+    c.add_user_atlas(elements=["Test"] * len(waves), wavelengths=waves)
     assert len(c.atlas) > 0
 
     # And let's try and fit...

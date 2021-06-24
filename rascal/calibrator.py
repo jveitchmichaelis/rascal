@@ -125,6 +125,8 @@ class HoughTransform:
         gradients = []
         intercepts = []
 
+        # For each point (x, y), computes the gradient and intercept for all
+        # (X, Y) with positive gradients
         for i in range(len(x) - 1):
 
             gradient_tmp = (y[i + 1:] - y[i]) / (x[i + 1:] - x[i])
@@ -996,7 +998,7 @@ class Calibrator:
                     continue
 
                 # Want the most inliers with the lowest error
-                if cost <= best_cost:
+                if (cost <= best_cost):
 
                     # Now we do a robust fit
                     try:
@@ -1011,8 +1013,6 @@ class Calibrator:
                             "Linear algebra error in robust fit")
                         continue
 
-                    best_cost = cost
-
                     # Get the residual of the fit
                     err = self.polyval(matched_x[best_mask],
                                        best_p) - matched_y[best_mask]
@@ -1023,17 +1023,22 @@ class Calibrator:
                     best_residual = err
                     best_inliers = n_inliers
 
-                    if progress:
+                    if best_err > 1e-4:
 
-                        sampler_list.set_description(
-                            'Most inliers: {:d}, best error: {:1.4f}'.format(
-                                n_inliers, best_err))
+                        best_cost = cost
 
-                    if n_inliers == len(peaks):
-                        """
-                        all peaks matched
-                        """
-                        break
+                        if progress:
+
+                            sampler_list.set_description(
+                                'Most inliers: {:d}, '
+                                'best error: {:1.4f}'.format(
+                                    n_inliers, best_err))
+
+                        if n_inliers == len(peaks):
+                            """
+                            all peaks matched
+                            """
+                            break
 
                 keep_trying = False
 
