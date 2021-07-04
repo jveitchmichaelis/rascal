@@ -23,7 +23,7 @@ def test_linear_fit():
                            min_wavelength=3000.,
                            max_wavelength=8000.)
     c.add_user_atlas(elements=elements_linear, wavelengths=wavelengths_linear)
-    c.set_ransac_properties()
+    c.set_ransac_properties(minimum_matches=30)
 
     # Run the wavelength calibration
     best_p, rms, residual, peak_utilisation = c.fit(max_tries=500, fit_deg=1)
@@ -33,6 +33,7 @@ def test_linear_fit():
 
     assert (best_p[1] > 5. * 0.999) & (best_p[1] < 5. * 1.001)
     assert (best_p[0] > 3000. * 0.999) & (best_p[0] < 3000. * 1.001)
+    assert peak_utilisation > 0.8
 
 
 def test_quadratic_fit():
@@ -48,7 +49,7 @@ def test_quadratic_fit():
                            max_wavelength=8000.)
     c.add_user_atlas(elements=elements_quadratic,
                      wavelengths=wavelengths_quadratic)
-    c.set_ransac_properties()
+    c.set_ransac_properties(minimum_matches=25)
     c.do_hough_transform(brute_force=False)
 
     # Run the wavelength calibration
@@ -75,7 +76,7 @@ def test_quadratic_fit_legendre():
                            max_wavelength=8000.)
     c.add_user_atlas(elements=elements_quadratic,
                      wavelengths=wavelengths_quadratic)
-    c.set_ransac_properties(sample_size=10)
+    c.set_ransac_properties(sample_size=10, minimum_matches=25)
     c.do_hough_transform(brute_force=False)
 
     # Run the wavelength calibration
@@ -104,7 +105,7 @@ def test_quadratic_fit_chebyshev():
                            max_wavelength=8000.)
     c.add_user_atlas(elements=elements_quadratic,
                      wavelengths=wavelengths_quadratic)
-    c.set_ransac_properties(sample_size=10)
+    c.set_ransac_properties(sample_size=10, minimum_matches=25)
 
     # Run the wavelength calibration
     best_p, rms, residual, peak_utilisation = c.fit(max_tries=2000,

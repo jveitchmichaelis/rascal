@@ -16,6 +16,7 @@ from .util import vacuum_to_air_wavelength
 from . import models
 from . houghtransform import HoughTransform
 
+np.random.seed(42)
 class Calibrator:
     def __init__(self, peaks, spectrum=None):
         '''
@@ -70,6 +71,9 @@ class Calibrator:
         self.ransac_tolerance = None
         self.candidate_weighted = None
         self.hough_weight = None
+        self.minimum_matches = None
+        self.minimum_peak_utilisation = None
+        self.minimum_fit_error = None
 
         self.set_calibrator_properties()
         self.set_hough_properties()
@@ -685,7 +689,20 @@ class Calibrator:
                     best_residual = err
                     best_inliers = n_inliers
 
-                    if best_err > 1e-4:
+                    if best_inliers < self.minimum_matches:
+
+                        self.logger.debug('Not enough matched peaks for valid solution, user specified {}.'
+                                .format(self.minimum_matches))
+                        continue
+
+                    if best_inliers < self.minimum_peak_utilisation*len(self.peaks):
+
+                        self.logger.debug('Not enough matched peaks for valid solution, user specified {:1.2f} %.'
+                                    .format(100*self.minimum_matches))
+                        continue
+
+                    # Make sure that we don't accept fits with zero error
+                    if best_err > self.minimum_fit_error:
 
                         best_cost = cost
 
@@ -1093,7 +1110,10 @@ class Calibrator:
                               filter_close=None,
                               ransac_tolerance=None,
                               candidate_weighted=None,
-                              hough_weight=None):
+                              hough_weight=None,
+                              minimum_matches=None,
+                              minimum_peak_utilisation=None,
+                              minimum_fit_error=None):
         '''
         Configure the Calibrator. This may require some manual twiddling before
         the calibrator can work efficiently. However, in theory, a large
@@ -1103,7 +1123,9 @@ class Calibrator:
         Parameters
         ----------
         sample_size: int (default: 5)
-            €£$
+            Number of samples used for fitting, this is automatically
+            set to the polynomial degree + 1, but a larger value can
+            be specified here.
         top_n_candidate: int (default: 5)
             Top ranked lines to be fitted.
         linear: boolean (default: True)
@@ -1121,6 +1143,19 @@ class Calibrator:
             Set to use the hough space to weigh the fit. The theoretical
             optimal weighting is unclear. The larger the value, the heavily it
             relies on the overdensity in the hough space for a good fit.
+        minimum_matches: int or None (default: 0)
+            Set to only accept fit solutions with a minimum number of 
+            matches. Setting this will prevent the fitting function from
+            accepting spurious low-error fits.
+        minimum_peak_utilisation: int or None (default: 0)
+            Set to only accept fit solutions with a fraction of matches. This 
+            option is convenient if you don't want to specify an absolute
+            number of atlas lines. Range is 0 - 1 inclusive.
+        minimum_fit_error: float or None (default: 1e-4)
+            Set to only accept fits with a minimum error. This avoids
+            accepting "perfect" fit solutions with zero errors. However
+            if you have an extremely good system, you may want to set this
+            tolerance lower.
 
         '''
 
@@ -1210,6 +1245,48 @@ class Calibrator:
         elif self.hough_weight is None:
 
             self.hough_weight = 1.0
+
+        else:
+
+            pass
+
+        # Set the minimum number of desired matches
+        if minimum_matches is not None:
+            
+            assert minimum_matches > 0
+            self.minimum_matches = minimum_matches
+
+        elif self.minimum_matches is None:
+
+            self.minimum_matches = 0
+
+        else:
+
+            pass
+
+        # Set the minimum utilisation required
+        if minimum_peak_utilisation is not None:
+            
+            assert minimum_peak_utilisation >= 0 and minimum_peak_utilisation <= 1.0
+            self.minimum_peak_utilisation = minimum_peak_utilisation
+
+        elif self.minimum_peak_utilisation is None:
+
+            self.minimum_peak_utilisation = 0
+
+        else:
+
+            pass
+
+        # Set the minimum fit error
+        if minimum_fit_error is not None:
+            
+            assert minimum_fit_error >= 0
+            self.minimum_fit_error = minimum_fit_error
+
+        elif self.minimum_fit_error is None:
+
+            self.minimum_fit_error = 1e-4
 
         else:
 
@@ -1606,6 +1683,16 @@ class Calibrator:
         if (self.hough_lines is None) or (self.hough_points is None):
 
             self.do_hough_transform()
+
+        if self.minimum_matches > len(self.atlas):
+            self.logger.warning(
+                'Requested minimum matches is greater than the atlas size' +
+                'setting the minimum number of matches to equal the atlas' +
+                'size = ' + str(len(self.atlas)) + '.')
+            self.minimum_matches = len(self.atlas)
+
+        #TODO also check whether minimum peak utilisation is greater than
+        # minimum matches.
 
         fit_coeff, rms, residual, n_inliers, valid =\
             self._solve_candidate_ransac(
