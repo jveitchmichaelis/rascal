@@ -73,7 +73,7 @@ def test_sprat_manual_atlas():
                             top_n_candidate=5,
                             filter_close=True)
 
-    c.do_hough_transform()
+    c.do_hough_transform(brute_force=True)
 
     # Run the wavelength calibration
     best_p, rms, residual, peak_utilisation = c.fit(max_tries=250)

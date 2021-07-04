@@ -14,9 +14,11 @@ from .util import derivative
 from .util import gauss
 from .util import vacuum_to_air_wavelength
 from . import models
-from . houghtransform import HoughTransform
+from .houghtransform import HoughTransform
 
 np.random.seed(42)
+
+
 class Calibrator:
     def __init__(self, peaks, spectrum=None):
         '''
@@ -519,14 +521,20 @@ class Calibrator:
 
             candidates[p] = y[x == p]
 
-        xbin_size = (self.ht.xedges[1] - self.ht.xedges[0]) / 2.
-        ybin_size = (self.ht.yedges[1] - self.ht.yedges[0]) / 2.
+        if self.ht.xedges is not None:
 
-        if np.isfinite(self.hough_weight):
+            xbin_size = (self.ht.xedges[1] - self.ht.xedges[0]) / 2.
+            ybin_size = (self.ht.yedges[1] - self.ht.yedges[0]) / 2.
 
-            twoditp = interpolate.RectBivariateSpline(
-                self.ht.xedges[1:] - xbin_size, self.ht.yedges[1:] - ybin_size,
-                self.ht.hist)
+            if np.isfinite(self.hough_weight):
+
+                twoditp = interpolate.RectBivariateSpline(
+                    self.ht.xedges[1:] - xbin_size,
+                    self.ht.yedges[1:] - ybin_size, self.ht.hist)
+
+        else:
+
+            twoditp = None
 
         # Calculate initial error given pre-existing fit
         if fit_coeff is not None:
@@ -642,7 +650,7 @@ class Calibrator:
                 intercept = wave - gradient * self.pixel_list
 
                 # modified cost function weighted by the Hough space density
-                if np.isfinite(self.hough_weight):
+                if (self.hough_weight is not None) & (twoditp is not None):
 
                     weight = self.hough_weight * np.sum(
                         twoditp(intercept, gradient, grid=False))
@@ -691,14 +699,18 @@ class Calibrator:
 
                     if best_inliers < self.minimum_matches:
 
-                        self.logger.debug('Not enough matched peaks for valid solution, user specified {}.'
-                                .format(self.minimum_matches))
+                        self.logger.debug(
+                            'Not enough matched peaks for valid solution, '
+                            'user specified {}.'.format(self.minimum_matches))
                         continue
 
-                    if best_inliers < self.minimum_peak_utilisation*len(self.peaks):
+                    if best_inliers < self.minimum_peak_utilisation * len(
+                            self.peaks):
 
-                        self.logger.debug('Not enough matched peaks for valid solution, user specified {:1.2f} %.'
-                                    .format(100*self.minimum_matches))
+                        self.logger.debug(
+                            'Not enough matched peaks for valid solution, '
+                            'user specified {:1.2f} %.'.format(
+                                100 * self.minimum_matches))
                         continue
 
                     # Make sure that we don't accept fits with zero error
@@ -1144,11 +1156,11 @@ class Calibrator:
             optimal weighting is unclear. The larger the value, the heavily it
             relies on the overdensity in the hough space for a good fit.
         minimum_matches: int or None (default: 0)
-            Set to only accept fit solutions with a minimum number of 
+            Set to only accept fit solutions with a minimum number of
             matches. Setting this will prevent the fitting function from
             accepting spurious low-error fits.
         minimum_peak_utilisation: int or None (default: 0)
-            Set to only accept fit solutions with a fraction of matches. This 
+            Set to only accept fit solutions with a fraction of matches. This
             option is convenient if you don't want to specify an absolute
             number of atlas lines. Range is 0 - 1 inclusive.
         minimum_fit_error: float or None (default: 1e-4)
@@ -1252,7 +1264,7 @@ class Calibrator:
 
         # Set the minimum number of desired matches
         if minimum_matches is not None:
-            
+
             assert minimum_matches > 0
             self.minimum_matches = minimum_matches
 
@@ -1266,8 +1278,9 @@ class Calibrator:
 
         # Set the minimum utilisation required
         if minimum_peak_utilisation is not None:
-            
-            assert minimum_peak_utilisation >= 0 and minimum_peak_utilisation <= 1.0
+
+            assert (minimum_peak_utilisation >= 0
+                    and minimum_peak_utilisation <= 1.0)
             self.minimum_peak_utilisation = minimum_peak_utilisation
 
         elif self.minimum_peak_utilisation is None:
@@ -1280,7 +1293,7 @@ class Calibrator:
 
         # Set the minimum fit error
         if minimum_fit_error is not None:
-            
+
             assert minimum_fit_error >= 0
             self.minimum_fit_error = minimum_fit_error
 
@@ -1514,7 +1527,7 @@ class Calibrator:
         self.atlas = []
         self.atlas_intensities = []
 
-    def do_hough_transform(self, brute_force=True):
+    def do_hough_transform(self, brute_force=False):
 
         # Generate the hough_points from the pairs
         self.ht.set_constraints(self.min_slope, self.max_slope,
@@ -1526,8 +1539,8 @@ class Calibrator:
             self.ht.generate_hough_points(self.pairs[:, 0],
                                           self.pairs[:, 1],
                                           num_slopes=self.num_slopes)
-        self.ht.bin_hough_points(self.xbins, self.ybins)
 
+        self.ht.bin_hough_points(self.xbins, self.ybins)
         self.hough_points = self.ht.hough_points
         self.hough_lines = self.ht.hough_lines
 
@@ -1691,7 +1704,7 @@ class Calibrator:
                 'size = ' + str(len(self.atlas)) + '.')
             self.minimum_matches = len(self.atlas)
 
-        #TODO also check whether minimum peak utilisation is greater than
+        # TODO also check whether minimum peak utilisation is greater than
         # minimum matches.
 
         fit_coeff, rms, residual, n_inliers, valid =\
@@ -2064,7 +2077,7 @@ class Calibrator:
 
                     fig.show(renderer)
 
-            if json:
+            if return_jsonstring:
 
                 return fig.to_json()
 
@@ -2425,7 +2438,7 @@ class Calibrator:
 
                     fig.show(renderer)
 
-            if json:
+            if return_jsonstring:
 
                 return fig.to_json()
 
@@ -2874,7 +2887,7 @@ class Calibrator:
 
                     fig.show(renderer)
 
-            if json:
+            if return_jsonstring:
 
                 return fig.to_json()
 

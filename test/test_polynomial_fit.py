@@ -1,7 +1,13 @@
 import numpy as np
 from rascal.calibrator import Calibrator
 
+np.random.seed(0)
+
 peaks = np.sort(np.random.random(31) * 1000.)
+# Removed the closely spaced peaks
+distance_mask = np.isclose(peaks[:-1], peaks[1:], atol=5.)
+distance_mask = np.insert(distance_mask, 0, False)
+peaks = peaks[~distance_mask]
 
 # Line list
 wavelengths_linear = 3000. + 5. * peaks
@@ -9,7 +15,6 @@ wavelengths_quadratic = 3000. + 4 * peaks + 1.0e-3 * peaks**2.
 
 elements_linear = ['Linear'] * len(wavelengths_linear)
 elements_quadratic = ['Quadratic'] * len(wavelengths_quadratic)
-
 
 def test_linear_fit():
 
@@ -24,6 +29,7 @@ def test_linear_fit():
                            max_wavelength=8000.)
     c.add_user_atlas(elements=elements_linear, wavelengths=wavelengths_linear)
     c.set_ransac_properties(minimum_matches=30)
+    c.do_hough_transform(brute_force=False)
 
     # Run the wavelength calibration
     best_p, rms, residual, peak_utilisation = c.fit(max_tries=500, fit_deg=1)
@@ -49,7 +55,7 @@ def test_quadratic_fit():
                            max_wavelength=8000.)
     c.add_user_atlas(elements=elements_quadratic,
                      wavelengths=wavelengths_quadratic)
-    c.set_ransac_properties(minimum_matches=25)
+    c.set_ransac_properties(minimum_matches=20)
     c.do_hough_transform(brute_force=False)
 
     # Run the wavelength calibration
@@ -76,7 +82,7 @@ def test_quadratic_fit_legendre():
                            max_wavelength=8000.)
     c.add_user_atlas(elements=elements_quadratic,
                      wavelengths=wavelengths_quadratic)
-    c.set_ransac_properties(sample_size=10, minimum_matches=25)
+    c.set_ransac_properties(sample_size=10, minimum_matches=20)
     c.do_hough_transform(brute_force=False)
 
     # Run the wavelength calibration
@@ -105,7 +111,8 @@ def test_quadratic_fit_chebyshev():
                            max_wavelength=8000.)
     c.add_user_atlas(elements=elements_quadratic,
                      wavelengths=wavelengths_quadratic)
-    c.set_ransac_properties(sample_size=10, minimum_matches=25)
+    c.set_ransac_properties(sample_size=10, minimum_matches=20)
+    c.do_hough_transform(brute_force=False)
 
     # Run the wavelength calibration
     best_p, rms, residual, peak_utilisation = c.fit(max_tries=2000,

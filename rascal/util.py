@@ -309,9 +309,12 @@ def refine_peaks(spectrum, peaks, window_width=10, distance=None):
     refined_peaks = np.array(refined_peaks)
     mask = (refined_peaks > 0) & (refined_peaks < len(spectrum))
 
-    distance_mask = filter_separation(refined_peaks, min_separation=distance)
+    # Remove peaks that are within rounding errors from each other from the
+    # curve_fit
+    distance_mask = np.isclose(refined_peaks[:-1], refined_peaks[1:])
+    distance_mask = np.insert(distance_mask, 0, False)
 
-    return refined_peaks[mask & distance_mask]
+    return refined_peaks[mask & ~distance_mask]
 
 
 def derivative(p):
