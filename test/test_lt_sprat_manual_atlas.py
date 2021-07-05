@@ -76,7 +76,8 @@ def test_sprat_manual_atlas():
     c.do_hough_transform(brute_force=True)
 
     # Run the wavelength calibration
-    best_p, rms, residual, peak_utilisation = c.fit(max_tries=250)
+    best_p, rms, residual, peak_utilisation, atlas_utilisation = c.fit(
+        max_tries=250)
 
     # Plot the solution
     c.plot_fit(best_p,
@@ -89,7 +90,7 @@ def test_sprat_manual_atlas():
                tolerance=5.)
 
     fit_coeff_new, peak_matched, atlas_matched, residual,\
-        peak_utilisation = c.match_peaks(best_p)
+        peak_utilisation, atlas_utilisation = c.match_peaks(best_p)
 
     c.plot_fit(fit_coeff_new,
                spectrum,
@@ -109,6 +110,7 @@ def test_sprat_manual_atlas():
 
     print("Stdev error: {} A".format(residual.std()))
     print("Peaks utilisation rate: {}%".format(peak_utilisation * 100))
+    print("Atlas utilisation rate: {}%".format(atlas_utilisation * 100))
 
     c.use_matplotlib()
     assert c.which_plotting_library() == 'matplotlib'

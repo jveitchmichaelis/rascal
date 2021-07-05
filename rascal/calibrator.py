@@ -2,7 +2,6 @@ import warnings
 import itertools
 import logging
 
-import json
 import numpy as np
 from scipy.spatial import Delaunay
 from scipy.optimize import minimize
@@ -1646,9 +1645,10 @@ class Calibrator:
         residual: float
             Residual from the best fit
         peak_utilisation: float
-            Fraction of detected peaks used for calibration (if there are more
-            peaks than the number of atlas lines, the fraction of atlas lines
-            is returned instead) [0-1].
+            Fraction of detected peaks (pixel) used for calibration [0-1].
+        atlas_utilisation: float
+            Fraction of supplied arc lines (wavelength) used for
+            calibration [0-1].
 
         '''
 
@@ -1736,7 +1736,8 @@ class Calibrator:
         self.peak_utilisation = peak_utilisation
         self.atlas_utilisation = atlas_utilisation
 
-        return self.fit_coeff, self.rms, self.residual, self.peak_utilisation
+        return (self.fit_coeff, self.rms, self.residual, self.peak_utilisation,
+                self.atlas_utilisation)
 
     def match_peaks(self,
                     fit_coeff,
@@ -1801,7 +1802,10 @@ class Calibrator:
             The difference (NOT absolute) between the data and the best-fit
             solution.
         peak_utilisation: float
-            Fraction of detected peaks used for calibration [0-1].
+            Fraction of detected peaks (pixel) used for calibration [0-1].
+        atlas_utilisation: float
+            Fraction of supplied arc lines (wavelength) used for
+            calibration [0-1].
 
         '''
 
@@ -1858,13 +1862,8 @@ class Calibrator:
         atlas_matched = np.array(atlas_matched)
         residual = np.array(residual)
 
-        if len(self.peaks) < len(self.atlas):
-
-            peak_utilisation = len(peak_matched) / len(self.peaks)
-
-        else:
-
-            peak_utilisation = len(peak_matched) / len(self.atlas)
+        peak_utilisation = len(peak_matched) / len(self.peaks)
+        atlas_utilisation = len(peak_matched) / len(self.atlas)
 
         if robust_refit:
 
@@ -1876,15 +1875,15 @@ class Calibrator:
                               'Input solution is returned.')
 
                 return (fit_coeff_new, peak_matched, atlas_matched, residual,
-                        peak_utilisation)
+                        peak_utilisation, atlas_utilisation)
 
             return (fit_coeff, peak_matched, atlas_matched, residual,
-                    peak_utilisation)
+                    peak_utilisation, atlas_utilisation)
 
         else:
 
             return (fit_coeff_new, peak_matched, atlas_matched, residual,
-                    peak_utilisation)
+                    peak_utilisation, atlas_utilisation)
 
     def plot_arc(self,
                  log_spectrum=False,

@@ -1,6 +1,7 @@
 import numpy as np
 import json
 
+
 class HoughTransform:
     '''
     This handles the hough transform operations on the pixel-wavelength space.
@@ -337,4 +338,3 @@ class HoughTransform:
 
             raise ValueError('Unknown filetype %s, it has to be npy or json' %
                              filetype)
-                             

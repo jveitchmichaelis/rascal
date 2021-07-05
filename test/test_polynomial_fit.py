@@ -16,6 +16,7 @@ wavelengths_quadratic = 3000. + 4 * peaks + 1.0e-3 * peaks**2.
 elements_linear = ['Linear'] * len(wavelengths_linear)
 elements_quadratic = ['Quadratic'] * len(wavelengths_quadratic)
 
+
 def test_linear_fit():
 
     # Initialise the calibrator
@@ -32,14 +33,16 @@ def test_linear_fit():
     c.do_hough_transform(brute_force=False)
 
     # Run the wavelength calibration
-    best_p, rms, residual, peak_utilisation = c.fit(max_tries=500, fit_deg=1)
+    best_p, rms, residual, peak_utilisation, atlas_utilisation = c.fit(
+        max_tries=500, fit_deg=1)
     # Refine solution
-    best_p, x_fit, y_fit, residual, peak_utilisation = c.match_peaks(
-        best_p, refine=False, robust_refit=True)
+    best_p, x_fit, y_fit, residual, peak_utilisation, atlas_utilisation =\
+        c.match_peaks(best_p, refine=False, robust_refit=True)
 
     assert (best_p[1] > 5. * 0.999) & (best_p[1] < 5. * 1.001)
     assert (best_p[0] > 3000. * 0.999) & (best_p[0] < 3000. * 1.001)
     assert peak_utilisation > 0.8
+    assert atlas_utilisation > 0.0
 
 
 def test_quadratic_fit():
@@ -59,14 +62,17 @@ def test_quadratic_fit():
     c.do_hough_transform(brute_force=False)
 
     # Run the wavelength calibration
-    best_p, rms, residual, peak_utilisation = c.fit(max_tries=2000, fit_deg=2)
+    best_p, rms, residual, peak_utilisation, atlas_utilisation = c.fit(
+        max_tries=2000, fit_deg=2)
     # Refine solution
-    best_p, x_fit, y_fit, residual, peak_utilisation = c.match_peaks(
-        best_p, refine=False, robust_refit=True)
+    best_p, x_fit, y_fit, residual, peak_utilisation, atlas_utilisation =\
+        c.match_peaks(best_p, refine=False, robust_refit=True)
 
     assert (best_p[2] > 1e-3 * 0.999) & (best_p[2] < 1e-3 * 1.001)
     assert (best_p[1] > 4. * 0.999) & (best_p[1] < 4. * 1.001)
     assert (best_p[0] > 3000. * 0.999) & (best_p[0] < 3000. * 1.001)
+    assert peak_utilisation > 0.8
+    assert atlas_utilisation > 0.0
 
 
 def test_quadratic_fit_legendre():
@@ -86,16 +92,19 @@ def test_quadratic_fit_legendre():
     c.do_hough_transform(brute_force=False)
 
     # Run the wavelength calibration
-    best_p, rms, residual, peak_utilisation = c.fit(max_tries=2000,
-                                                    fit_tolerance=5.,
-                                                    candidate_tolerance=2.,
-                                                    fit_deg=2,
-                                                    fit_type='legendre')
+    best_p, rms, residual, peak_utilisation, atlas_utilisation = c.fit(
+        max_tries=2000,
+        fit_tolerance=5.,
+        candidate_tolerance=2.,
+        fit_deg=2,
+        fit_type='legendre')
 
     # Legendre 2nd order takes the form
     assert (best_p[2] > 1e-3 * 0.99) & (best_p[2] < 1e-3 * 1.01)
     assert (best_p[1] > 4. * 0.99) & (best_p[1] < 4. * 1.01)
     assert (best_p[0] > 3000. * 0.99) & (best_p[0] < 3000. * 1.01)
+    assert peak_utilisation > 0.7
+    assert atlas_utilisation > 0.0
 
 
 def test_quadratic_fit_chebyshev():
@@ -115,8 +124,12 @@ def test_quadratic_fit_chebyshev():
     c.do_hough_transform(brute_force=False)
 
     # Run the wavelength calibration
-    best_p, rms, residual, peak_utilisation = c.fit(max_tries=2000,
-                                                    fit_tolerance=5.,
-                                                    candidate_tolerance=2.,
-                                                    fit_deg=2,
-                                                    fit_type='chebyshev')
+    best_p, rms, residual, peak_utilisation, atlas_utilisation = c.fit(
+        max_tries=2000,
+        fit_tolerance=5.,
+        candidate_tolerance=2.,
+        fit_deg=2,
+        fit_type='chebyshev')
+
+    assert peak_utilisation > 0.7
+    assert atlas_utilisation > 0.0

@@ -56,17 +56,17 @@ def run_sprat_calibration(fit_deg):
     c.list_atlas()
 
     # Run the wavelength calibration
-    best_p, rms, residual, peak_utilisation = c.fit(max_tries=200,
-                                                    fit_deg=fit_deg)
+    best_p, rms, residual, peak_utilisation, atlas_utilisation = c.fit(
+        max_tries=200, fit_deg=fit_deg)
 
     # Refine solution
-    best_p, x_fit, y_fit, residual, peak_utilisation = c.match_peaks(
-        best_p, refine=False, robust_refit=True)
+    best_p, x_fit, y_fit, residual, peak_utilisation, atlas_utilisation =\
+        c.match_peaks(best_p, refine=False, robust_refit=True)
 
     fit_diff = c.polyval(x_fit, best_p) - y_fit
     rms = np.sqrt(np.sum(fit_diff**2 / len(x_fit)))
 
-    return best_p, residual, peak_utilisation, rms
+    return best_p, residual, peak_utilisation, atlas_utilisation, rms
 
 
 def test_sprat_calibration():
@@ -75,7 +75,7 @@ def test_sprat_calibration():
                 "polynomial properly.")
 
     for i in range(3, 6):
-        best_p, _, _, _ = run_sprat_calibration(fit_deg=i)
+        best_p, _, _, _, _ = run_sprat_calibration(fit_deg=i)
         assert (len(best_p) == (i + 1))
 
 
@@ -91,10 +91,12 @@ def test_sprat_calibration_multirun():
     c3 = np.zeros(n)
     c4 = np.zeros(n)
     peak_utilisation = np.zeros(n)
+    atlas_utilisation = np.zeros(n)
     rms = np.zeros(n)
 
     for i in range(n):
-        best_p, _, peak_utilisation[i], rms[i] = run_sprat_calibration(4)
+        best_p, _, peak_utilisation[i], atlas_utilisation[i], rms[i] =\
+            run_sprat_calibration(4)
         c0[i], c1[i], c2[i], c3[i], c4[i] = best_p
 
     assert np.std(c0) < 500.
@@ -103,4 +105,5 @@ def test_sprat_calibration_multirun():
     assert np.std(c3) < 0.1
     assert np.std(c4) < 0.01
     assert np.std(peak_utilisation) < 10.
+    assert np.std(atlas_utilisation) < 10.
     assert np.std(rms) < 5.
