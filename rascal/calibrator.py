@@ -1716,13 +1716,8 @@ class Calibrator:
                 brute_force=self.brute_force,
                 progress=self.progress)
 
-        if len(self.peaks) < len(self.atlas):
-
-            peak_utilisation = n_inliers / len(self.peaks)
-
-        else:
-
-            peak_utilisation = n_inliers / len(self.atlas)
+        peak_utilisation = n_inliers / len(self.peaks)
+        atlas_utilisation = n_inliers / len(self.atlas)
 
         if not valid:
 
@@ -1739,6 +1734,7 @@ class Calibrator:
         self.rms = rms
         self.residual = residual
         self.peak_utilisation = peak_utilisation
+        self.atlas_utilisation = atlas_utilisation
 
         return self.fit_coeff, self.rms, self.residual, self.peak_utilisation
 
