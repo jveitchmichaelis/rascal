@@ -1885,6 +1885,104 @@ class Calibrator:
             return (fit_coeff_new, peak_matched, atlas_matched, residual,
                     peak_utilisation, atlas_utilisation)
 
+    def manual_refit(self,
+                        peak_matched,
+                        atlas_matched,
+                        additional_peaks=[], 
+                        additional_atlas=[],
+                        peaks_to_remove=[],
+                        atlas_to_remove=[],
+                        x0=None,
+                        degree=None,
+                        peak_tolerance=1,
+                        atlas_tolerance=5):
+        
+        '''
+        Perform a refinement of the matched peaks and atlas lines.
+
+        This function takes lists of matched peaks and atlases, along with
+        user-specified lists of lines to add/remove from the lists.
+
+        Any given peaks or atlas lines to remove are selected within a
+        user-specified tolerance, by default 1 px or 5 atlas units.
+
+        The final set of matching peaks/lines is then matched using a
+        robust polyfit of the desired degree. Optionally, an initial 
+        fit x0 can be provided to condition the optimiser.
+
+        Parameters
+        ----------
+        peak_matched: list
+            List of matched peaks
+        atlas_matched: list
+            List of matched atlas lines
+        additional_peaks: list
+            Set to True to refine solution.
+        additional_atlas: list
+            Absolute difference between fit and model in the unit of nm.
+        peaks_to_remove: list
+            Peaks which will be removed from the match list
+        atlas_to_remove: list
+            Atlas lines which will be removed from the match list
+        x0: list
+            Initial fit coefficients
+        degree: int
+            Polynomial fit degree
+        peak_tolerance: float
+            Tolerance for selecting peaks to remove, in pixels
+        atlas_tolerance: float
+            Tolerance for selecting atlas lines to remove, same units as atlas lines
+
+        Returns
+        -------
+        fit_coeff: list
+            List of best fit polynomial coefficients
+        residuals: numpy 1D array
+            Residual match error per-peak
+
+        '''
+
+        peak_matched = np.array(peak_matched)
+        atlas_matched = np.array(atlas_matched)
+
+        # Remove user-selected peaks within tolerance
+        for peak in peaks_to_remove:
+            mask = [(peak_matched - peak) > peak_tolerance]
+
+            peak_matched = peak_matched[mask]
+            atlas_matched = atlas_matched[mask]
+        
+        # Remove user-selected atlas lines within tolerance
+        for atlas_line in atlas_to_remove:
+            mask = [(atlas_matched - atlas_line) > atlas_tolerance]
+
+            peak_matched = peak_matched[mask]
+            atlas_matched = atlas_matched[mask]
+
+        peak_matched = np.hstack((peak_matched, additional_peaks))
+        atlas_matched= np.hstack((atlas_matched, additional_atlas))
+
+        x = peak_matched
+        y = atlas_matched
+
+        assert len(x) == len(y)
+        assert len(x) > 0
+
+        if degree is None:
+            degree = self.fit_deg
+
+        assert degree > 0
+        assert degree <= len(x) - 1
+
+        if x0 is not None:
+            assert len(x0) == self.fit_deg + 1
+
+        fit_coeff_new = models.robust_polyfit(x, y, degree, x0)
+
+        residuals = y - self.polyval(x, fit_coeff_new)
+
+        return fit_coeff_new, residuals
+
     def plot_arc(self,
                  log_spectrum=False,
                  save_fig=False,
