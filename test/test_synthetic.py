@@ -25,9 +25,6 @@ def test_initialisation():
     assert s.max_wavelength == 1200.
 
 
-# Pynverse can only work on strictly monotonic functions
-# A constant model gives a constant...
-@pytest.mark.xfail()
 def test_constant_model():
     s = SyntheticSpectrum(np.arange(1))
     assert s.degree == 0
@@ -35,7 +32,6 @@ def test_constant_model():
     s.get_pixels(wave1)
 
 
-# No idea why this fails...
 @pytest.mark.xfail()
 def test_linear_model():
     s = SyntheticSpectrum(np.arange(2))
@@ -48,7 +44,7 @@ def test_cubic_model():
     s = SyntheticSpectrum(np.arange(4))
     assert s.degree == 3
 
-    p = s.get_pixels(wave1)
+    p, _ = s.get_pixels(wave1)
     assert len(p) == np.sum((wave1 > 200.) & (wave1 < 1200.))
 
 
@@ -56,13 +52,13 @@ def test_switching_model():
     s = SyntheticSpectrum(np.arange(3))
     assert s.degree == 2
 
-    p = s.get_pixels(wave1)
+    p, _ = s.get_pixels(wave1)
     assert len(p) == np.sum((wave1 > 200.) & (wave1 < 1200.))
 
     s.set_model(np.arange(5))
     assert s.degree == 4
 
-    p = s.get_pixels(wave1)
+    p, _ = s.get_pixels(wave1)
     assert len(p) == np.sum((wave1 > 200.) & (wave1 < 1200.))
 
 
@@ -70,15 +66,15 @@ def test_switching_wavelength_ranges():
     s = SyntheticSpectrum(np.arange(3))
     assert s.degree == 2
 
-    p = s.get_pixels(wave1)
+    p, _ = s.get_pixels(wave1)
     assert len(p) == np.sum((wave1 > 200.) & (wave1 < 1200.))
 
     s.set_wavelength_limit(min_wavelength=500.)
-    p = s.get_pixels(wave1)
+    p, _ = s.get_pixels(wave1)
     assert len(p) == np.sum((wave1 > 500.) & (wave1 < 1200.))
 
     s.set_wavelength_limit(max_wavelength=1000.)
-    p = s.get_pixels(wave1)
+    p, _ = s.get_pixels(wave1)
     assert len(p) == np.sum((wave1 > 500.) & (wave1 < 1000.))
 
 

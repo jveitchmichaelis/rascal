@@ -15,7 +15,8 @@ def test_default():
 
     # We add a bunch of wavelegnths between 200-1200 nm
     waves = np.linspace(200, 1200, num=20)
-    peaks = s.get_pixels(waves)
+
+    peaks, waves = s.get_pixels(waves)
     assert len(peaks) > 0
 
     # Set up the calibrator with the pixel values of our
@@ -44,5 +45,5 @@ def test_default():
     fit_diff = c.polyval(x_fit, best_p) - y_fit
     rms = np.sqrt(np.sum(fit_diff**2 / len(x_fit)))
 
-    assert peak_utilisation > 0.1
+    assert peak_utilisation > 0.75
     assert rms < 5.
