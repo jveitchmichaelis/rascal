@@ -46,6 +46,8 @@ def test_linear_fit():
     assert peak_utilisation > 0.8
     assert atlas_utilisation > 0.0
 
+    assert len(c.get_pix_wave_pairs()) == len(peaks)
+
 
 def test_manual_refit():
 
@@ -104,6 +106,39 @@ def test_manual_refit_remove_points():
                                         robust_refit=True)
 
     c.remove_pix_wave_pair(5)
+
+    (best_p_manual, matched_peaks, matched_atlas, rms,
+     residuals) = c.manual_refit(matched_peaks, matched_atlas)
+
+    assert np.allclose(best_p_manual, best_p)
+
+
+def test_manual_refit_add_points():
+
+    # Initialise the calibrator
+    c = Calibrator(peaks)
+    c.set_calibrator_properties(num_pix=1000)
+    c.set_hough_properties(num_slopes=1000,
+                           range_tolerance=500.,
+                           xbins=200,
+                           ybins=200,
+                           min_wavelength=3000.,
+                           max_wavelength=8000.)
+    c.add_user_atlas(elements=elements_linear, wavelengths=wavelengths_linear)
+    c.set_ransac_properties(minimum_matches=25)
+    c.do_hough_transform(brute_force=False)
+
+    # Run the wavelength calibration
+    (best_p, atched_peaks, matched_atlas, rms, residual, peak_utilisation,
+     atlas_utilisation) = c.fit(max_tries=500, fit_deg=1)
+
+    # Refine solution
+    (best_p, matched_peaks, matched_atlas, rms, residual, peak_utilisation,
+     atlas_utilisation) = c.match_peaks(best_p,
+                                        refine=False,
+                                        robust_refit=True)
+
+    c.add_pix_wave_pair(2000., 3000. + 4 * 2000. + 1.0e-3 * 2000.**2.)
     (best_p_manual, matched_peaks, matched_atlas, rms,
      residuals) = c.manual_refit(matched_peaks, matched_atlas)
 

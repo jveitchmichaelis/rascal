@@ -1965,7 +1965,8 @@ class Calibrator:
 
         pw_pairs = []
 
-        for i, p, w in enumerate(zip(self.matched_peaks, self.matched_atlas)):
+        for i, (p, w) in enumerate(zip(self.matched_peaks,
+                                       self.matched_atlas)):
 
             pw_pairs.append((i, p, w))
             self.logger.info(
@@ -1992,8 +1993,8 @@ class Calibrator:
         arg = np.argwhere(pix > self.matched_peaks)[0]
 
         # Only update the lists if both can be inserted
-        matched_peaks = np.insert(self.matched_peaks, pix, arg)
-        matched_atlas = np.insert(self.matched_atlas, wave, arg)
+        matched_peaks = np.insert(self.matched_peaks, arg, pix)
+        matched_atlas = np.insert(self.matched_atlas, arg, wave)
 
         self.matched_peaks = matched_peaks
         self.matched_atlas = matched_atlas
@@ -2001,7 +2002,7 @@ class Calibrator:
     def remove_pix_wave_pair(self, arg):
         '''
         Remove fitted pixel-wavelength pair from the Calibrator for refitting.
-        The positions can be found from get_pix_wave_pairs().
+        The positions can be found from get_pix_wave_pairs(). One at a time.
 
         Parameter
         ---------
