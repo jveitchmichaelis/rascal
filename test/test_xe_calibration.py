@@ -56,11 +56,11 @@ def run_sprat_calibration(fit_deg):
     c.list_atlas()
 
     # Run the wavelength calibration
-    best_p, rms, residual, peak_utilisation, atlas_utilisation = c.fit(
+    best_p, x, y, rms, residual, peak_utilisation, atlas_utilisation = c.fit(
         max_tries=200, fit_deg=fit_deg)
 
     # Refine solution
-    best_p, x_fit, y_fit, residual, peak_utilisation, atlas_utilisation =\
+    best_p, x_fit, y_fit, rms, residual, peak_utilisation, atlas_utilisation =\
         c.match_peaks(best_p, refine=False, robust_refit=True)
 
     fit_diff = c.polyval(x_fit, best_p) - y_fit

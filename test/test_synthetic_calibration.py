@@ -37,10 +37,10 @@ def test_default():
     assert len(c.atlas) > 0
 
     # And let's try and fit...
-    best_p, rms, residual, peak_utilisation, atlas_utilisation = c.fit(
+    best_p, x, y, rms, residual, peak_utilisation, atlas_utilisation = c.fit(
         max_tries=500)
 
-    best_p, x_fit, y_fit, residual, peak_utilisation, atlas_utilisation =\
+    best_p, x_fit, y_fit, rms, residual, peak_utilisation, atlas_utilisation =\
         c.match_peaks(best_p, refine=False, robust_refit=True)
 
     fit_diff = c.polyval(x_fit, best_p) - y_fit
