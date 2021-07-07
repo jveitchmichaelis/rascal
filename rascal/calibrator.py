@@ -1,5 +1,6 @@
 import itertools
 import logging
+from re import X
 
 import numpy as np
 from scipy.spatial import Delaunay
@@ -317,7 +318,7 @@ class Calibrator:
         if self.fit_coeff is None:
 
             raise ValueError(
-                'A guess solution for a polynomail fit has to '
+                'A guess solution for a polynomial fit has to '
                 'be provided as fit_coeff in fit() in order to generate '
                 'candidates for RANSAC sampling.')
 
@@ -328,17 +329,19 @@ class Calibrator:
 
         for p in self.peaks:
 
-            x = self.polyval(p, self.fit_coeff)
-            diff = np.abs(self.atlas - x)
+            x0 = self.polyval(p, self.fit_coeff)
+            diff = np.abs(self.atlas - x0)
 
-            weight = gauss(self.atlas[diff < candidate_tolerance], 1., x,
+            x = np.array(self.atlas)[diff < candidate_tolerance]
+
+            weight = gauss(x, 1., x0,
                            self.range_tolerance)
 
-            for y, w in zip(self.atlas[diff < candidate_tolerance], weight):
+            for y, w in zip(x, weight):
 
                 x_match.append(p)
                 y_match.append(y)
-                w_match.append(weight)
+                w_match.append(w)
 
         x_match = np.array(x_match)
         y_match = np.array(y_match)
@@ -454,7 +457,7 @@ class Calibrator:
 
         else:
 
-            self._get_candidate_points_poly()
+            self._get_candidate_points_poly(candidate_tolerance)
 
         self.candidate_peak, self.candidate_arc =\
             self._get_most_common_candidates(
@@ -1797,7 +1800,7 @@ class Calibrator:
                     robust_refit=True,
                     fit_deg=None):
         '''
-        ** refine is EXPERIMENTAL, use with caution **
+        ** refine option is EXPERIMENTAL, use with caution **
 
         Refine the polynomial fit fit_coefficients. Recommended to use in it
         multiple calls to first refine the lowest order and gradually increase
@@ -2126,7 +2129,7 @@ class Calibrator:
                  renderer='default',
                  display=True):
         '''
-        Plots the 1D spectrum of the extracted arc
+        Plots the 1D spectrum of the extracted arc.
 
         parameters
         ----------
@@ -2688,7 +2691,7 @@ class Calibrator:
         Parameters
         ----------
         fit_coeff: 1D numpy array or list
-            Best fit polynomail fit_coefficients
+            Best fit polynomial fit_coefficients
         spectrum: 1D numpy array (N)
             Array of length N pixels
         tolerance: float (default: 5)
