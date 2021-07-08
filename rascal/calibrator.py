@@ -2936,6 +2936,8 @@ class Calibrator:
                                name='Arc Spectrum'))
 
                 spec_max = np.nanmax(spectrum) * 1.05
+            else:
+                spec_max = 1.0
 
             fitted_peaks = []
             fitted_peaks_adu = []
@@ -2970,9 +2972,9 @@ class Calibrator:
                     if spectrum is not None:
                         fitted_peaks_adu.append(spectrum[int(
                             self.pix_to_rawpix(p))])
-                        fitted_diff.append(diff[idx])
-                        self.logger.info('- matched to {} A'.format(
-                            self.atlas[idx]))
+                    fitted_diff.append(diff[idx])
+                    self.logger.info('- matched to {} A'.format(
+                        self.atlas[idx]))
 
             x_fitted = self.polyval(fitted_peaks, fit_coeff)
 
