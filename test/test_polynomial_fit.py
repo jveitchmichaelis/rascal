@@ -97,6 +97,11 @@ def test_manual_refit_remove_points():
         c.match_peaks(best_p, refine=False, robust_refit=True)
 
     best_p_manual, residuals = c.manual_refit(x_fit, y_fit, peaks_to_remove=np.random.choice(x_fit, 5))
+    
+    # TODO add assertions for this one
+
+def test_manual_refit_add_points():
+    pass
 
 
 def test_quadratic_fit():
