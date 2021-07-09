@@ -76,7 +76,7 @@ def test_sprat_manual_atlas():
     c.do_hough_transform(brute_force=True)
 
     # Run the wavelength calibration
-    best_p, rms, residual, peak_utilisation, atlas_utilisation = c.fit(
+    best_p, x, y, rms, residual, peak_utilisation, atlas_utilisation = c.fit(
         max_tries=250)
 
     # Plot the solution
@@ -87,9 +87,10 @@ def test_sprat_manual_atlas():
                display=False,
                save_fig=True,
                fig_type='png+html',
-               tolerance=5.)
+               tolerance=5.,
+               filename='test/test_lt_sprat_fit_plotly')
 
-    fit_coeff_new, peak_matched, atlas_matched, residual,\
+    fit_coeff_new, peak_matched, atlas_matched, rms, residual,\
         peak_utilisation, atlas_utilisation = c.match_peaks(best_p)
 
     c.plot_fit(fit_coeff_new,
@@ -115,7 +116,9 @@ def test_sprat_manual_atlas():
     c.use_matplotlib()
     assert c.which_plotting_library() == 'matplotlib'
 
-    c.plot_arc(display=False, save_fig=True)
+    c.plot_arc(display=False,
+               save_fig=True,
+               filename='test/test_lt_sprat_arc_plotly')
     c.plot_arc(log_spectrum=True,
                display=False,
                save_fig=True,
@@ -130,7 +133,8 @@ def test_sprat_manual_atlas():
                tolerance=5.,
                display=False,
                save_fig=True,
-               fig_type='png+html')
+               fig_type='png+html',
+               filename='test/test_lt_sprat_fit_plotly')
 
     # Plot the solution
     c.plot_fit(best_p,
@@ -151,7 +155,10 @@ def test_sprat_manual_atlas():
                display=False,
                filename='test/test_lt_sprat_arc_plotly')
 
-    c.plot_arc(save_fig=True, fig_type='png+html', display=False)
+    c.plot_arc(save_fig=True,
+               fig_type='png+html',
+               display=False,
+               return_jsonstring=True)
 
     # Plot the solution
     c.plot_fit(best_p,
@@ -161,7 +168,9 @@ def test_sprat_manual_atlas():
                tolerance=5.,
                save_fig=True,
                fig_type='png+html',
-               display=False)
+               display=False,
+               filename='test/test_lt_sprat_fit_log_plotly',
+               return_jsonstring=True)
     # Plot the solution
     c.plot_fit(best_p,
                spectrum,
@@ -177,4 +186,5 @@ def test_sprat_manual_atlas():
     c.plot_search_space(save_fig=True,
                         fig_type='png+html',
                         display=False,
-                        filename='test/test_lt_sprat_search_space_plotly')
+                        filename='test/test_lt_sprat_search_space_plotly',
+                        return_jsonstring=True)

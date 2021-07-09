@@ -33,20 +33,24 @@ def test_linear_fit():
     c.do_hough_transform(brute_force=False)
 
     # Run the wavelength calibration
-    best_p, rms, residual, peak_utilisation, atlas_utilisation = c.fit(
-        max_tries=500, fit_deg=1)
+    (best_p, matched_peaks, matched_atlas, rms, residual, peak_utilisation,
+     atlas_utilisation) = c.fit(max_tries=500, fit_deg=1)
     # Refine solution
-    best_p, x_fit, y_fit, residual, peak_utilisation, atlas_utilisation =\
-        c.match_peaks(best_p, refine=False, robust_refit=True)
+    (best_p, matched_peaks, matched_atlas, rms, residual, peak_utilisation,
+     atlas_utilisation) = c.match_peaks(best_p,
+                                        refine=False,
+                                        robust_refit=True)
 
-    assert np.abs(best_p[1] - 5.) < 0.001
-    assert np.abs(best_p[0] - 3000.) < 0.001
+    assert np.abs(best_p[1] - 5.) / 5. < 0.001
+    assert np.abs(best_p[0] - 3000.) / 3000. < 0.001
     assert peak_utilisation > 0.8
     assert atlas_utilisation > 0.0
 
+    assert len(c.get_pix_wave_pairs()) == len(peaks)
+
 
 def test_manual_refit():
-    
+
     # Initialise the calibrator
     c = Calibrator(peaks)
     c.set_calibrator_properties(num_pix=1000)
@@ -57,24 +61,27 @@ def test_manual_refit():
                            min_wavelength=3000.,
                            max_wavelength=8000.)
     c.add_user_atlas(elements=elements_linear, wavelengths=wavelengths_linear)
-    c.set_ransac_properties(minimum_matches=30)
+    c.set_ransac_properties(minimum_matches=25)
     c.do_hough_transform(brute_force=False)
 
     # Run the wavelength calibration
-    best_p, rms, residual, peak_utilisation, atlas_utilisation = c.fit(
-        max_tries=500, fit_deg=1)
+    (best_p, matched_peaks, matched_atlas, rms, residual, peak_utilisation,
+     atlas_utilisation) = c.fit(max_tries=500, fit_deg=1)
 
     # Refine solution
-    best_p, x_fit, y_fit, residual, peak_utilisation, atlas_utilisation =\
-        c.match_peaks(best_p, refine=False, robust_refit=True)
+    (best_p_robust, matched_peaks, matched_atlas, rms, residual,
+     peak_utilisation, atlas_utilisation) = c.match_peaks(best_p,
+                                                          refine=False,
+                                                          robust_refit=True)
 
-    
-    best_p_manual, residuals = c.manual_refit(x_fit, y_fit)
+    (best_p_manual, matched_peaks, matched_atlas, rms,
+     residuals) = c.manual_refit(matched_peaks, matched_atlas)
 
     assert np.allclose(best_p_manual, best_p)
 
+
 def test_manual_refit_remove_points():
-    
+
     # Initialise the calibrator
     c = Calibrator(peaks)
     c.set_calibrator_properties(num_pix=1000)
@@ -85,23 +92,57 @@ def test_manual_refit_remove_points():
                            min_wavelength=3000.,
                            max_wavelength=8000.)
     c.add_user_atlas(elements=elements_linear, wavelengths=wavelengths_linear)
-    c.set_ransac_properties(minimum_matches=30)
+    c.set_ransac_properties(minimum_matches=25)
     c.do_hough_transform(brute_force=False)
 
     # Run the wavelength calibration
-    best_p, rms, residual, peak_utilisation, atlas_utilisation = c.fit(
-        max_tries=500, fit_deg=1)
+    (best_p, atched_peaks, matched_atlas, rms, residual, peak_utilisation,
+     atlas_utilisation) = c.fit(max_tries=500, fit_deg=1)
 
     # Refine solution
-    best_p, x_fit, y_fit, residual, peak_utilisation, atlas_utilisation =\
-        c.match_peaks(best_p, refine=False, robust_refit=True)
+    (best_p, matched_peaks, matched_atlas, rms, residual, peak_utilisation,
+     atlas_utilisation) = c.match_peaks(best_p,
+                                        refine=False,
+                                        robust_refit=True)
 
-    best_p_manual, residuals = c.manual_refit(x_fit, y_fit, peaks_to_remove=np.random.choice(x_fit, 5))
-    
-    # TODO add assertions for this one
+    c.remove_pix_wave_pair(5)
+
+    (best_p_manual, matched_peaks, matched_atlas, rms,
+     residuals) = c.manual_refit(matched_peaks, matched_atlas)
+
+    assert np.allclose(best_p_manual, best_p)
+
 
 def test_manual_refit_add_points():
-    pass
+
+    # Initialise the calibrator
+    c = Calibrator(peaks)
+    c.set_calibrator_properties(num_pix=1000)
+    c.set_hough_properties(num_slopes=1000,
+                           range_tolerance=500.,
+                           xbins=200,
+                           ybins=200,
+                           min_wavelength=3000.,
+                           max_wavelength=8000.)
+    c.add_user_atlas(elements=elements_linear, wavelengths=wavelengths_linear)
+    c.set_ransac_properties(minimum_matches=25)
+    c.do_hough_transform(brute_force=False)
+
+    # Run the wavelength calibration
+    (best_p, atched_peaks, matched_atlas, rms, residual, peak_utilisation,
+     atlas_utilisation) = c.fit(max_tries=500, fit_deg=1)
+
+    # Refine solution
+    (best_p, matched_peaks, matched_atlas, rms, residual, peak_utilisation,
+     atlas_utilisation) = c.match_peaks(best_p,
+                                        refine=False,
+                                        robust_refit=True)
+
+    c.add_pix_wave_pair(2000., 3000. + 4 * 2000. + 1.0e-3 * 2000.**2.)
+    (best_p_manual, matched_peaks, matched_atlas, rms,
+     residuals) = c.manual_refit(matched_peaks, matched_atlas)
+
+    assert np.allclose(best_p_manual, best_p)
 
 
 def test_quadratic_fit():
@@ -121,17 +162,22 @@ def test_quadratic_fit():
     c.do_hough_transform(brute_force=False)
 
     # Run the wavelength calibration
-    best_p, rms, residual, peak_utilisation, atlas_utilisation = c.fit(
-        max_tries=2000, fit_deg=2)
+    (best_p, matched_peaks, matched_atlas, rms, residual, peak_utilisation,
+     atlas_utilisation) = c.fit(max_tries=2000,
+                                fit_tolerance=5.,
+                                candidate_tolerance=2.,
+                                fit_deg=2)
     # Refine solution
-    best_p, x_fit, y_fit, residual, peak_utilisation, atlas_utilisation =\
-        c.match_peaks(best_p, refine=False, robust_refit=True)
+    (best_p_robust, matched_peaks, matched_atlas, rms, residual,
+     peak_utilisation, atlas_utilisation) = c.match_peaks(best_p,
+                                                          refine=False,
+                                                          robust_refit=True)
 
-    assert (best_p[2] > 1e-3 * 0.999) & (best_p[2] < 1e-3 * 1.001)
-    assert (best_p[1] > 4. * 0.999) & (best_p[1] < 4. * 1.001)
-    assert (best_p[0] > 3000. * 0.999) & (best_p[0] < 3000. * 1.001)
+    assert np.abs(best_p_robust[2] - 1e-3) / 1e-3 < 0.001
+    assert np.abs(best_p_robust[1] - 4.) / 4. < 0.001
+    assert np.abs(best_p_robust[0] - 3000.) / 3000. < 0.001
     assert peak_utilisation > 0.8
-    assert atlas_utilisation > 0.0
+    assert atlas_utilisation > 0.5
 
 
 def test_quadratic_fit_legendre():
@@ -151,19 +197,19 @@ def test_quadratic_fit_legendre():
     c.do_hough_transform(brute_force=False)
 
     # Run the wavelength calibration
-    best_p, rms, residual, peak_utilisation, atlas_utilisation = c.fit(
-        max_tries=2000,
-        fit_tolerance=5.,
-        candidate_tolerance=2.,
-        fit_deg=2,
-        fit_type='legendre')
+    (best_p, matched_peaks, matched_atlas, rms, residual, peak_utilisation,
+     atlas_utilisation) = c.fit(max_tries=2000,
+                                fit_tolerance=5.,
+                                candidate_tolerance=2.,
+                                fit_deg=2,
+                                fit_type='legendre')
 
     # Legendre 2nd order takes the form
-    assert (best_p[2] > 1e-3 * 0.99) & (best_p[2] < 1e-3 * 1.01)
-    assert (best_p[1] > 4. * 0.99) & (best_p[1] < 4. * 1.01)
-    assert (best_p[0] > 3000. * 0.99) & (best_p[0] < 3000. * 1.01)
+    assert np.abs(best_p[2] - 1e-3) / 1e-3 < 0.001
+    assert np.abs(best_p[1] - 4.) / 4. < 0.001
+    assert np.abs(best_p[0] - 3000.) / 3000. < 0.001
     assert peak_utilisation > 0.7
-    assert atlas_utilisation > 0.0
+    assert atlas_utilisation > 0.5
 
 
 def test_quadratic_fit_chebyshev():
@@ -183,13 +229,15 @@ def test_quadratic_fit_chebyshev():
     c.do_hough_transform(brute_force=False)
 
     # Run the wavelength calibration
-    best_p, rms, residual, peak_utilisation, atlas_utilisation = c.fit(
-        max_tries=2000,
-        fit_tolerance=5.,
-        candidate_tolerance=2.,
-        fit_deg=2,
-        fit_type='chebyshev')
+    (best_p, matched_peaks, matched_atlas, rms, residual, peak_utilisation,
+     atlas_utilisation) = c.fit(max_tries=2000,
+                                fit_tolerance=5.,
+                                candidate_tolerance=2.,
+                                fit_deg=2,
+                                fit_type='chebyshev')
 
+    assert np.abs(best_p[2] - 1e-3) / 1e-3 < 0.001
+    assert np.abs(best_p[1] - 4.) / 4. < 0.001
+    assert np.abs(best_p[0] - 3000.) / 3000. < 0.001
     assert peak_utilisation > 0.7
-    assert atlas_utilisation > 0.0
-
+    assert atlas_utilisation > 0.5

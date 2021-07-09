@@ -35,7 +35,7 @@ def test_constant_model():
 @pytest.mark.xfail()
 def test_linear_model():
     s = SyntheticSpectrum(np.arange(2))
-    assert s.degree == 1
+    assert s.degree == 2
 
     s.get_pixels(wave1)
 

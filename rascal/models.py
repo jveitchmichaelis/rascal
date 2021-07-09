@@ -1,3 +1,4 @@
+import copy
 import scipy.optimize
 import numpy as np
 """
@@ -47,14 +48,15 @@ def robust_polyfit(x, y, degree=3, x0=None, bounds=None):
 
     x_n, y_n = normalise_input(x, y)
 
+    p_init = copy.copy(x0)
     # Need to normalise the fit function too
-    if x0 is not None:
+    if p_init is not None:
         for i in range(0, degree):
-            x0[i] *= x.std()**i
+            p_init[i] *= x.std()**i
 
-        x0 /= y.std()
+        p_init /= y.std()
     else:
-        x0 = np.ones(degree + 1)
+        p_init = np.ones(degree + 1)
     '''
     if bounds is None:
         bounds = np.inf * np.ones(degree + 1)
@@ -63,7 +65,7 @@ def robust_polyfit(x, y, degree=3, x0=None, bounds=None):
     '''
 
     res = scipy.optimize.least_squares(poly_cost_function,
-                                       x0,
+                                       p_init,
                                        args=(x_n, y_n, degree),
                                        loss='huber',
                                        diff_step=1e-5)
