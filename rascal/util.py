@@ -2,81 +2,11 @@ import numpy as np
 from scipy.optimize import curve_fit
 from numpy import exp
 import pkg_resources
-"""
-
-def vacuum_to_air(wavelengths):
-    s = 10000 / wavelengths
-    s2 = s**2
-
-    n = 1 + 0.0000834254 + 0.02406147 / (130 - s2) + 0.00015998 / (38.9 - s2)
-    wavelengths /= n
-
-    return
-
-def load_calibration_lines(elements,
-                           min_atlas_wavelength=1000.,
-                           max_atlas_wavelength=10000.,
-                           include_second_order=False,
-                           relative_intensity=1000,
-                           pressure=101325,
-                           temperature=273.15):
-    '''
-    https://apps.dtic.mil/dtic/tr/fulltext/u2/a105494.pdf
-    '''
-
-    if isinstance(elements, str):
-        elements = [elements]
-
-    lines = []
-    line_elements = []
-    line_strengths = []
-
-    for arc in elements:
-        file_path = pkg_resources.resource_filename(
-            'rascal', 'arc_lines/{}.csv'.format(arc.lower()))
-
-        with open(file_path, 'r') as f:
-
-            f.readline()
-            for l in f.readlines():
-                if l[0] == '#':
-                    continue
-
-                data = l.rstrip().split(',')
-                if len(data) > 2:
-                    line, strength, source = data[:3]
-                    line_strengths.append(float(strength))
-                else:
-                    line, source = data[:2]
-                    line_strengths.append(0)
-
-                lines.append(float(line))
-                line_elements.append(source)
-
-                if include_second_order:
-                    wavelength = 2 * lines[-1]
-
-                    lines.append(wavelength)
-                    line_elements.append(line_elements[-1] + "_2")
-                    line_strengths.append(line_strengths[-1])
-
-    cal_lines = np.array(lines)
-    cal_elements = np.array(line_elements)
-    cal_strengths = np.array(line_strengths)
-
-    # Get only lines within the requested wavelength
-    mask = (cal_lines > min_atlas_wavelength) * (
-        cal_lines < max_atlas_wavelength) * (cal_strengths >
-                                             relative_intensity)
-    return cal_elements[mask], cal_lines[mask], cal_strengths[mask]
-
-"""
-
 
 def get_vapour_pressure(temperature):
-    '''
+    """
     Appendix A.I of https://emtoolbox.nist.gov/Wavelength/Documentation.asp
-    '''
+    """
     K1 = 1.16705214528E+03
     K2 = -7.24213167032E+05
     K3 = -1.70738469401E+01
@@ -97,18 +27,18 @@ def get_vapour_pressure(temperature):
 
 
 def get_vapour_partial_pressure(relative_humidity, vapour_pressure):
-    '''
+    """
     Appendix A.II of https://emtoolbox.nist.gov/Wavelength/Documentation.asp
-    '''
+    """
     partial_pressure = relative_humidity / 100. * vapour_pressure
     return partial_pressure
 
 
 def edlen_refraction(wavelengths, temperature, pressure,
                      vapour_partial_pressure):
-    '''
+    """
     Appendix A.IV of https://emtoolbox.nist.gov/Wavelength/Documentation.asp
-    '''
+    """
     A = 8342.54
     B = 2406147.
     C = 15998.
@@ -132,7 +62,7 @@ def vacuum_to_air_wavelength(wavelengths,
                              temperature=273.15,
                              pressure=101325,
                              relative_humidity=0):
-    '''
+    """
 
     The conversion follows the Modified Edlén Equations
 
@@ -158,7 +88,7 @@ def vacuum_to_air_wavelength(wavelengths,
     -------
     air wavelengths: float or numpy.array
         The wavelengths in air given the condition
-    '''
+    """
 
     vapour_pressure = get_vapour_pressure(temperature)
     vapour_partial_pressure = get_vapour_partial_pressure(
@@ -168,7 +98,7 @@ def vacuum_to_air_wavelength(wavelengths,
 
 
 def filter_wavelengths(lines, min_atlas_wavelength, max_atlas_wavelength):
-    '''
+    """
     Filters a wavelength list to a minimum and maximum range.
 
     Parameters
@@ -187,7 +117,7 @@ def filter_wavelengths(lines, min_atlas_wavelength, max_atlas_wavelength):
     lines: list
         Filtered wavelengths within specified range limit
 
-    '''
+    """
 
     wavelengths = lines[:, 1].astype(np.float32)
     wavelength_mask = (wavelengths >= min_atlas_wavelength) & (wavelengths <=
@@ -197,7 +127,7 @@ def filter_wavelengths(lines, min_atlas_wavelength, max_atlas_wavelength):
 
 
 def filter_separation(wavelengths, min_separation=0):
-    '''
+    """
     Filters a wavelength list by a separation threshold.
 
     Parameters
@@ -214,7 +144,7 @@ def filter_separation(wavelengths, min_separation=0):
     distance_mask: list
         Mask of values which satisfy the separation criteria
 
-    '''
+    """
 
     left_dists = np.zeros_like(wavelengths)
     left_dists[1:] = wavelengths[1:] - wavelengths[:-1]
@@ -231,7 +161,7 @@ def filter_separation(wavelengths, min_separation=0):
 
 
 def filter_intensity(lines, min_intensity=0):
-    '''
+    """
     Filters a line list by an intensity threshold
 
     Parameters
@@ -249,7 +179,7 @@ def filter_intensity(lines, min_intensity=0):
     lines: list
         Filtered line list
 
-    '''
+    """
 
     out = []
     for line in lines:
@@ -272,7 +202,7 @@ def load_calibration_lines(elements=[],
                            temperature=273.15,
                            relative_humidity=0.):
 
-    '''
+    """
     Load calibration lines from the standard NIST atlas.
     Rascal provides a cleaned set of NIST lines that can be 
     used for general purpose calibration. It is recommended
@@ -314,7 +244,7 @@ def load_calibration_lines(elements=[],
     -------
     out: list
         Emission lines corresponding to the parameters specified
-    '''
+    """
 
     if isinstance(elements, str):
         elements = [elements]
@@ -362,7 +292,7 @@ def load_calibration_lines(elements=[],
 
 
 def gauss(x, a, x0, sigma):
-    '''
+    """
     1D Gaussian
 
     Parameters
@@ -380,13 +310,13 @@ def gauss(x, a, x0, sigma):
     -------
     out: list
         The Gaussian function evaluated at provided x
-    '''
+    """
 
     return a * exp(-(x - x0)**2 / (2 * sigma**2 + 1e-9))
 
 
 def refine_peaks(spectrum, peaks, window_width=10, distance=None):
-    '''
+    """
     Refine peak locations in a spectrum from a set of initial estimates.
 
     This function attempts to fit a Gaussian to each peak in the provided
@@ -410,7 +340,7 @@ def refine_peaks(spectrum, peaks, window_width=10, distance=None):
     refined_peaks: list
         A list of refined peak locations
         
-    '''
+    """
 
     refined_peaks = []
 
@@ -463,7 +393,7 @@ def refine_peaks(spectrum, peaks, window_width=10, distance=None):
 
 
 def _derivative(p):
-    '''
+    """
     Compute the derivative of a polynomial function.
 
     Parameters
@@ -477,7 +407,7 @@ def _derivative(p):
     derv: list
         Derivative coefficients, i * p[i]
         
-    '''
+    """
     derv = []
     for i in range(1, len(p)):
         derv.append(i * p[i])

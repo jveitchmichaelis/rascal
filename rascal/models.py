@@ -27,7 +27,7 @@ def polynomial(a, degree=3):
 
 
 def poly_cost_function(a, x, y, degree):
-    '''
+    """
     Polynomial cost function. Returns the absolute
     difference between the target value and
     predicted values.
@@ -48,7 +48,7 @@ def poly_cost_function(a, x, y, degree):
     residual: list
         y - f(x)
         
-    '''
+    """
     f = polynomial(a, degree)
     return y - f(x)
 
@@ -67,7 +67,7 @@ def normalise_input(x, y):
 
 
 def robust_polyfit(x, y, degree=3, x0=None):
-    '''
+    """
     Perform a robust polyfit given a set of values (x,y).
 
     Specifically this function performs a least squares 
@@ -90,7 +90,7 @@ def robust_polyfit(x, y, degree=3, x0=None):
     p: list
         Polynomial coefficients
         
-    '''
+    """
 
     x_n, y_n = normalise_input(x, y)
 
