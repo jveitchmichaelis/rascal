@@ -259,13 +259,13 @@ class Calibrator:
 
         (wavelength - gradient * x + intercept) < tolerance
 
-        Note: depending on the toleranceold set, one peak may match with
+        Note: depending on the tolerance set, one peak may match with
         multiple wavelengths.
 
         Parameters
         ----------
         candidate_tolerance: float (default: 10)
-            toleranceold  (Angstroms) for considering a point to be an inlier
+            tolerance  (Angstroms) for considering a point to be an inlier
             during candidate peak/line selection. This should be reasonable
             small as we want to search for candidate points which are
             *locally* linear.
