@@ -167,15 +167,55 @@ def vacuum_to_air_wavelength(wavelengths,
         wavelengths, temperature, pressure, vapour_partial_pressure)
 
 
-def filter_wavelengths(lines, min_atlas_wavelength, max_wavlength):
+def filter_wavelengths(lines, min_atlas_wavelength, max_atlas_wavelength):
+    '''
+    Filters a wavelength list to a minimum and maximum range.
+
+    Parameters
+    ----------
+
+    lines: list
+        List of input wavelengths
+    min_atlas_wavelength: int
+        Min wavelength, Ansgtrom
+    max_atlas_wavelength: int
+        Max wavelength, Angstrom
+
+    Returns
+    -------
+
+    lines: list
+        Filtered wavelengths within specified range limit
+
+    '''
+
     wavelengths = lines[:, 1].astype(np.float32)
     wavelength_mask = (wavelengths >= min_atlas_wavelength) & (wavelengths <=
-                                                               max_wavlength)
+                                                               max_atlas_wavelength)
 
     return lines[wavelength_mask]
 
 
 def filter_separation(wavelengths, min_separation=0):
+    '''
+    Filters a wavelength list by a separation threshold.
+
+    Parameters
+    ----------
+
+    wavelengths: list
+        List of input wavelengths
+    min_separation: int
+        Separation threshold, Ansgtrom
+
+    Returns
+    -------
+
+    distance_mask: list
+        Mask of values which satisfy the separation criteria
+
+    '''
+
     left_dists = np.zeros_like(wavelengths)
     left_dists[1:] = wavelengths[1:] - wavelengths[:-1]
 
@@ -191,6 +231,26 @@ def filter_separation(wavelengths, min_separation=0):
 
 
 def filter_intensity(lines, min_intensity=0):
+    '''
+    Filters a line list by an intensity threshold
+
+    Parameters
+    ----------
+
+    lines: list[tuple (str, float, float)]
+        A list of input lines where the 2nd parameter
+        is intensity
+    min_intensity: int
+        Intensity threshold
+
+    Returns
+    -------
+
+    lines: list
+        Filtered line list
+
+    '''
+
     out = []
     for line in lines:
         _, _, intensity = line
@@ -211,6 +271,50 @@ def load_calibration_lines(elements=[],
                            pressure=101325.,
                            temperature=273.15,
                            relative_humidity=0.):
+
+    '''
+    Load calibration lines from the standard NIST atlas.
+    Rascal provides a cleaned set of NIST lines that can be 
+    used for general purpose calibration. It is recommended
+    however that for repeated and robust calibration, the
+    user should specify an instrument-specific atlas.
+
+    Provide a wavelength range suitable to your calibration
+    source. You can also specify a minimum intensity that 
+    corresponds to the values listed in the NIST tables.
+
+    If you want air wavelengths (default), you can provide
+    atmospheric conditions for your system. In most cases
+    the default values of standard temperature and pressure
+    should be sufficient.
+
+
+    Parameters
+    ----------
+    elements: list
+        List of short element names, e.g. He as per NIST
+    min_atlas_wavelength: int
+        Minimum wavelength to search, Angstrom
+    max_atlas_wavelength: int
+        Maximum wavelength to search, Angstrom
+    min_intensity: int
+        Minimum intensity to search, per NIST
+    max_intensity: int
+        Maximum intensity to search, per NIST
+    vacuum: bool
+        Return vacuum wavelengths
+    pressure: float
+        Atmospheric pressure, Pascal
+    temperature: float
+        Temperature in Kelvin, default room temp
+    relative_humidity: float
+        Relative humidity, percent
+    
+    Returns
+    -------
+    out: list
+        Emission lines corresponding to the parameters specified
+    '''
 
     if isinstance(elements, str):
         elements = [elements]
@@ -258,14 +362,55 @@ def load_calibration_lines(elements=[],
 
 
 def gauss(x, a, x0, sigma):
+    '''
+    1D Gaussian
+
+    Parameters
+    ----------
+    x:
+        value or values to evaluate the Gaussian at
+    a: float
+        Magnitude
+    x0: float
+        Gaussian centre
+    sigma: float
+        Standard deviation (spread)
+    
+    Returns
+    -------
+    out: list
+        The Gaussian function evaluated at provided x
+    '''
+
     return a * exp(-(x - x0)**2 / (2 * sigma**2 + 1e-9))
 
 
 def refine_peaks(spectrum, peaks, window_width=10, distance=None):
+    '''
+    Refine peak locations in a spectrum from a set of initial estimates.
 
-    if distance is None:
+    This function attempts to fit a Gaussian to each peak in the provided
+    list. It returns a list of sub-pixel refined peaks. If two peaks are 
+    very close, they can be refined to the same location. In this case 
+    only one of the peaks will be returned - i.e. this function will return
+    a unique set of peak locations.
 
-        distance = window_width
+    Parameters
+    ----------
+    spectrum: list
+        Input spectrum (list of intensities)
+    peaks: list
+        A list of peak locations in pixels
+    window_width: int
+        Size of window to consider in fit either side of 
+        initial peak location
+    
+    Returns
+    -------
+    refined_peaks: list
+        A list of refined peak locations
+        
+    '''
 
     refined_peaks = []
 
@@ -317,7 +462,22 @@ def refine_peaks(spectrum, peaks, window_width=10, distance=None):
     return refined_peaks[mask & ~distance_mask]
 
 
-def derivative(p):
+def _derivative(p):
+    '''
+    Compute the derivative of a polynomial function.
+
+    Parameters
+    ----------
+    p: list
+        Polynomial coefficients, in increasing order
+        (e.g. 0th coefficient first)
+    
+    Returns
+    -------
+    derv: list
+        Derivative coefficients, i * p[i]
+        
+    '''
     derv = []
     for i in range(1, len(p)):
         derv.append(i * p[i])

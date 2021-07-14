@@ -27,6 +27,28 @@ def polynomial(a, degree=3):
 
 
 def poly_cost_function(a, x, y, degree):
+    '''
+    Polynomial cost function. Returns the absolute
+    difference between the target value and
+    predicted values.
+
+    Parameters
+    ----------
+    a: list
+        Polynomial coefficients
+    x: list
+        Values to evaluate polynomial at
+    y: list
+        Target values for each x
+    degree: int
+        Polynomial degree
+    
+    Returns
+    -------
+    residual: list
+        y - f(x)
+        
+    '''
     f = polynomial(a, degree)
     return y - f(x)
 
@@ -44,7 +66,31 @@ def normalise_input(x, y):
     return x_norm, y_norm
 
 
-def robust_polyfit(x, y, degree=3, x0=None, bounds=None):
+def robust_polyfit(x, y, degree=3, x0=None):
+    '''
+    Perform a robust polyfit given a set of values (x,y).
+
+    Specifically this function performs a least squares 
+    fit to the given data points using the robust Huber
+    loss. Inputs are normalised prior to fitting.
+
+    Parameters
+    ----------
+    x: list
+        Data points
+    y: list
+        Target data to fit
+    degree: int
+        Polynomial degree to fit
+    x0: list or None
+        Initial coefficients
+    
+    Returns
+    -------
+    p: list
+        Polynomial coefficients
+        
+    '''
 
     x_n, y_n = normalise_input(x, y)
 
@@ -57,12 +103,6 @@ def robust_polyfit(x, y, degree=3, x0=None, bounds=None):
         p_init /= y.std()
     else:
         p_init = np.ones(degree + 1)
-    '''
-    if bounds is None:
-        bounds = np.inf * np.ones(degree + 1)
-
-    assert len(bounds) > 0
-    '''
 
     res = scipy.optimize.least_squares(poly_cost_function,
                                        p_init,

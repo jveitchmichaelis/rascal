@@ -9,7 +9,7 @@ from scipy import interpolate
 from tqdm.autonotebook import tqdm
 
 from .util import load_calibration_lines
-from .util import derivative
+from .util import _derivative
 from .util import gauss
 from .util import vacuum_to_air_wavelength
 from . import models
@@ -649,7 +649,7 @@ class Calibrator:
                 # use the Hough space density as weights for the cost function
                 wave = self.polyval(self.pixel_list, fit_coeffs)
                 gradient = self.polyval(self.pixel_list,
-                                        derivative(fit_coeffs))
+                                        _derivative(fit_coeffs))
                 intercept = wave - gradient * self.pixel_list
 
                 # modified cost function weighted by the Hough space density
