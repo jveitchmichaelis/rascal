@@ -15,9 +15,6 @@ from .util import vacuum_to_air_wavelength
 from . import models
 from .houghtransform import HoughTransform
 
-np.random.seed(42)
-
-
 class Calibrator:
     def __init__(self, peaks, spectrum=None):
         '''
