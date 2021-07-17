@@ -3,6 +3,7 @@ from scipy.optimize import curve_fit
 from numpy import exp
 import pkg_resources
 
+
 def get_vapour_pressure(temperature):
     """
     Appendix A.I of https://emtoolbox.nist.gov/Wavelength/Documentation.asp
@@ -120,8 +121,9 @@ def filter_wavelengths(lines, min_atlas_wavelength, max_atlas_wavelength):
     """
 
     wavelengths = lines[:, 1].astype(np.float32)
-    wavelength_mask = (wavelengths >= min_atlas_wavelength) & (wavelengths <=
-                                                               max_atlas_wavelength)
+    wavelength_mask = (
+        (wavelengths >= min_atlas_wavelength) &
+        (wavelengths <= max_atlas_wavelength))
 
     return lines[wavelength_mask]
 
@@ -201,16 +203,15 @@ def load_calibration_lines(elements=[],
                            pressure=101325.,
                            temperature=273.15,
                            relative_humidity=0.):
-
     """
     Load calibration lines from the standard NIST atlas.
-    Rascal provides a cleaned set of NIST lines that can be 
+    Rascal provides a cleaned set of NIST lines that can be
     used for general purpose calibration. It is recommended
     however that for repeated and robust calibration, the
     user should specify an instrument-specific atlas.
 
     Provide a wavelength range suitable to your calibration
-    source. You can also specify a minimum intensity that 
+    source. You can also specify a minimum intensity that
     corresponds to the values listed in the NIST tables.
 
     If you want air wavelengths (default), you can provide
@@ -239,7 +240,7 @@ def load_calibration_lines(elements=[],
         Temperature in Kelvin, default room temp
     relative_humidity: float
         Relative humidity, percent
-    
+
     Returns
     -------
     out: list
@@ -305,7 +306,7 @@ def gauss(x, a, x0, sigma):
         Gaussian centre
     sigma: float
         Standard deviation (spread)
-    
+
     Returns
     -------
     out: list
@@ -320,8 +321,8 @@ def refine_peaks(spectrum, peaks, window_width=10, distance=None):
     Refine peak locations in a spectrum from a set of initial estimates.
 
     This function attempts to fit a Gaussian to each peak in the provided
-    list. It returns a list of sub-pixel refined peaks. If two peaks are 
-    very close, they can be refined to the same location. In this case 
+    list. It returns a list of sub-pixel refined peaks. If two peaks are
+    very close, they can be refined to the same location. In this case
     only one of the peaks will be returned - i.e. this function will return
     a unique set of peak locations.
 
@@ -332,14 +333,14 @@ def refine_peaks(spectrum, peaks, window_width=10, distance=None):
     peaks: list
         A list of peak locations in pixels
     window_width: int
-        Size of window to consider in fit either side of 
+        Size of window to consider in fit either side of
         initial peak location
-    
+
     Returns
     -------
     refined_peaks: list
         A list of refined peak locations
-        
+
     """
 
     refined_peaks = []
@@ -401,12 +402,12 @@ def _derivative(p):
     p: list
         Polynomial coefficients, in increasing order
         (e.g. 0th coefficient first)
-    
+
     Returns
     -------
     derv: list
         Derivative coefficients, i * p[i]
-        
+
     """
     derv = []
     for i in range(1, len(p)):

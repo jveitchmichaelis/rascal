@@ -1,6 +1,5 @@
 import itertools
 import logging
-from re import X
 
 import numpy as np
 from scipy.spatial import Delaunay
@@ -14,6 +13,7 @@ from .util import gauss
 from .util import vacuum_to_air_wavelength
 from . import models
 from .houghtransform import HoughTransform
+
 
 class Calibrator:
     def __init__(self, peaks, spectrum=None):
@@ -331,8 +331,7 @@ class Calibrator:
 
             x = np.array(self.atlas)[diff < candidate_tolerance]
 
-            weight = gauss(x, 1., x0,
-                           self.range_tolerance)
+            weight = gauss(x, 1., x0, self.range_tolerance)
 
             for y, w in zip(x, weight):
 
@@ -2118,6 +2117,7 @@ class Calibrator:
                 self.rms, self.residuals)
 
     def plot_arc(self,
+                 pixel_list=None,
                  log_spectrum=False,
                  save_fig=False,
                  fig_type='png',
@@ -2130,6 +2130,9 @@ class Calibrator:
 
         parameters
         ----------
+        pixel_list: array (default: None)
+            pixel value of the of the spectrum, this is only needed if the
+            spectrum spans multiple detector arrays.
         log_spectrum: boolean (default: False)
             Set to true to display the wavelength calibrated arc spectrum in
             logarithmic space.
@@ -2159,13 +2162,18 @@ class Calibrator:
 
         '''
 
+        if pixel_list is None:
+
+            pixel_list = np.arange(len(self.spectrum))
+
         if self.plot_with_matplotlib:
 
             plt.figure(figsize=(18, 5))
 
             if self.spectrum is not None:
                 if log_spectrum:
-                    plt.plot(np.log10(self.spectrum / self.spectrum.max()),
+                    plt.plot(pixel_list,
+                             np.log10(self.spectrum / self.spectrum.max()),
                              label='Arc Spectrum')
                     plt.vlines(self.peaks,
                                -2,
@@ -2175,7 +2183,8 @@ class Calibrator:
                     plt.ylabel("log(Normalised Count)")
                     plt.ylim(-2, 0)
                 else:
-                    plt.plot(self.spectrum / self.spectrum.max(),
+                    plt.plot(pixel_list,
+                             self.spectrum / self.spectrum.max(),
                              label='Arc Spectrum')
                     plt.ylabel("Normalised Count")
                     plt.vlines(self.peaks,
@@ -2226,7 +2235,7 @@ class Calibrator:
                 # Plot all-pairs
                 fig.add_trace(
                     go.Scatter(
-                        x=list(np.arange(len(self.spectrum))),
+                        x=list(pixel_list),
                         y=list(np.log10(self.spectrum / self.spectrum.max())),
                         mode='lines',
                         name='Arc'))
@@ -2237,7 +2246,7 @@ class Calibrator:
 
                 # Plot all-pairs
                 fig.add_trace(
-                    go.Scatter(x=list(np.arange(len(self.spectrum))),
+                    go.Scatter(x=list(pixel_list),
                                y=list(self.spectrum / self.spectrum.max()),
                                mode='lines',
                                name='Arc'))
@@ -2616,14 +2625,14 @@ class Calibrator:
             fig.update_layout(
                 autosize=True,
                 yaxis=dict(
-                    title='Pixel',
+                    title='Wavelength / A',
                     range=[
                         self.min_wavelength - self.range_tolerance * 1.1,
                         self.max_wavelength + self.range_tolerance * 1.1
                     ],
                     showgrid=True),
                 xaxis=dict(
-                    title='Wavelength / A',
+                    title='Pixel',
                     zeroline=False,
                     range=[0., self.pixel_list.max()],
                     showgrid=True,

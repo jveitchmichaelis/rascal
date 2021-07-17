@@ -1,11 +1,10 @@
-import numpy as np
 import os
+
+import numpy as np
 from astropy.io import fits
 from scipy.signal import find_peaks
-from matplotlib import pyplot as plt
 
 from rascal.calibrator import Calibrator
-from rascal import models
 from rascal import util
 
 # Load the LT SPRAT data
@@ -18,13 +17,13 @@ spectrum2D = fits.open(
 spectrum = np.flip(spectrum2D.mean(1), 0)
 
 # Identify the peaks
-peaks, _ = find_peaks(spectrum, prominence=15, distance=5, threshold=None)
+peaks, _ = find_peaks(spectrum, prominence=10, distance=5, threshold=None)
 peaks = util.refine_peaks(spectrum, peaks, window_width=5)
 
 # Initialise the calibrator
 c = Calibrator(peaks, spectrum=spectrum)
 c.plot_arc()
-c.set_hough_properties(num_slopes=5000,
+c.set_hough_properties(num_slopes=10000,
                        range_tolerance=500.,
                        xbins=200,
                        ybins=200,
@@ -32,14 +31,15 @@ c.set_hough_properties(num_slopes=5000,
                        max_wavelength=4600.)
 c.set_ransac_properties(sample_size=8, top_n_candidate=10)
 c.add_atlas(elements=['Cu', 'Ne', 'Ar'],
-            min_intensity=10,
+            min_intensity=5,
             pressure=80000.,
             temperature=285.)
 
 c.do_hough_transform()
 
 # Run the wavelength calibration
-best_p, rms, residual, peak_utilisation = c.fit(max_tries=100, fit_deg=4)
+(best_p, matched_peaks, matched_atlas, rms, residual, peak_utilisation,
+ atlas_utilisation) = c.fit(max_tries=100, fit_deg=4)
 
 # Plot the solution
 c.plot_fit(best_p, spectrum, plot_atlas=True, log_spectrum=False, tolerance=5.)
@@ -49,3 +49,4 @@ c.plot_search_space()
 
 print("Stdev error: {} A".format(residual.std()))
 print("Peaks utilisation rate: {}%".format(peak_utilisation * 100))
+print("Atlas utilisation rate: {}%".format(atlas_utilisation * 100))

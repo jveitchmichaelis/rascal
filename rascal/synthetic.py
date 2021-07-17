@@ -106,18 +106,20 @@ class SyntheticSpectrum:
         wavelengths = np.array(wavelengths)
         wavelengths = wavelengths[wavelengths > self.min_wavelength]
         wavelengths = wavelengths[wavelengths < self.max_wavelength]
-        
+
         # Constant function y = c
         if self.degree == 0:
             pixels = self.coefficients[0]*np.ones(len(wavelengths))
         # Linear function y = mx + c
         elif self.degree == 1:
-            #x = (y - c) / m
-            pixels = (wavelengths - self.coefficients[0]) / self.coefficients[1]
+            # x = (y - c) / m
+            pixels =\
+                (wavelengths - self.coefficients[0]) / self.coefficients[1]
         else:
             pixels = pynverse.inversefunc(self.model, wavelengths)
 
         return pixels, wavelengths
+
 
 '''
 class RandomSyntheticSpectrum(SyntheticSpectrum):
