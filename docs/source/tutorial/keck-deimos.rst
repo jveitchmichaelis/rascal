@@ -8,9 +8,6 @@ This example performs wavelength calibration on DEep Imaging Multi-Object Spectr
 .. code-block:: python
 
     import json
-    from astropy.io import fits
-    import matplotlib
-    import matplotlib.pyplot as plt
     import numpy as np
     from scipy.signal import find_peaks
 
@@ -24,7 +21,7 @@ This example performs wavelength calibration on DEep Imaging Multi-Object Spectr
     spectrum_json = json.load(open('data_keck_deimos/keck_deimos_830g_l_PYPIT.json'))
     spectrum = np.array(spectrum_json['spec'])
 
-    peaks, _ = find_peaks(spectrum, prominence=100, distance=10)
+    peaks, _ = find_peaks(spectrum, prominence=200, distance=10)
     peaks_refined = refine_peaks(spectrum, peaks, window_width=3)
 
 3. Initialise the calibrator and set the properties. There are three sets of properties: (1) the calibrator properties who concerns the highest level setting - e.g. logging and plotting; (2) the Hough transform properties which set the constraints in which the trasnform is performed; (3) the RANSAC properties control the sampling conditions.
@@ -41,7 +38,7 @@ This example performs wavelength calibration on DEep Imaging Multi-Object Spectr
                            xbins=200,
                            ybins=200,
                            min_wavelength=6500.,
-                           max_wavelength=10400.,
+                           max_wavelength=10500.,
                            range_tolerance=500.,
                            linearity_tolerance=50)
 
@@ -78,15 +75,21 @@ The following `INFO` should be logged, where the first 3 lines are when the cali
 
 .. code-block:: python
 
-    c.add_atlas(["He", "Ar", "Kr"], min_intensity=15)
+    c.add_atlas(["He", "Ar", "Kr"],
+                min_intensity=15,
+                min_intensity=1000.,
+                pressure=70000.,
+                temperature=285.)
     c.do_hough_transform()
 
 6. Perform polynomial fit on samples drawn from RANSAC, the deafult option is to fit with polynomial function.
 
 .. code-block:: python
 
-    fit_coeff, rms, residual, peak_utilisation = c.fit(max_tries=500)
+    (fit_coeff, matched_peaks, matched_atlas, rms, residual, peak_utilisation,
+     atlas_utilisation) = c.fit(max_tries=1000)
     c.plot_fit(fit_coeff,
+               spectrum=spectrum,
                plot_atlas=True,
                log_spectrum=False,
                tolerance=10.)
@@ -182,14 +185,7 @@ with some INFO output looking like this:
     print("RMS: {}".format(rms))
     print("Stdev error: {} A".format(np.abs(residual).std()))
     print("Peaks utilisation rate: {}%".format(peak_utilisation*100))
-
-with these output
-
-.. code-block:: python
-
-    RMS: 1.411078018939561
-    Stdev error: 1.002515041197043 A
-    Peaks utilisation rate: 27.27272727272727%
+    print("Atlas utilisation rate: {}%".format(atlas_utilisation*100))
 
 where the low numer of peaks utilisation suggests it may be a good fit by chance for the 1/3 of all the peaks, or confusion of the peaks causes the problem. These values alone cannot tell which is the case here and the diagnotic plot should be inspected to confirm the quality of fit.
 

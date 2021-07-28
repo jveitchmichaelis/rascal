@@ -7,9 +7,9 @@ The spectrogrphy `SPRAT <http://telescope.livjm.ac.uk/TelInst/Inst/SPRAT/>`_ on 
 
 .. code-block:: python
 
-    from astropy.io import fits
     import matplotlib.pyplot as plt
     import numpy as np
+    from astropy.io import fits
     from scipy.signal import find_peaks
     from scipy.signal import resample
 
@@ -32,8 +32,8 @@ The spectrogrphy `SPRAT <http://telescope.livjm.ac.uk/TelInst/Inst/SPRAT/>`_ on 
 
     data = fits.open('data_lt_sprat/v_a_20190516_57_1_0_1.fits')[0].data
 
-    plt.figure(1, figsize=(16,5))
-    plt.imshow(np.log(data.data), aspect='auto', origin='lower')
+    plt.figure(1, figsize=(10, 4))
+    plt.imshow(np.log10(data.data), aspect='auto', origin='lower')
     plt.tight_layout()
 
 .. figure:: lt-sprat-arc-image.png
@@ -67,7 +67,6 @@ The spectrogrphy `SPRAT <http://telescope.livjm.ac.uk/TelInst/Inst/SPRAT/>`_ on 
 
     c.set_ransac_properties(sample_size=5,
                             top_n_candidate=5,
-                            linear=True,
                             filter_close=True,
                             ransac_tolerance=5,
                             candidate_weighted=True,
@@ -96,17 +95,19 @@ The following `INFO` should be logged, where the first 3 lines are when the cali
 
 .. code-block:: python
 
-    c.load_user_atlas(elements=element,
-                      wavelengths=atlas,
-                      constrain_poly=True)
+    c.add_user_atlas(elements=element,
+                     wavelengths=atlas,
+                     constrain_poly=True)
     c.do_hough_transform()
 
 6. Perform polynomial fit on samples drawn from RANSAC, the deafult option is to fit with polynomial function.
 
 .. code-block:: python
 
-    fit_coeff, rms, residual, peak_utilisation = c.fit(max_tries=500)
+    (fit_coeff, matched_peaks, matched_atlas, rms, residual, peak_utilisation,
+     atlas_utilisation) = c.fit(max_tries=1000)
     c.plot_fit(fit_coeff,
+               spectrum=spectrum,
                plot_atlas=True,
                log_spectrum=False,
                tolerance=10.)
@@ -218,14 +219,7 @@ with some INFO output looking like this:
     print("RMS: {}".format(rms))
     print("Stdev error: {} A".format(np.abs(residual).std()))
     print("Peaks utilisation rate: {}%".format(peak_utilisation*100))
-
-with these output
-
-.. code-block:: python
-
-    RMS: 1.5395791997318062
-    Stdev error: 1.0080766045416139 A
-    Peaks utilisation rate: 82.35294117647058%
+    print("Atlas utilisation rate: {}%".format(atlas_utilisation * 100))
 
 8. We can also inspect the search space in the Hough parameter-space where the samples were drawn by running:
 

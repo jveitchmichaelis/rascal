@@ -3,6 +3,7 @@ import sys
 
 import numpy as np
 from astropy.io import fits
+from matplotlib import pyplot as plt
 from scipy.signal import find_peaks
 from scipy import interpolate
 
@@ -22,6 +23,14 @@ spectrum2D = fits.open(
     os.path.join(base_dir,
                  'data_gemini_gmos/N20181115S0215_flattened.fits'))[0].data
 
+plt.ion()
+plt.figure(1, figsize=(10, 4))
+plt.imshow(np.log10(spectrum2D), aspect='auto', origin='lower')
+plt.xlabel('Spectral Direction / Pix')
+plt.ylabel('Spatial Direction / Pix')
+plt.tight_layout()
+plt.savefig('output/gemini-gmosls-arc-image.png')
+
 # Collapse into 1D spectrum between row 300 and 310
 spectrum = np.median(spectrum2D[300:310], axis=0)[::-1]
 
@@ -38,7 +47,9 @@ peaks_shifted = rawpix_to_pix_itp(peaks)
 # Initialise the calibrator
 c = Calibrator(peaks_shifted, spectrum=spectrum)
 c.set_calibrator_properties(pixel_list=pixels)
-c.plot_arc(pixels)
+c.plot_arc(pixels,
+           save_fig='png',
+           filename='output/gemini-gmosls-arc-spectrum')
 c.set_hough_properties(num_slopes=5000,
                        range_tolerance=500.,
                        xbins=200,
@@ -74,10 +85,17 @@ c.do_hough_transform()
  atlas_utilisation) = c.fit(max_tries=1000, fit_deg=4)
 
 # Plot the solution
-c.plot_fit(best_p, spectrum, plot_atlas=True, log_spectrum=False, tolerance=5.)
+c.plot_fit(best_p,
+           spectrum,
+           plot_atlas=True,
+           log_spectrum=False,
+           tolerance=5.,
+           save_fig='png',
+           filename='output/gemini-gmosls-wavelength-calibration')
 
 # Show the parameter space for searching possible solution
-c.plot_search_space()
+c.plot_search_space(save_fig='png',
+                    filename='output/gemini-gmosls-search-space')
 
 print("Stdev error: {} A".format(residual.std()))
 print("Peaks utilisation rate: {}%".format(peak_utilisation * 100))

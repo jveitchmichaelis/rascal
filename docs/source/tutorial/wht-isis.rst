@@ -7,24 +7,14 @@ The Intermediate-dispersion Spectrograph and Imaging System (`ISIS <http://www.i
 
 .. code-block:: python
 
-    from astropy.io import fits
     import matplotlib.pyplot as plt
     import numpy as np
+    from astropy.io import fits
     from scipy.signal import find_peaks
     from scipy.signal import resample
 
     from rascal.calibrator import Calibrator
     from rascal.util import refine_peaks
-
-    atlas = [
-        4193.5, 4385.77, 4500.98, 4524.68, 4582.75, 4624.28, 4671.23, 4697.02,
-        4734.15, 4807.02, 4921.48, 5028.28, 5618.88, 5823.89, 5893.29, 5934.17,
-        6182.42, 6318.06, 6472.841, 6595.56, 6668.92, 6728.01, 6827.32, 6976.18,
-        7119.60, 7257.9, 7393.8, 7584.68, 7642.02, 7740.31, 7802.65, 7887.40,
-        7967.34, 8057.258
-    ]
-
-    element = ['Xe'] * len(atlas)
 
 2. Load and inspect the arc image
 
@@ -32,8 +22,8 @@ The Intermediate-dispersion Spectrograph and Imaging System (`ISIS <http://www.i
 
     data = fits.open('data_wht_isis/r2701004_red_arc.fit')[1]
 
-    plt.figure(1, figsize=(16,5))
-    plt.imshow(np.log(data.data.T), aspect='auto', origin='lower')
+    plt.figure(1, figsize=(10, 4))
+    plt.imshow(np.log10(data.data.T), aspect='auto', origin='lower')
     plt.tight_layout()
 
 .. figure:: wht-isis-arc-image.png

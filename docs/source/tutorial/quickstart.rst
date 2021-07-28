@@ -58,14 +58,18 @@ To distinguish from the Hough transform and fitting from the calibrator, in manu
                            linearity_tolerance=50)
 
     c.set_ransac_properties(sample_size=5,
-                            top_n_candidate=8)
+                            top_n_candidate=8,
+                            filter_close=True)
 
 The calibration still does not know what it is calibrating against, so we have to provide the arc lines or use the built-in library by providing the Chemical symbols.
 
 .. code-block:: python
 
     # Load the Lines from library
-    c.add_atlas(["Xe"])
+    c.add_atlas(["Xe"],
+                min_intensity=10,
+                min_distance=10,
+                constrain_poly=True)
 
 With everything set, we can perform the Hough transform on the pixel-wavelength pairs
 
@@ -78,12 +82,22 @@ Finally, we can do the fitting, there are still a few more parameters that were 
 .. code-block:: python
 
     # Solve for the wavelength calibration
-    best_polyfit_coefficient, rms, residual, peak_utilisation = c.fit(max_tries=1000,
-                                                                      polydeg=7)
+    (best_polyfit_coefficient, matched_peaks, matched_atlas, rms, residual,
+     peak_utilisation, atlas_utilisation) = c.fit(max_tries=1000, polydeg=7)
 
 Show the wavelength calibrated spectrum.
 
 .. code-block:: python
 
     # Produce the diagnostic plot
-    c.plot_fit(best_polyfit_coefficient)
+    c.plot_fit(best_polyfit_coefficient,
+               spectrum,
+               plot_atlas=True,
+               log_spectrum=False,
+               tolerance=5.)
+
+Show the parameter space in which the solution searching was carried out.
+
+.. code-block:: python
+
+    c.plot_search_space()

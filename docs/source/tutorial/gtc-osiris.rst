@@ -48,6 +48,8 @@ The spectrogrphy `OSIRIS <http://www.gtc.iac.es/instruments/osiris/#Longslit_Spe
 
 .. code-block:: python
 
+    c = Calibrator(peaks_refined, spectrum)
+
     c.set_hough_properties(num_slopes=2000,
                            xbins=100,
                            ybins=100,
@@ -56,9 +58,9 @@ The spectrogrphy `OSIRIS <http://www.gtc.iac.es/instruments/osiris/#Longslit_Spe
                            range_tolerance=500.,
                            linearity_tolerance=50)
 
-    c.load_user_atlas(elements=element,
-                      wavelengths=atlas,
-                      constrain_poly=True)
+    c.add_user_atlas(elements=element,
+                     wavelengths=atlas,
+                     constrain_poly=True)
 
     c.set_ransac_properties(sample_size=5,
                             top_n_candidate=5,
@@ -93,16 +95,17 @@ The following `INFO` should be logged, where the first 3 lines are when the cali
 
 .. code-block:: python
 
-    c.load_user_atlas(elements=element,
-                      wavelengths=atlas,
-                      constrain_poly=True)
+    c.add_user_atlas(elements=element,
+                     wavelengths=atlas,
+                     constrain_poly=True)
     c.do_hough_transform()
 
 6. Perform polynomial fit on samples drawn from RANSAC, the deafult option is to fit with polynomial function.
 
 .. code-block:: python
 
-    fit_coeff, rms, residual, peak_utilisation = c.fit(max_tries=200, fit_tolerance=10., fit_deg=4)
+    (fit_coeff, matched_peaks, matched_atlas, rms, residual, peak_utilisation,
+     atlas_utilisation) = c.fit(max_tries=200, fit_tolerance=10., fit_deg=4)
 
     c.plot_fit(fit_coeff,
                plot_atlas=True,
@@ -165,14 +168,7 @@ with some INFO output looking like this:
     print("RMS: {}".format(rms))
     print("Stdev error: {} A".format(np.abs(residual).std()))
     print("Peaks utilisation rate: {}%".format(peak_utilisation*100))
-
-with these output
-
-.. code-block:: python
-
-    RMS: 0.263069686012686
-    Stdev error: 0.1791648865435056 A
-    Peaks utilisation rate: 80.0%
+    print("Atlass utilisation rate: {}%".format(atlas_utilisation*100))
 
 8. We can also inspect the search space in the Hough parameter-space where the samples were drawn by running:
 

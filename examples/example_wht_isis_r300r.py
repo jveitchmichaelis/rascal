@@ -2,6 +2,7 @@ import os
 
 import numpy as np
 from astropy.io import fits
+from matplotlib import pyplot as plt
 from scipy.signal import find_peaks
 
 from rascal.calibrator import Calibrator
@@ -15,6 +16,14 @@ spectrum2D = fits.open(
 # Collapse into 1D spectrum between row 500 and 520
 spectrum = np.median(spectrum2D[500:520], axis=0)
 
+plt.ion()
+plt.figure(1, figsize=(10, 4))
+plt.imshow(np.log10(spectrum2D), aspect='auto', origin='lower')
+plt.xlabel('Spectral Direction / Pix')
+plt.ylabel('Spatial Direction / Pix')
+plt.tight_layout()
+plt.savefig('output/wht-isis-arc-image.png')
+
 # Identify the peaks
 peaks, _ = find_peaks(spectrum,
                       height=500,
@@ -25,7 +34,9 @@ peaks = util.refine_peaks(spectrum, peaks, window_width=3)
 
 # Initialise the calibrator
 c = Calibrator(peaks, spectrum=spectrum)
-c.plot_arc(log_spectrum=True)
+c.plot_arc(log_spectrum=True,
+           save_fig='png',
+           filename='output/wht-isis-arc-spectrum')
 c.set_hough_properties(num_slopes=10000,
                        xbins=500,
                        ybins=500,
@@ -37,8 +48,8 @@ c.set_ransac_properties(sample_size=5, top_n_candidate=5, filter_close=True)
 c.add_atlas(["Ne", "Ar", "Cu"],
             min_atlas_wavelength=6000,
             max_atlas_wavelength=11000,
-            min_intensity=10,
-            min_distance=10,
+            min_intensity=250,
+            min_distance=15,
             constrain_poly=False,
             vacuum=False,
             pressure=101325.,
@@ -51,10 +62,16 @@ c.do_hough_transform()
  atlas_utilisation) = c.fit(max_tries=1000)
 
 # Plot the solution
-c.plot_fit(best_p, spectrum, plot_atlas=True, log_spectrum=False, tolerance=5.)
+c.plot_fit(best_p,
+           spectrum,
+           plot_atlas=True,
+           log_spectrum=False,
+           tolerance=5.,
+           save_fig='png',
+           filename='output/wht-isis-wavelength-calibration')
 
 # Show the parameter space for searching possible solution
-c.plot_search_space()
+c.plot_search_space(save_fig='png', filename='output/wht-isis-search-space')
 
 print("Stdev error: {} A".format(residual.std()))
 print("Peaks utilisation rate: {}%".format(peak_utilisation * 100))

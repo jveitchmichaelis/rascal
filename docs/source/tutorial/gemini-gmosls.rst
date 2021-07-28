@@ -52,6 +52,8 @@ The spectrogrphy `GMOSLS <https://www.gemini.edu/instrumentation/current-instrum
     # Collapse into 1D spectrum between row 110 and 120
     spectrum = np.median(spectrum2D[300:310], axis=0)[::-1]
 
+.. figure:: gemini-gmosls-arc-image.png
+
 3. Load the data and identify the arc lines in the middle of the frame. Normally you should be applying the trace from the spectral image onto the arc image
 
 .. code-block:: python
@@ -106,19 +108,20 @@ The following `INFO` should be logged, where the first 3 lines are when the cali
 
 .. code-block:: python
 
-    c.load_user_atlas(elements=element,
-                      wavelengths=atlas,
-                      vacuum=True,
-                      pressure=61700.,
-                      temperature=276.55,
-                      relative_humidity=4.)
+    c.add_user_atlas(elements=element,
+                     wavelengths=atlas,
+                     vacuum=True,
+                     pressure=61700.,
+                     temperature=276.55,
+                     relative_humidity=4.)
     c.do_hough_transform()
 
 6. Perform polynomial fit on samples drawn from RANSAC, the deafult option is to fit with polynomial function.
 
 .. code-block:: python
 
-    fit_coeff, rms, residual, peak_utilisation = c.fit(max_tries=1000, fit_deg=4)
+    (fit_coeff, matched_peaks, matched_atlas, rms, residual, peak_utilisation,
+     atlas_utilisation) = c.fit(max_tries=1000, fit_deg=4)
 
     # Plot the solution
     c.plot_fit(fit_coeff, spectrum, plot_atlas=True, log_spectrum=False, tolerance=5.)
@@ -241,14 +244,7 @@ with some INFO output looking like this:
     print("RMS: {}".format(rms))
     print("Stdev error: {} A".format(np.abs(residual).std()))
     print("Peaks utilisation rate: {}%".format(peak_utilisation*100))
-
-with these output
-
-.. code-block:: python
-
-    RMS: 0.20199868705514198
-    Stdev error: 0.20199868705514198 A
-    Peaks utilisation rate: 93.33333333333333%
+    print("Atlas utilisation rate: {}%".format(atlas_utilisation*100))
 
 8. We can also inspect the search space in the Hough parameter-space where the samples were drawn by running:
 

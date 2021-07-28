@@ -16,7 +16,7 @@ peaks, _ = find_peaks(spectrum, prominence=200, distance=10)
 peaks = refine_peaks(spectrum, peaks, window_width=3)
 
 c = Calibrator(peaks, spectrum=spectrum)
-c.plot_arc()
+c.plot_arc(save_fig='png', filename='output/keck-deimos-arc-spectrum')
 c.set_hough_properties(num_slopes=10000.,
                        range_tolerance=500.,
                        linearity_tolerance=50,
@@ -38,15 +38,22 @@ c.add_atlas(elements=["Ne", "Ar", "Kr"],
 c.do_hough_transform()
 
 # Run the wavelength calibration
-(best_p, matched_peaks, matched_atlas, rms, residual, peak_utilisation,
+(fit_coeff, matched_peaks, matched_atlas, rms, residual, peak_utilisation,
  atlas_utilisation) = c.fit(max_tries=1000)
 
 # Plot the solution
-c.plot_fit(best_p, spectrum, plot_atlas=True, log_spectrum=False, tolerance=5.)
+c.plot_fit(fit_coeff,
+           spectrum,
+           plot_atlas=True,
+           log_spectrum=False,
+           tolerance=5.,
+           save_fig='png',
+           filename='output/keck-deimos-wavelength-calibration')
 
 # Show the parameter space for searching possible solution
-c.plot_search_space()
-
-print("Stdev error: {} A".format(residual.std()))
+print("RMS: {}".format(rms))
+print("Stdev error: {} A".format(np.abs(residual).std()))
 print("Peaks utilisation rate: {}%".format(peak_utilisation * 100))
 print("Atlas utilisation rate: {}%".format(atlas_utilisation * 100))
+
+c.plot_search_space(save_fig='png', filename='output/keck-deimos-search-space')

@@ -38,6 +38,7 @@ From this we know that the maximum gradient must be:
     &\dfrac{\mathrm{Maximum\ Wavelength} - \mathrm{Tolerance} - \mathrm{Minimum\ Interception}}{\mathrm{Number\ of\ Pixels}\, /\, \mathrm{Linearity\ Tolerance\ Threshold}}\\
     =\, &\dfrac{(8000 + 500) - (4000 - 500)}{914 / 3}\\
     \approx\, &16.41
+
 and the minimum:
 
 .. math::

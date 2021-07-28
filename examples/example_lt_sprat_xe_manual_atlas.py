@@ -2,6 +2,7 @@ import os
 
 import numpy as np
 from astropy.io import fits
+from matplotlib import pyplot as plt
 from scipy.signal import find_peaks
 
 from rascal.calibrator import Calibrator
@@ -13,6 +14,14 @@ fits_file = fits.open(
     os.path.join(base_dir, 'data_lt_sprat/v_a_20190516_57_1_0_1.fits'))[0]
 
 spectrum2D = fits_file.data
+
+plt.ion()
+plt.figure(1, figsize=(10, 4))
+plt.imshow(np.log10(spectrum2D), aspect='auto', origin='lower')
+plt.xlabel('Spectral Direction / Pix')
+plt.ylabel('Spatial Direction / Pix')
+plt.tight_layout()
+plt.savefig('output/lt-sprat-arc-image.png')
 
 # Collapse into 1D spectrum between row 110 and 120
 spectrum = np.median(spectrum2D[110:120], axis=0)
@@ -79,10 +88,16 @@ print("Peaks utilisation rate: {}%".format(peak_utilisation * 100))
 print("Atlas utilisation rate: {}%".format(atlas_utilisation * 100))
 
 c.use_matplotlib()
-c.plot_arc()
+c.plot_arc(save_fig='png', filename='output/lt-sprat-arc-spectrum')
 
 # Plot the solution
-c.plot_fit(best_p, spectrum, plot_atlas=True, log_spectrum=False, tolerance=5.)
+c.plot_fit(best_p,
+           spectrum=spectrum,
+           plot_atlas=True,
+           log_spectrum=False,
+           tolerance=5.,
+           save_fig='png',
+           filename='output/lt-sprat-wavelength-calibration')
 
 # Show the parameter space for searching possible solution
-c.plot_search_space()
+c.plot_search_space(save_fig='png', filename='output/lt-sprat-search-space')
