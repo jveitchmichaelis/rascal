@@ -2006,8 +2006,8 @@ class Calibrator:
         Remove fitted pixel-wavelength pair from the Calibrator for refitting.
         The positions can be found from get_pix_wave_pairs(). One at a time.
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         arg: int
             The position of the pairs in the arrays.
 

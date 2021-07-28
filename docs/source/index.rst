@@ -107,6 +107,12 @@ User Guide
    modules/synthetic
    modules/util
 
+.. toctree::
+   :maxdepth: 2
+   :caption: Change log
+
+   changelog
+
 License & Attribution
 =====================
 
