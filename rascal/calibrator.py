@@ -872,6 +872,7 @@ class Calibrator:
                                   num_pix=None,
                                   pixel_list=None,
                                   plotting_library=None,
+                                  seed=None,
                                   logger_name='Calibrator',
                                   log_level='warning'):
         '''
@@ -886,6 +887,10 @@ class Calibrator:
             spectrum spans multiple detector arrays.
         plotting_library: string (default: 'matplotlib')
             Choose between matplotlib and plotly.
+        seed: int
+            Set an optional seed for random number generators. If used,
+            this parameter must be set prior to calling RANSAC. Useful
+            for deterministic debugging.
         logger_name: string (default: 'Calibrator')
             The name of the logger. It can use an existing logger if a
             matching name is provided.
@@ -952,6 +957,9 @@ class Calibrator:
         # map the list position to the pixel value
         self.pix_to_rawpix = interpolate.interp1d(
             self.pixel_list, np.arange(len(self.pixel_list)))
+        
+        if seed is not None:
+            np.random.seed(seed)
 
         # if the plotting library is supplied
         if plotting_library is not None:
