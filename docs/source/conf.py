@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.abspath('../..'))
 project = 'RASCAL'
 copyright = '2019-2021, Josh Veitch-Michaelis, Marco Lam'
 author = 'Josh Veitch-Michaelis, Marco Lam'
-__version__ = '0.3.0-rc'
+__version__ = '0.3.0'
 
 # The full version, including alpha/beta/rc tags
 version = __version__
