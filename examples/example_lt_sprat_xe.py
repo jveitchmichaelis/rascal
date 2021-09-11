@@ -42,6 +42,7 @@ atlas = Atlas(elements=["Xe"],
                 min_distance=10,
                 min_atlas_wavelength=3500.,
                 max_atlas_wavelength=8000.,
+                range_tolerance=500.,
                 pressure=pressure,
                 temperature=temperature,
                 relative_humidity=relative_humidity)

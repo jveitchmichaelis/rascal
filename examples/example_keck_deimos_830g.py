@@ -4,6 +4,7 @@ import numpy as np
 from scipy.signal import find_peaks
 
 from rascal.calibrator import Calibrator
+from rascal.atlas import Atlas
 from rascal.util import refine_peaks
 
 # Load the 1D Spectrum from Pypeit
@@ -31,10 +32,14 @@ c.set_ransac_properties(sample_size=5,
                         ransac_tolerance=5,
                         candidate_weighted=True,
                         hough_weight=1.0)
-c.add_atlas(elements=["Ne", "Ar", "Kr"],
+
+atlas = Atlas(elements=["Ne", "Ar", "Kr"],
             min_intensity=1000.,
             pressure=70000.,
-            temperature=285.)
+            temperature=285.,
+            range_tolerance=500.,)
+c.set_atlas(atlas)
+
 c.do_hough_transform()
 
 # Run the wavelength calibration

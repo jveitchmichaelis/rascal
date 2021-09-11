@@ -5,10 +5,11 @@ from astropy.io import fits
 from scipy.signal import find_peaks
 
 from rascal.calibrator import Calibrator
+from rascal.atlas import Atlas
 from rascal import util
 
 # Load the LT SPRAT data
-base_dir = os.path.dirname(__file__)
+base_dir = os.path.dirname(os.path.abspath(__file__))
 spectrum2D = fits.open(
     os.path.join(base_dir,
                  'data_int_ids/int20180101_01355922.fits.fz'))[1].data
@@ -30,10 +31,13 @@ c.set_hough_properties(num_slopes=10000,
                        min_wavelength=2500.,
                        max_wavelength=4600.)
 c.set_ransac_properties(sample_size=8, top_n_candidate=10)
-c.add_atlas(elements=['Cu', 'Ne', 'Ar'],
+
+atlas = Atlas(elements=['Cu', 'Ne', 'Ar'],
             min_intensity=5,
             pressure=80000.,
-            temperature=285.)
+            temperature=285.,
+            range_tolerance=500)
+c.set_atlas(atlas)
 
 c.do_hough_transform()
 
