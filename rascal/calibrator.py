@@ -7,10 +7,8 @@ from scipy.optimize import minimize
 from scipy import interpolate
 from tqdm.autonotebook import tqdm
 
-from .util import load_calibration_lines
 from .util import _derivative
 from .util import gauss
-from .util import vacuum_to_air_wavelength
 
 from . import plotting
 from . import models
@@ -40,9 +38,7 @@ class Calibrator:
         self.plotly_imported = False
         self.plot_with_matplotlib = False
         self.plot_with_plotly = False
-        self.atlas_elements = []
-        self.atlas = []
-        self.atlas_intensities = []
+        self.atlas = None
         self.pix_known = None
         self.wave_known = None
         self.hough_lines = None
@@ -101,7 +97,7 @@ class Calibrator:
 
         '''
 
-        pairs = [pair for pair in itertools.product(self.peaks, self.atlas)]
+        pairs = [pair for pair in itertools.product(self.peaks, self.atlas.lines)]
 
         if constrain_poly:
 
@@ -288,9 +284,9 @@ class Calibrator:
         for p in self.peaks:
 
             x0 = self.polyval(p, self.fit_coeff)
-            diff = np.abs(self.atlas - x0)
+            diff = np.abs(self.atlas.lines - x0)
 
-            x = np.array(self.atlas)[diff < candidate_tolerance]
+            x = np.array(self.atlas.lines)[diff < candidate_tolerance]
 
             weight = gauss(x, 1., x0, self.range_tolerance)
 
@@ -746,14 +742,14 @@ class Calibrator:
         for p in self.peaks:
 
             x = self.polyval(p, fit_new)
-            diff = self.atlas - x
+            diff = self.atlas.lines - x
             diff_abs = np.abs(diff)
             idx = np.argmin(diff_abs)
 
             if diff_abs[idx] < tolerance:
 
                 x_matched.append(p)
-                y_matched.append(self.atlas[idx])
+                y_matched.append(self.atlas.lines[idx])
 
         x_matched = np.array(x_matched)
         y_matched = np.array(y_matched)
@@ -1273,48 +1269,18 @@ class Calibrator:
 
             pass
 
-    def add_atlas(self,
-                  elements,
-                  min_atlas_wavelength=None,
-                  max_atlas_wavelength=None,
-                  min_intensity=10.,
-                  min_distance=10.,
+    def set_atlas(self,
+                  atlas,
                   candidate_tolerance=10.,
-                  constrain_poly=False,
-                  vacuum=False,
-                  pressure=101325.,
-                  temperature=273.15,
-                  relative_humidity=0.):
+                  constrain_poly=False):
+        self.atlas = atlas
         '''
-        Adds an atlas of arc lines to the calibrator, given an element.
-
-        Arc lines are taken from a general list of NIST lines and can be
-        filtered using the minimum relative intensity (note this may not be
-        accurate due to instrumental effects such as detector response,
-        dichroics, etc) and minimum line separation.
-
-        Lines are filtered first by relative intensity, then by separation.
-        This is to improve robustness in the case where there is a strong
-        line very close to a weak line (which is within the separation limit).
-
-        The vacuum to air wavelength conversion is deafult to False because
-        observatories usually provide the line lists in the respective air
-        wavelength, as the corrections from temperature and humidity are
-        small. See https://emtoolbox.nist.gov/Wavelength/Documentation.asp
+        Adds an atlas of arc lines to the calibrator
 
         Parameters
         ----------
-        elements: string or list of strings
+        atlas: rascal.Atlas
             Chemical symbol, case insensitive
-        min_atlas_wavelength: float (default: None)
-            Minimum wavelength of the arc lines.
-        max_atlas_wavelength: float (default: None)
-            Maximum wavelength of the arc lines.
-        min_intensity: float (default: None)
-            Minimum intensity of the arc lines. Refer to NIST for the
-            intensity.
-        min_distance: float (default: None)
-            Minimum separation between neighbouring arc lines.
         candidate_tolerance: float (default: 10)
             toleranceold  (Angstroms) for considering a point to be an inlier
             during candidate peak/line selection. This should be reasonable
@@ -1322,179 +1288,11 @@ class Calibrator:
             *locally* linear.
         constrain_poly: boolean
             Apply a polygonal constraint on possible peak/atlas pairs
-        vacuum: boolean
-            Set to True if the light path from the arc lamb to the detector
-            plane is entirely in vacuum.
-        pressure: float
-            Pressure when the observation took place, in Pascal.
-            If it is not known, we suggest you to assume 10% decrement per
-            1000 meter altitude.
-        temperature: float
-            Temperature when the observation took place, in Kelvin.
-        relative_humidity: float
-            In percentage.
-
         '''
-
-        if min_atlas_wavelength is None:
-
-            min_atlas_wavelength = self.min_wavelength - self.range_tolerance
-
-        if max_atlas_wavelength is None:
-
-            max_atlas_wavelength = self.max_wavelength + self.range_tolerance
-
-        if isinstance(elements, str):
-
-            elements = [elements]
-
-        for element in elements:
-
-            atlas_elements_tmp, atlas_tmp, atlas_intensities_tmp =\
-                load_calibration_lines(
-                    element, min_atlas_wavelength, max_atlas_wavelength,
-                    min_intensity, min_distance, vacuum, pressure, temperature,
-                    relative_humidity)
-
-            self.atlas_elements.extend(atlas_elements_tmp)
-            self.atlas.extend(atlas_tmp)
-            self.atlas_intensities.extend(atlas_intensities_tmp)
 
         # Create a list of all possible pairs of detected peaks and lines
         # from atlas
         self._generate_pairs(candidate_tolerance, constrain_poly)
-
-    def add_user_atlas(self,
-                       elements,
-                       wavelengths,
-                       intensities=None,
-                       candidate_tolerance=10.,
-                       constrain_poly=False,
-                       vacuum=False,
-                       pressure=101325.,
-                       temperature=273.15,
-                       relative_humidity=0.):
-        '''
-        Add a single or list of arc lines. Each arc line should have an
-        element label associated with it. It is recommended that you use
-        a standard periodic table abbreviation (e.g. 'Hg'), but it makes
-        no difference to the fitting process.
-
-        The vacuum to air wavelength conversion is deafult to False because
-        observatories usually provide the line lists in the respective air
-        wavelength, as the corrections from temperature and humidity are
-        small. See https://emtoolbox.nist.gov/Wavelength/Documentation.asp
-
-        Parameters
-        ----------
-        elements: list/str
-            Elements (required). Preferably a standard (i.e. periodic table)
-            name for convenience with built-in atlases
-        wavelengths: list/float
-            Wavelengths to add (Angstrom)
-        intensities: list/float
-            Relative line intensities (NIST value)
-        candidate_tolerance: float (default: 15)
-            toleranceold  (Angstroms) for considering a point to be an inlier
-            during candidate peak/line selection. This should be reasonable
-            small as we want to search for candidate points which are
-            *locally* linear.
-        constrain_poly: boolean
-            Apply a polygonal constraint on possible peak/atlas pairs
-        vacuum: boolean
-            Set to true to convert the input wavelength to air-wavelengths
-            based on the given pressure, temperature and humidity.
-        pressure: float
-            Pressure when the observation took place, in Pascal.
-            If it is not known, assume 10% decrement per 1000 meter altitude
-        temperature: float
-            Temperature when the observation took place, in Kelvin.
-        relative_humidity: float
-            In percentage.
-
-        '''
-
-        if not isinstance(elements, list):
-
-            elements = list(elements)
-
-        if not isinstance(wavelengths, list):
-
-            wavelengths = list(wavelengths)
-
-        if intensities is None:
-
-            intensities = [0] * len(wavelengths)
-
-        else:
-
-            if not isinstance(intensities, list):
-
-                intensities = list(intensities)
-
-        assert len(elements) == len(wavelengths), ValueError(
-            'Input elements and wavelengths have different length.')
-        assert len(elements) == len(intensities), ValueError(
-            'Input elements and intensities have different length.')
-
-        if vacuum:
-
-            wavelengths = vacuum_to_air_wavelength(wavelengths, temperature,
-                                                   pressure, relative_humidity)
-
-        self.atlas_elements.extend(elements)
-        self.atlas.extend(wavelengths)
-        self.atlas_intensities.extend(intensities)
-
-        # Create a list of all possible pairs of detected peaks and lines
-        # from atlas
-        self._generate_pairs(candidate_tolerance, constrain_poly)
-
-    def remove_atlas_lines_range(self, wavelength, tolerance=10):
-        '''
-        Remove arc lines within a certain wavelength range.
-
-        Parameters
-        ----------
-        wavelength: float
-            Wavelength to remove (Angstrom)
-        tolerance: float
-            Tolerance around this wavelength where atlas lines will be removed
-
-        '''
-
-        for i, line in enumerate(self.atlas):
-
-            if abs(line - wavelength) < tolerance:
-
-                removed_element = self.atlas_elements.pop(i)
-                removed_peak = self.atlas.pop(i)
-                self.atlas_intensities.pop(i)
-
-                self.logger.info('Removed {} line: {} A'.format(
-                    removed_element, removed_peak))
-
-    def list_atlas(self):
-        '''
-        List all the lines loaded to the Calibrator.
-
-        '''
-
-        for i in range(len(self.atlas)):
-
-            print('Element ' + str(self.atlas_elements[i]) + ' at ' +
-                  str(self.atlas[i]) + ' with intensity ' +
-                  str(self.atlas_intensities[i]))
-
-    def clear_atlas(self):
-        '''
-        Remove all the lines loaded to the Calibrator.
-
-        '''
-
-        self.atlas_elements = []
-        self.atlas = []
-        self.atlas_intensities = []
 
     def do_hough_transform(self, brute_force=False):
 
@@ -1687,13 +1485,13 @@ class Calibrator:
                 'fit_type must be: (1) poly, (2) legendre or (3) chebyshev')
 
         # Reduce sample_size if it is larger than the number of atlas available
-        if self.sample_size > len(self.atlas):
+        if self.sample_size > len(self.atlas.lines):
 
             self.logger.warning(
                 'Size of sample_size is larger than the size of atlas, ' +
                 'the sample_size is set to match the size of atlas = ' +
-                str(len(self.atlas)) + '.')
-            self.sample_size = len(self.atlas)
+                str(len(self.atlas.lines)) + '.')
+            self.sample_size = len(self.atlas.lines)
 
         if self.sample_size <= fit_deg:
 
@@ -1703,12 +1501,12 @@ class Calibrator:
 
             self.do_hough_transform()
 
-        if self.minimum_matches > len(self.atlas):
+        if self.minimum_matches > len(self.atlas.lines):
             self.logger.warning(
                 'Requested minimum matches is greater than the atlas size' +
                 'setting the minimum number of matches to equal the atlas' +
-                'size = ' + str(len(self.atlas)) + '.')
-            self.minimum_matches = len(self.atlas)
+                'size = ' + str(len(self.atlas.lines)) + '.')
+            self.minimum_matches = len(self.atlas.lines)
 
         # TODO also check whether minimum peak utilisation is greater than
         # minimum matches.
@@ -1723,7 +1521,7 @@ class Calibrator:
                 progress=self.progress)
 
         peak_utilisation = n_inliers / len(self.peaks)
-        atlas_utilisation = n_inliers / len(self.atlas)
+        atlas_utilisation = n_inliers / len(self.atlas.lines)
 
         if not valid:
 
@@ -1868,7 +1666,7 @@ class Calibrator:
             if diff_abs[idx] < tolerance:
 
                 matched_peaks.append(p)
-                matched_atlas.append(self.atlas[idx])
+                matched_atlas.append(self.atlas.lines[idx])
                 residuals.append(diff[idx])
 
         matched_peaks = np.array(matched_peaks)
@@ -1877,7 +1675,7 @@ class Calibrator:
         self.rms = np.sqrt(np.nansum(self.residuals**2.) / len(self.residuals))
 
         self.peak_utilisation = len(matched_peaks) / len(self.peaks)
-        self.atlas_utilisation = len(matched_peaks) / len(self.atlas)
+        self.atlas_utilisation = len(matched_peaks) / len(self.atlas.lines)
 
         self.matched_peaks = matched_peaks
         self.matched_atlas = matched_atlas
