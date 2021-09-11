@@ -6,6 +6,7 @@ from matplotlib import pyplot as plt
 from scipy.signal import find_peaks
 
 from rascal.calibrator import Calibrator
+from rascal.atlas import Atlas
 from rascal import util
 
 # Load the LT SPRAT data
@@ -45,16 +46,17 @@ c.set_hough_properties(num_slopes=10000,
                        range_tolerance=500.,
                        linearity_tolerance=50)
 c.set_ransac_properties(sample_size=5, top_n_candidate=5, filter_close=True)
-c.add_atlas(["Ne", "Ar", "Cu"],
+atlas = Atlas(["Ne", "Ar", "Cu"],
             min_atlas_wavelength=6000,
             max_atlas_wavelength=11000,
             min_intensity=250,
             min_distance=15,
-            constrain_poly=False,
+            range_tolerance=500.,
             vacuum=False,
             pressure=101325.,
             temperature=273.15,
             relative_humidity=0.)
+c.set_atlas(atlas, constrain_poly=False)
 c.do_hough_transform()
 
 # Run the wavelength calibration

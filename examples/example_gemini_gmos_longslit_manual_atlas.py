@@ -8,6 +8,7 @@ from scipy.signal import find_peaks
 from scipy import interpolate
 
 from rascal.calibrator import Calibrator
+from rascal.atlas import Atlas
 from rascal import util
 
 sys.path.append('../../bhtomspec/GMOS')
@@ -60,7 +61,7 @@ c.set_ransac_properties(sample_size=8, top_n_candidate=10)
 # Vacuum wavelengths
 # blend: 5143.21509, 5146.74143
 # something weird near there, so not used: 8008.359, 8016.990
-atlas = [
+atlas_lines = [
     4703.632, 4728.19041, 4766.19677, 4807.36348, 4849.16386, 4881.22627,
     4890.40721, 4906.12088, 4934.58593, 4966.46490, 5018.56194, 5063.44827,
     5163.723, 5189.191, 5497.401, 5560.246, 5608.290, 5913.723, 6754.698,
@@ -70,14 +71,17 @@ atlas = [
     9197.161, 9227.03, 9356.787, 9660.435, 9787.186
 ]
 
-element = ['CuAr'] * len(atlas)
+element = ['CuAr'] * len(atlas_lines)
 
-c.add_user_atlas(elements=element,
-                 wavelengths=atlas,
+atlas = Atlas( range_tolerance=500.)
+atlas.add_user_atlas(elements=element,
+                 wavelengths=atlas_lines,
                  vacuum=True,
                  pressure=61700.,
                  temperature=276.55,
                  relative_humidity=4.)
+c.set_atlas(atlas)
+
 c.do_hough_transform()
 
 # Run the wavelength calibration

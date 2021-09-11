@@ -7,6 +7,7 @@ from scipy.signal import find_peaks
 from scipy import interpolate
 
 from rascal.calibrator import Calibrator
+from rascal.atlas import Atlas
 from rascal import util
 
 sys.path.append('../../bhtomspec/GMOS')
@@ -47,11 +48,14 @@ c.set_hough_properties(num_slopes=5000,
                        max_wavelength=9500.)
 c.set_ransac_properties(sample_size=5, top_n_candidate=5)
 # Vacuum wavelengths
-c.add_atlas(elements=['Cu', 'Ar'],
+
+atlas = Atlas(elements=['Cu', 'Ar'],
             min_intensity=80,
             min_distance=5,
+            range_tolerance=500.,
             pressure=70000.,
             temperature=280.)
+c.set_atlas(atlas)
 
 c.do_hough_transform()
 
