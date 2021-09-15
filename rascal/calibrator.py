@@ -1634,7 +1634,7 @@ class Calibrator:
 
         if fit_coeff is None:
 
-            fit_coeff = self.fit_coeff.copy
+            fit_coeff = self.fit_coeff.copy()
 
         if fit_deg is None:
 
