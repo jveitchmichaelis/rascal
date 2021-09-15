@@ -691,7 +691,7 @@ class Calibrator:
                             all peaks matched
                             """
                             break
-
+                    
                 keep_trying = False
 
         # Overfit check
@@ -847,8 +847,10 @@ class Calibrator:
 
         # initialise the logger
         self.logger = logging.getLogger(logger_name)
+        self.logger.propagate = False
+        
         level = logging.getLevelName(log_level.upper())
-        logging.basicConfig(level=level)
+        self.logger.setLevel(level)
         self.log_level = level
 
         formatter = logging.Formatter(
@@ -856,9 +858,10 @@ class Calibrator:
             '%(message)s',
             datefmt='%a, %d %b %Y %H:%M:%S')
 
-        handler = logging.StreamHandler()
-        handler.setFormatter(formatter)
-        self.logger.addHandler(handler)
+        if len(self.logger.handlers) == 0:
+            handler = logging.StreamHandler()
+            handler.setFormatter(formatter)
+            self.logger.addHandler(handler)
 
         # set the num_pix
         if num_pix is not None:
@@ -1668,7 +1671,7 @@ class Calibrator:
                 matched_peaks.append(p)
                 matched_atlas.append(self.atlas.lines[idx])
                 residuals.append(diff[idx])
-
+        
         matched_peaks = np.array(matched_peaks)
         matched_atlas = np.array(matched_atlas)
         self.residuals = np.array(residuals)
