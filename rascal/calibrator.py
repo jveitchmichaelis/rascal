@@ -1763,29 +1763,69 @@ class Calibrator:
         matched_atlas = []
         residuals = []
 
+        # Find all Atlas peaks within tolerance
         for p in self.peaks:
 
             x = self.polyval(p, fit_coeff)
             diff = self.atlas - x
-            diff_abs = np.abs(diff)
-            idx = np.argmin(diff_abs)
+            diff_abs = np.abs(diff) < tolerance
 
-            if diff_abs[idx] < tolerance:
+            matched_peaks.append(p)
+            matched_atlas.append(self.atlas.lines[diff_abs])
+            residuals.append(diff_abs)
 
-                matched_peaks.append(p)
-                matched_atlas.append(self.atlas.lines[idx])
-                residuals.append(diff[idx])
+        # Create permutations:
+        candidates = [[]]
+
+        for match in matched_atlas:
+            for i in range(len(candidates)):
+                new_candidates = []
+                c = candidates[i]
+
+                if len(match) == 1:
+                    c.extend(match)
+                else:
+                    for rep in match:
+                        # Make sure we don't reuse atlas lines
+                        if not rep in c:
+                            new_c = list(c).extend(rep)
+                            new_candidates.append(new_c)
+            
+            candidates += new_candidates
         
-        matched_peaks = np.array(matched_peaks)
-        matched_atlas = np.array(matched_atlas)
-        self.residuals = np.array(residuals)
+        if len(candidates) > 1:
+            self.logger.info("More than one match solution found, checking permutations.")
+
+        self.matched_peaks = np.array(matched_peaks)
+
+        # Check all candidates
+        candidate_errors = []
+        best_err = 1e9
+        self.matched_atlas = None
+        self.residuals = None
+
+        for candidate in candidates:
+            matched_atlas = np.array(candidate)
+
+            fit_coeff = self.polyfit(self.matched_peaks,
+                                        matched_atlas,
+                                        fit_deg)
+        
+            x = self.polyval(matched_peaks, fit_coeff)
+            residuals = np.abs(matched_atlas - x)
+            err = np.sum(residuals)
+
+            if err < best_err:
+                self.matched_atlas = candidate
+                self.residuals = residuals
+
+        assert self.matched_atlas is not None
+        assert self.residuals is not None
+        
         self.rms = np.sqrt(np.nansum(self.residuals**2.) / len(self.residuals))
 
-        self.peak_utilisation = len(matched_peaks) / len(self.peaks)
-        self.atlas_utilisation = len(matched_peaks) / len(self.atlas.lines)
-
-        self.matched_peaks = matched_peaks
-        self.matched_atlas = matched_atlas
+        self.peak_utilisation = len(self.matched_peaks) / len(self.peaks)
+        self.atlas_utilisation = len(self.matched_atlas) / len(self.atlas.lines)
 
         if robust_refit:
 
