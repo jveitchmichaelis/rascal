@@ -654,7 +654,12 @@ class Calibrator:
                         continue
 
                     # Get the residual of the fit
+<<<<<<< HEAD
                     err = self.polyval(matched_peaks, best_p) - matched_atlas
+=======
+                    err = self.polyval(matched_peaks,
+                                       best_p) - matched_atlas
+>>>>>>> edb0f40 (fix matched_peaks returned by ransac)
                     err[np.abs(err) >
                         self.ransac_tolerance] = self.ransac_tolerance
 
@@ -695,6 +700,7 @@ class Calibrator:
                             all peaks matched
                             """
                             break
+<<<<<<< HEAD
 
                     # If the best fit is accepted, update the lists
                     self.matched_peaks = list(matched_peaks)
@@ -707,6 +713,11 @@ class Calibrator:
                         self.matched_atlas)
                     assert len(np.unique(self.matched_atlas)) == len(
                         np.unique(self.matched_peaks))
+=======
+                    
+                    self.matched_peaks = matched_peaks
+                    self.matched_atlas = matched_atlas
+>>>>>>> edb0f40 (fix matched_peaks returned by ransac)
 
                 keep_trying = False
 
@@ -718,6 +729,13 @@ class Calibrator:
         else:
 
             valid_solution = True
+
+        assert best_inliers == len(self.matched_peaks)
+        assert best_inliers == len(self.matched_atlas)
+
+        assert len(self.matched_atlas) == len(set(self.matched_atlas))
+
+        self.logger.info("Found: {}".format(best_inliers))
 
         return best_p, best_err, best_residual, best_inliers, valid_solution
 
