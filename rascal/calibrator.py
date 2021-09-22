@@ -624,10 +624,10 @@ class Calibrator:
                 # reject lines outside the rms limit (ransac_tolerance)
                 best_mask = err < self.ransac_tolerance
                 n_inliers = sum(best_mask)
-                self.matched_peaks = matched_x[best_mask]
-                self.matched_atlas = matched_y[best_mask]
+                matched_peaks = matched_x[best_mask]
+                matched_atlas = matched_y[best_mask]
 
-                if len(self.matched_peaks) <= self.fit_deg:
+                if len(matched_peaks) <= self.fit_deg:
 
                     self.logger.debug('Too few good candidates for fitting.')
                     continue
@@ -638,8 +638,8 @@ class Calibrator:
                     # Now we do a robust fit
                     try:
 
-                        best_p = models.robust_polyfit(self.matched_peaks,
-                                                       self.matched_atlas,
+                        best_p = models.robust_polyfit(matched_peaks,
+                                                       matched_atlas,
                                                        self.fit_deg)
 
                     except np.linalg.LinAlgError:
@@ -649,8 +649,8 @@ class Calibrator:
                         continue
 
                     # Get the residual of the fit
-                    err = self.polyval(self.matched_peaks,
-                                       best_p) - self.matched_atlas
+                    err = self.polyval(matched_peaks,
+                                       best_p) - matched_atlas
                     err[np.abs(err) >
                         self.ransac_tolerance] = self.ransac_tolerance
 
@@ -692,6 +692,9 @@ class Calibrator:
                             """
                             break
                     
+                    self.matched_peaks = matched_peaks
+                    self.matched_atlas = matched_atlas
+
                 keep_trying = False
 
         # Overfit check
@@ -702,6 +705,13 @@ class Calibrator:
         else:
 
             valid_solution = True
+
+        assert best_inliers == len(self.matched_peaks)
+        assert best_inliers == len(self.matched_atlas)
+
+        assert len(self.matched_atlas) == len(set(self.matched_atlas))
+
+        self.logger.info("Found: {}".format(best_inliers))
 
         return best_p, best_err, best_residual, best_inliers, valid_solution
 
