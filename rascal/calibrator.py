@@ -365,6 +365,9 @@ class Calibrator:
         matched_x = np.array(filtered_x)
         matched_y = np.array(filtered_y)
 
+        assert len(matched_y) == len(set(matched_y))
+        assert len(matched_x) == len(set(matched_x))
+
         return err, matched_x, matched_y
 
     def _solve_candidate_ransac(self, fit_deg, fit_coeff, max_tries,
