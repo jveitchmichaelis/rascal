@@ -901,8 +901,10 @@ class Calibrator:
 
         # initialise the logger
         self.logger = logging.getLogger(logger_name)
+        self.logger.propagate = False
+        
         level = logging.getLevelName(log_level.upper())
-        logging.basicConfig(level=level)
+        self.logger.setLevel(level)
         self.log_level = level
 
         formatter = logging.Formatter(
@@ -910,9 +912,10 @@ class Calibrator:
             '%(message)s',
             datefmt='%a, %d %b %Y %H:%M:%S')
 
-        handler = logging.StreamHandler()
-        handler.setFormatter(formatter)
-        self.logger.addHandler(handler)
+        if len(self.logger.handlers) == 0:
+            handler = logging.StreamHandler()
+            handler.setFormatter(formatter)
+            self.logger.addHandler(handler)
 
         # set the num_pix
         if num_pix is not None:
