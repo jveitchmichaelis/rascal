@@ -411,6 +411,8 @@ class Calibrator:
         matched_x = np.array(filtered_x)
         matched_y = np.array(filtered_y)
 
+        assert len(np.unique(matched_x)) == len(np.unique(matched_y))
+
         return err, matched_x, matched_y
 
     def _solve_candidate_ransac(self, fit_deg, fit_coeff, max_tries,
@@ -670,10 +672,10 @@ class Calibrator:
                 # reject lines outside the rms limit (ransac_tolerance)
                 best_mask = err < self.ransac_tolerance
                 n_inliers = sum(best_mask)
-                self.matched_peaks = matched_x[best_mask]
-                self.matched_atlas = matched_y[best_mask]
+                matched_peaks = matched_x[best_mask]
+                matched_atlas = matched_y[best_mask]
 
-                if len(self.matched_peaks) <= self.fit_deg:
+                if len(matched_peaks) <= self.fit_deg:
 
                     self.logger.debug('Too few good candidates for fitting.')
                     continue
@@ -684,8 +686,8 @@ class Calibrator:
                     # Now we do a robust fit
                     try:
 
-                        best_p = models.robust_polyfit(self.matched_peaks,
-                                                       self.matched_atlas,
+                        best_p = models.robust_polyfit(matched_peaks,
+                                                       matched_atlas,
                                                        self.fit_deg)
 
                     except np.linalg.LinAlgError:
@@ -695,8 +697,8 @@ class Calibrator:
                         continue
 
                     # Get the residual of the fit
-                    err = self.polyval(self.matched_peaks,
-                                       best_p) - self.matched_atlas
+                    err = self.polyval(matched_peaks,
+                                       best_p) - matched_atlas
                     err[np.abs(err) >
                         self.ransac_tolerance] = self.ransac_tolerance
 
@@ -737,6 +739,15 @@ class Calibrator:
                             all peaks matched
                             """
                             break
+                    
+                    # If the best fit is accepted, update the lists
+                    self.matched_peaks = list(matched_peaks)
+                    self.matched_atlas = list(matched_atlas)
+
+                    # Sanity check that matching peaks/atlas lines are 1:1
+                    assert len(np.unique(self.matched_peaks)) == len(self.matched_peaks)
+                    assert len(np.unique(self.matched_atlas)) == len(self.matched_atlas)
+                    assert len(np.unique(self.matched_atlas)) == len(np.unique(self.matched_peaks))
 
                 keep_trying = False
 
@@ -901,8 +912,10 @@ class Calibrator:
 
         # initialise the logger
         self.logger = logging.getLogger(logger_name)
+        self.logger.propagate = False
+        
         level = logging.getLevelName(log_level.upper())
-        logging.basicConfig(level=level)
+        self.logger.setLevel(level)
         self.log_level = level
 
         formatter = logging.Formatter(
@@ -910,9 +923,10 @@ class Calibrator:
             '%(message)s',
             datefmt='%a, %d %b %Y %H:%M:%S')
 
-        handler = logging.StreamHandler()
-        handler.setFormatter(formatter)
-        self.logger.addHandler(handler)
+        if len(self.logger.handlers) == 0:
+            handler = logging.StreamHandler()
+            handler.setFormatter(formatter)
+            self.logger.addHandler(handler)
 
         # set the num_pix
         if num_pix is not None:
