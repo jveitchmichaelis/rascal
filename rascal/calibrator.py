@@ -411,6 +411,8 @@ class Calibrator:
         matched_x = np.array(filtered_x)
         matched_y = np.array(filtered_y)
 
+        assert len(np.unique(matched_x)) == len(np.unique(matched_y))
+
         return err, matched_x, matched_y
 
     def _solve_candidate_ransac(self, fit_deg, fit_coeff, max_tries,
@@ -741,6 +743,11 @@ class Calibrator:
                     # If the best fit is accepted, update the lists
                     self.matched_peaks = list(matched_peaks)
                     self.matched_atlas = list(matched_atlas)
+
+                    # Sanity check that matching peaks/atlas lines are 1:1
+                    assert len(np.unique(self.matched_peaks)) == len(self.matched_peaks)
+                    assert len(np.unique(self.matched_atlas)) == len(self.matched_atlas)
+                    assert len(np.unique(self.matched_atlas)) == len(np.unique(self.matched_peaks))
 
                 keep_trying = False
 
