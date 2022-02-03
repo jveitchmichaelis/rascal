@@ -10,7 +10,6 @@ META_PATH = os.path.join("..", "pyproject.toml")
 
 HERE = os.path.dirname(os.path.realpath(__file__))
 
-
 def read(*parts):
     with codecs.open(os.path.join(HERE, *parts), "rb", "utf-8") as f:
         return f.read()
