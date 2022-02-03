@@ -7,7 +7,7 @@ from setuptools import setup, find_packages
 
 __packagename__ = "rascal"
 
-META_PATH = os.path.join("pyproject.toml")
+META_PATH = "pyproject.toml"
 
 HERE = os.path.dirname(os.path.realpath(__file__))
 
