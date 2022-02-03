@@ -1,7 +1,8 @@
 import numpy as np
 
-from rascal.synthetic import SyntheticSpectrum
+from rascal.atlas import Atlas
 from rascal.calibrator import Calibrator
+from rascal.synthetic import SyntheticSpectrum
 
 
 def test_default():
@@ -22,6 +23,7 @@ def test_default():
     # Set up the calibrator with the pixel values of our
     # wavelengths
     c = Calibrator(peaks=peaks)
+    a = Atlas()
 
     # Arbitrarily we'll set the number of pixels to 768 (i.e.
     # a max range of around 1500 nm
@@ -33,8 +35,9 @@ def test_default():
                            max_wavelength=1500.)
 
     # Add our fake lines as the atlas
-    c.add_user_atlas(elements=["Test"] * len(waves), wavelengths=waves)
-    assert len(c.atlas) > 0
+    a.add_user_atlas(elements=["Test"] * len(waves), wavelengths=waves)
+    c.set_atlas(a)
+    assert len(c.atlas.lines) > 0
 
     # And let's try and fit...
     best_p, x, y, rms, residual, peak_utilisation, atlas_utilisation = c.fit(
@@ -53,7 +56,6 @@ def test_default():
 
 def test_get_candidate_points_poly():
 
-
     # Create a test spectrum with a simple linear relationship
     # between pixels/wavelengths. The intercept is set to
     # 100 nm and the gradient is set to 2.
@@ -71,6 +73,7 @@ def test_get_candidate_points_poly():
     # Set up the calibrator with the pixel values of our
     # wavelengths
     c = Calibrator(peaks=peaks)
+    a = Atlas()
 
     # Arbitrarily we'll set the number of pixels to 768 (i.e.
     # a max range of around 1500 nm
@@ -84,8 +87,9 @@ def test_get_candidate_points_poly():
     c.set_ransac_properties(linear=False)
 
     # Add our fake lines as the atlas
-    c.add_user_atlas(elements=["Test"] * len(waves), wavelengths=waves)
-    assert len(c.atlas) > 0
+    a.add_user_atlas(elements=["Test"] * len(waves), wavelengths=waves)
+    c.set_atlas(a)
+    assert len(c.atlas.lines) > 0
 
     # And let's try and fit...
     best_p, x, y, rms, residual, peak_utilisation, atlas_utilisation = c.fit(

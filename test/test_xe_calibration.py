@@ -5,6 +5,7 @@ from astropy.io import fits
 import numpy as np
 from scipy.signal import find_peaks
 
+from rascal.atlas import Atlas
 from rascal.calibrator import Calibrator
 from rascal import util
 
@@ -40,6 +41,8 @@ def run_sprat_calibration(fit_deg):
 
     # Initialise the calibrator
     c = Calibrator(peaks)
+    a = Atlas()
+
     c.set_calibrator_properties(num_pix=1024)
     c.set_hough_properties(num_slopes=1000,
                            range_tolerance=500.,
@@ -47,13 +50,15 @@ def run_sprat_calibration(fit_deg):
                            ybins=100,
                            min_wavelength=3500.,
                            max_wavelength=8000.)
-    c.add_user_atlas(elements=elements, wavelengths=wavelengths)
-    c.clear_atlas()
-    assert len(c.atlas) == 0
-    c.add_user_atlas(elements=elements, wavelengths=wavelengths)
-    c.remove_atlas_lines_range(9999.)
-    assert len(c.atlas) == len(wavelengths) - 1
-    c.list_atlas()
+    a.add_user_atlas(elements=elements, wavelengths=wavelengths)
+    c.set_atlas(a)
+    c.atlas.clear()
+    assert len(a.lines) == 0
+    a.add_user_atlas(elements=elements, wavelengths=wavelengths)
+    c.set_atlas(a)
+    c.atlas.remove_atlas_lines_range(9999.)
+    assert len(c.atlas.lines) == len(wavelengths) - 1
+    c.atlas.list()
 
     # Run the wavelength calibration
     best_p, x, y, rms, residual, peak_utilisation, atlas_utilisation = c.fit(

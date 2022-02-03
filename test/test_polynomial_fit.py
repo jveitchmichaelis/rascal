@@ -1,4 +1,5 @@
 import numpy as np
+from rascal.atlas import Atlas
 from rascal.calibrator import Calibrator
 
 np.random.seed(0)
@@ -21,6 +22,7 @@ def test_linear_fit():
 
     # Initialise the calibrator
     c = Calibrator(peaks)
+    a = Atlas()
     c.set_calibrator_properties(num_pix=1000)
     c.set_hough_properties(num_slopes=1000,
                            range_tolerance=500.,
@@ -28,7 +30,8 @@ def test_linear_fit():
                            ybins=200,
                            min_wavelength=3000.,
                            max_wavelength=8000.)
-    c.add_user_atlas(elements=elements_linear, wavelengths=wavelengths_linear)
+    a.add_user_atlas(elements=elements_linear, wavelengths=wavelengths_linear)
+    c.set_atlas(a)
     c.set_ransac_properties(minimum_matches=20)
     c.do_hough_transform(brute_force=False)
 
@@ -53,6 +56,7 @@ def test_manual_refit():
 
     # Initialise the calibrator
     c = Calibrator(peaks)
+    a = Atlas()
     c.set_calibrator_properties(num_pix=1000)
     c.set_hough_properties(num_slopes=1000,
                            range_tolerance=500.,
@@ -60,7 +64,8 @@ def test_manual_refit():
                            ybins=200,
                            min_wavelength=3000.,
                            max_wavelength=8000.)
-    c.add_user_atlas(elements=elements_linear, wavelengths=wavelengths_linear)
+    a.add_user_atlas(elements=elements_linear, wavelengths=wavelengths_linear)
+    c.set_atlas(a)
     c.set_ransac_properties(minimum_matches=25)
     c.do_hough_transform(brute_force=False)
 
@@ -84,6 +89,7 @@ def test_manual_refit_remove_points():
 
     # Initialise the calibrator
     c = Calibrator(peaks)
+    a = Atlas()
     c.set_calibrator_properties(num_pix=1000)
     c.set_hough_properties(num_slopes=1000,
                            range_tolerance=500.,
@@ -91,7 +97,8 @@ def test_manual_refit_remove_points():
                            ybins=200,
                            min_wavelength=3000.,
                            max_wavelength=8000.)
-    c.add_user_atlas(elements=elements_linear, wavelengths=wavelengths_linear)
+    a.add_user_atlas(elements=elements_linear, wavelengths=wavelengths_linear)
+    c.set_atlas(a)
     c.set_ransac_properties(minimum_matches=25)
     c.do_hough_transform(brute_force=False)
 
@@ -117,6 +124,7 @@ def test_manual_refit_add_points():
 
     # Initialise the calibrator
     c = Calibrator(peaks)
+    a = Atlas()
     c.set_calibrator_properties(num_pix=1000)
     c.set_hough_properties(num_slopes=1000,
                            range_tolerance=500.,
@@ -124,7 +132,8 @@ def test_manual_refit_add_points():
                            ybins=200,
                            min_wavelength=3000.,
                            max_wavelength=8000.)
-    c.add_user_atlas(elements=elements_linear, wavelengths=wavelengths_linear)
+    a.add_user_atlas(elements=elements_linear, wavelengths=wavelengths_linear)
+    c.set_atlas(a)
     c.set_ransac_properties(minimum_matches=25)
     c.do_hough_transform(brute_force=False)
 
@@ -149,6 +158,7 @@ def test_quadratic_fit():
 
     # Initialise the calibrator
     c = Calibrator(peaks)
+    a = Atlas()
     c.set_calibrator_properties(num_pix=1000)
     c.set_hough_properties(num_slopes=1000,
                            range_tolerance=500.,
@@ -156,8 +166,9 @@ def test_quadratic_fit():
                            ybins=100,
                            min_wavelength=3000.,
                            max_wavelength=8000.)
-    c.add_user_atlas(elements=elements_quadratic,
+    a.add_user_atlas(elements=elements_quadratic,
                      wavelengths=wavelengths_quadratic)
+    c.set_atlas(a)
     c.set_ransac_properties(minimum_matches=20)
     c.do_hough_transform(brute_force=False)
 
@@ -184,6 +195,7 @@ def test_quadratic_fit_legendre():
 
     # Initialise the calibrator
     c = Calibrator(peaks)
+    a = Atlas()
     c.set_calibrator_properties(num_pix=1000)
     c.set_hough_properties(num_slopes=500,
                            range_tolerance=200.,
@@ -191,8 +203,9 @@ def test_quadratic_fit_legendre():
                            ybins=100,
                            min_wavelength=3000.,
                            max_wavelength=8000.)
-    c.add_user_atlas(elements=elements_quadratic,
+    a.add_user_atlas(elements=elements_quadratic,
                      wavelengths=wavelengths_quadratic)
+    c.set_atlas(a)
     c.set_ransac_properties(sample_size=10, minimum_matches=20)
     c.do_hough_transform(brute_force=False)
 
@@ -216,6 +229,7 @@ def test_quadratic_fit_chebyshev():
 
     # Initialise the calibrator
     c = Calibrator(peaks)
+    a = Atlas()
     c.set_calibrator_properties(num_pix=1000)
     c.set_hough_properties(num_slopes=500,
                            range_tolerance=200.,
@@ -223,8 +237,9 @@ def test_quadratic_fit_chebyshev():
                            ybins=100,
                            min_wavelength=3000.,
                            max_wavelength=8000.)
-    c.add_user_atlas(elements=elements_quadratic,
+    a.add_user_atlas(elements=elements_quadratic,
                      wavelengths=wavelengths_quadratic)
+    c.set_atlas(a)
     c.set_ransac_properties(sample_size=10, minimum_matches=20)
     c.do_hough_transform(brute_force=False)
 

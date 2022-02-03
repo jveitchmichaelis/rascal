@@ -2,18 +2,20 @@ import numpy as np
 from .util import load_calibration_lines
 from .util import vacuum_to_air_wavelength
 
+
 class Atlas:
-    def __init__(self, elements=None,
-                  min_atlas_wavelength=3000,
-                  max_atlas_wavelength=5000,
-                  range_tolerance=500,
-                  min_intensity=10.,
-                  min_distance=10.,
-                  vacuum=False,
-                  pressure=101325.,
-                  temperature=273.15,
-                  relative_humidity=0.):
-                  
+
+    def __init__(self,
+                 elements=None,
+                 min_atlas_wavelength=3000,
+                 max_atlas_wavelength=5000,
+                 range_tolerance=500,
+                 min_intensity=10.,
+                 min_distance=10.,
+                 vacuum=False,
+                 pressure=101325.,
+                 temperature=273.15,
+                 relative_humidity=0.):
         '''
         Creates an atlas of arc lines.
 
@@ -65,30 +67,31 @@ class Atlas:
         self.intensities = []
         self.min_atlas_wavelength = min_atlas_wavelength
         self.max_atlas_wavelength = max_atlas_wavelength
-        self.min_intensity=min_intensity
-        self.min_distance=min_distance
+        self.min_intensity = min_intensity
+        self.min_distance = min_distance
         self.range_tolerance = range_tolerance
 
         if elements is not None:
             self.add(elements=elements,
-                min_atlas_wavelength=min_atlas_wavelength,
-                max_atlas_wavelength=max_atlas_wavelength,
-                min_intensity=min_intensity,
-                min_distance=min_distance,
-                vacuum=vacuum,
-                pressure=pressure,
-                temperature=temperature,
-                relative_humidity=relative_humidity)
+                     min_atlas_wavelength=min_atlas_wavelength,
+                     max_atlas_wavelength=max_atlas_wavelength,
+                     min_intensity=min_intensity,
+                     min_distance=min_distance,
+                     vacuum=vacuum,
+                     pressure=pressure,
+                     temperature=temperature,
+                     relative_humidity=relative_humidity)
 
-    def add(self,elements=None,
-                min_atlas_wavelength=None,
-                max_atlas_wavelength=None,
-                min_intensity=10.,
-                min_distance=10.,
-                vacuum=False,
-                pressure=101325.,
-                temperature=273.15,
-                relative_humidity=0.):
+    def add(self,
+            elements=None,
+            min_atlas_wavelength=None,
+            max_atlas_wavelength=None,
+            min_intensity=10.,
+            min_distance=10.,
+            vacuum=False,
+            pressure=101325.,
+            temperature=273.15,
+            relative_humidity=0.):
         '''
         Adds arc lines to the atlas
 
@@ -135,16 +138,32 @@ class Atlas:
 
         if min_atlas_wavelength is None:
 
-            min_atlas_wavelength = self.min_atlas_wavelength - self.range_tolerance
+            min_atlas_wavelength =\
+                self.min_atlas_wavelength - self.range_tolerance
 
         if max_atlas_wavelength is None:
 
-            max_atlas_wavelength = self.max_atlas_wavelength + self.range_tolerance
+            max_atlas_wavelength =\
+                self.max_atlas_wavelength + self.range_tolerance
+
+        if not np.isfinite(min_atlas_wavelength):
+
+            raise ValueError(
+                'min_atlas_wavelength has to be finite or None. {} is given.'.
+                format(min_atlas_wavelength))
+
+        if not np.isfinite(max_atlas_wavelength):
+
+            raise ValueError(
+                'max_atlas_wavelength has to be finite or None. {} is given.'.
+                format(max_atlas_wavelength))
 
         if isinstance(elements, str):
 
             elements = [elements]
-        elif elements is not None:
+
+        if elements is not None:
+
             for element in elements:
 
                 atlas_elements_tmp, atlas_tmp, atlas_intensities_tmp =\
@@ -250,9 +269,6 @@ class Atlas:
                 removed_element = self.elements.pop(i)
                 removed_peak = self.lines.pop(i)
                 self.intensities.pop(i)
-
-                self.logger.info('Removed {} line: {} A'.format(
-                    removed_element, removed_peak))
 
     def list(self):
         '''

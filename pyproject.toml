@@ -1,27 +1,28 @@
 [tool.poetry]
 name = "rascal"
-version = "0.3.1"
-description = ""
-license = "BSD"
+version = "0.3.2"
+description = "The Pyhton Automated Wavelenmgth Calibrator."
+license = "BSD-3-Clause"
 readme = "README.md"
-authors = ["Josh Veitch-Michaelis <j.veitchmichaelis@gmail.com>"]
+authors = ["Josh Veitch-Michaelis <j.veitchmichaelis@gmail.com>", "Marco C Lam <lam@tau.ac.il>"]
+maintainers = ["Josh Veitch-Michaelis <j.veitchmichaelis@gmail.com>", "Marco C Lam <lam@tau.ac.il>"]
 homepage = "https://github.com/jveitchmichaelis/rascal"
 documentation = "https://rascal.readthedocs.io/en/latest/?badge=latest"
 repository = "https://github.com/jveitchmichaelis/rascal"
 
 [tool.poetry.dependencies]
-astropy = "^4.0"
-python = "^3.6"
-numpy = "^1.16"
-scipy = "^1.3.3"
-pynverse = "^0.1.4"
-matplotlib = "^3.0.3"
-tqdm = "^4.48.0"
+astropy = ">=4.0"
+python = ">=3.6"
+numpy = ">=1.16"
+scipy = ">=1.3.3"
+pynverse = ">=0.1.4"
+matplotlib = ">=3.0.3"
+tqdm = ">=4.48.0"
 
 [tool.poetry.dev-dependencies]
-pytest = "^5.3"
-pytest-cov = "^2.8"
+pytest = ">=5.3"
+pytest-cov = ">=2.8"
 
 [build-system]
-requires = ["poetry>=0.12", "setuptools >= 40.6.0", "wheel"]
+requires = ["poetry>=1.1", "setuptools >= 60.6.0", "wheel"]
 build-backend = "poetry.masonry.api"

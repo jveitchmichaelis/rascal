@@ -3,6 +3,7 @@ from astropy.io import fits
 from scipy.signal import find_peaks
 import os
 
+from rascal.atlas import Atlas
 from rascal.calibrator import Calibrator
 from rascal import util
 
@@ -31,6 +32,8 @@ def test_sprat_manual_atlas():
 
     # Initialise the calibrator
     c = Calibrator(peaks, spectrum=spectrum)
+    a = Atlas()
+
     c.use_plotly()
     assert c.which_plotting_library() == 'plotly'
 
@@ -62,12 +65,12 @@ def test_sprat_manual_atlas():
     ]
     element = ['Xe'] * len(atlas)
 
-    c.add_user_atlas(element,
+    a.add_user_atlas(element,
                      atlas,
-                     constrain_poly=True,
                      pressure=pressure,
                      temperature=temperature,
                      relative_humidity=relative_humidity)
+    c.set_atlas(a, constrain_poly=True)
 
     c.set_ransac_properties(sample_size=5,
                             top_n_candidate=5,

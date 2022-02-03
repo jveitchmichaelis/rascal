@@ -121,9 +121,8 @@ def filter_wavelengths(lines, min_atlas_wavelength, max_atlas_wavelength):
     """
 
     wavelengths = lines[:, 1].astype(np.float32)
-    wavelength_mask = (
-        (wavelengths >= min_atlas_wavelength) &
-        (wavelengths <= max_atlas_wavelength))
+    wavelength_mask = ((wavelengths >= min_atlas_wavelength) &
+                       (wavelengths <= max_atlas_wavelength))
 
     return lines[wavelength_mask]
 

@@ -16,6 +16,7 @@ from .houghtransform import HoughTransform
 
 
 class Calibrator:
+
     def __init__(self, peaks, spectrum=None):
         '''
         Initialise the calibrator object.
@@ -97,7 +98,9 @@ class Calibrator:
 
         '''
 
-        pairs = [pair for pair in itertools.product(self.peaks, self.atlas.lines)]
+        pairs = [
+            pair for pair in itertools.product(self.peaks, self.atlas.lines)
+        ]
 
         if constrain_poly:
 
@@ -651,8 +654,7 @@ class Calibrator:
                         continue
 
                     # Get the residual of the fit
-                    err = self.polyval(matched_peaks,
-                                       best_p) - matched_atlas
+                    err = self.polyval(matched_peaks, best_p) - matched_atlas
                     err[np.abs(err) >
                         self.ransac_tolerance] = self.ransac_tolerance
 
@@ -693,15 +695,18 @@ class Calibrator:
                             all peaks matched
                             """
                             break
-                    
+
                     # If the best fit is accepted, update the lists
                     self.matched_peaks = list(matched_peaks)
                     self.matched_atlas = list(matched_atlas)
 
                     # Sanity check that matching peaks/atlas lines are 1:1
-                    assert len(np.unique(self.matched_peaks)) == len(self.matched_peaks)
-                    assert len(np.unique(self.matched_atlas)) == len(self.matched_atlas)
-                    assert len(np.unique(self.matched_atlas)) == len(np.unique(self.matched_peaks))
+                    assert len(np.unique(self.matched_peaks)) == len(
+                        self.matched_peaks)
+                    assert len(np.unique(self.matched_atlas)) == len(
+                        self.matched_atlas)
+                    assert len(np.unique(self.matched_atlas)) == len(
+                        np.unique(self.matched_peaks))
 
                 keep_trying = False
 
@@ -859,7 +864,7 @@ class Calibrator:
         # initialise the logger
         self.logger = logging.getLogger(logger_name)
         self.logger.propagate = False
-        
+
         level = logging.getLevelName(log_level.upper())
         self.logger.setLevel(level)
         self.log_level = level
@@ -917,7 +922,7 @@ class Calibrator:
         # map the list position to the pixel value
         self.pix_to_rawpix = interpolate.interp1d(
             self.pixel_list, np.arange(len(self.pixel_list)))
-        
+
         if seed is not None:
             np.random.seed(seed)
 
@@ -1283,10 +1288,7 @@ class Calibrator:
 
             pass
 
-    def set_atlas(self,
-                  atlas,
-                  candidate_tolerance=10.,
-                  constrain_poly=False):
+    def set_atlas(self, atlas, candidate_tolerance=10., constrain_poly=False):
         self.atlas = atlas
         '''
         Adds an atlas of arc lines to the calibrator
@@ -1673,7 +1675,7 @@ class Calibrator:
         for p in self.peaks:
 
             x = self.polyval(p, fit_coeff)
-            diff = self.atlas - x
+            diff = self.atlas.lines - x
             diff_abs = np.abs(diff)
             idx = np.argmin(diff_abs)
 
@@ -1936,14 +1938,14 @@ class Calibrator:
         '''
 
         return plotting.plot_arc(self,
-                 pixel_list=None,
-                 log_spectrum=False,
-                 save_fig=False,
-                 fig_type='png',
-                 filename=None,
-                 return_jsonstring=False,
-                 renderer='default',
-                 display=True)
+                                 pixel_list=pixel_list,
+                                 log_spectrum=log_spectrum,
+                                 save_fig=save_fig,
+                                 fig_type=fig_type,
+                                 filename=filename,
+                                 return_jsonstring=return_jsonstring,
+                                 renderer=renderer,
+                                 display=display)
 
     def plot_search_space(self,
                           fit_coeff=None,
@@ -1996,15 +1998,15 @@ class Calibrator:
         '''
 
         return plotting.plot_search_space(self,
-                          fit_coeff=None,
-                          top_n_candidate=3,
-                          weighted=True,
-                          save_fig=False,
-                          fig_type='png',
-                          filename=None,
-                          return_jsonstring=False,
-                          renderer='default',
-                          display=True)
+                                          fit_coeff=fit_coeff,
+                                          top_n_candidate=top_n_candidate,
+                                          weighted=weighted,
+                                          save_fig=save_fig,
+                                          fig_type=fig_type,
+                                          filename=filename,
+                                          return_jsonstring=return_jsonstring,
+                                          renderer=renderer,
+                                          display=display)
 
     def plot_fit(self,
                  fit_coeff,
@@ -2062,14 +2064,14 @@ class Calibrator:
         '''
 
         return plotting.plot_fit(self,
-                 fit_coeff,
-                 spectrum=None,
-                 tolerance=5.,
-                 plot_atlas=True,
-                 log_spectrum=False,
-                 save_fig=False,
-                 fig_type='png',
-                 filename=None,
-                 return_jsonstring=False,
-                 renderer='default',
-                 display=True)
+                                 fit_coeff,
+                                 spectrum=spectrum,
+                                 tolerance=tolerance,
+                                 plot_atlas=plot_atlas,
+                                 log_spectrum=log_spectrum,
+                                 save_fig=save_fig,
+                                 fig_type=fig_type,
+                                 filename=filename,
+                                 return_jsonstring=return_jsonstring,
+                                 renderer=renderer,
+                                 display=display)
