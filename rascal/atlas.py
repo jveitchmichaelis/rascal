@@ -169,8 +169,8 @@ class Atlas:
                 atlas_elements_tmp, atlas_tmp, atlas_intensities_tmp =\
                     load_calibration_lines(
                         element, min_atlas_wavelength, max_atlas_wavelength,
-                        min_intensity, min_distance, vacuum, pressure, temperature,
-                        relative_humidity)
+                        min_intensity, min_distance, vacuum, pressure,
+                        temperature, relative_humidity)
 
                 self.elements.extend(atlas_elements_tmp)
                 self.lines.extend(atlas_tmp)
@@ -266,8 +266,8 @@ class Atlas:
 
             if abs(line - wavelength) < tolerance:
 
-                removed_element = self.elements.pop(i)
-                removed_peak = self.lines.pop(i)
+                self.elements.pop(i)
+                self.lines.pop(i)
                 self.intensities.pop(i)
 
     def list(self):

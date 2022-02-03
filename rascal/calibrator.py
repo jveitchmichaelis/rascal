@@ -695,7 +695,7 @@ class Calibrator:
                             all peaks matched
                             """
                             break
-                    
+
                     self.matched_peaks = matched_peaks
                     self.matched_atlas = matched_atlas
 
@@ -1296,7 +1296,7 @@ class Calibrator:
         else:
 
             pass
-    
+
     def add_atlas(self,
                   elements,
                   min_atlas_wavelength=None,
@@ -1359,7 +1359,7 @@ class Calibrator:
         self.atlas.clear()
 
         self.atlas.clear()
-    
+
     def add_user_atlas(self,
                        elements,
                        wavelengths,
