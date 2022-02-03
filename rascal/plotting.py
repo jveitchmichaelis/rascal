@@ -94,7 +94,11 @@ def plot_search_space(calibrator,
 
     Return
     ------
+<<<<<<< HEAD
     json object if return_jsonstring is True.
+=======
+    json object if json is True.
+>>>>>>> a91a6b42d285555dab2e48b23c975cfa6c5d944e
 
     """
 
@@ -458,8 +462,13 @@ def plot_fit(calibrator,
         Set to True to return json strings if using plotly as the plotting
         library.
     renderer: string (default: 'default')
+<<<<<<< HEAD
         Indicate the Plotly renderer. Nothing gets displayed if
         return_jsonstring is set to True.
+=======
+        Indicate the Plotly renderer. Nothing gets displayed if json is
+        set to True.
+>>>>>>> a91a6b42d285555dab2e48b23c975cfa6c5d944e
     display: boolean (Default: False)
         Set to True to display disgnostic plot.
 
@@ -906,8 +915,13 @@ def plot_arc(calibrator,
         Set to True to return json strings if using plotly as the plotting
         library.
     renderer: string (default: 'default')
+<<<<<<< HEAD
         Indicate the Plotly renderer. Nothing gets displayed if
         return_jsonstring is set to True.
+=======
+        Indicate the Plotly renderer. Nothing gets displayed if json is
+        set to True.
+>>>>>>> a91a6b42d285555dab2e48b23c975cfa6c5d944e
     display: boolean (Default: False)
         Set to True to display disgnostic plot.
 

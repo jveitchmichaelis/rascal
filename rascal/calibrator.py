@@ -695,6 +695,9 @@ class Calibrator:
                             all peaks matched
                             """
                             break
+                    
+                    self.matched_peaks = matched_peaks
+                    self.matched_atlas = matched_atlas
 
                     # If the best fit is accepted, update the lists
                     self.matched_peaks = list(matched_peaks)
@@ -871,7 +874,6 @@ class Calibrator:
         # initialise the logger
         self.logger = logging.getLogger(logger_name)
         self.logger.propagate = False
-
         level = logging.getLevelName(log_level.upper())
         self.logger.setLevel(level)
         self.log_level = level
@@ -1294,7 +1296,7 @@ class Calibrator:
         else:
 
             pass
-
+    
     def add_atlas(self,
                   elements,
                   min_atlas_wavelength=None,
@@ -1356,6 +1358,8 @@ class Calibrator:
 
         self.atlas.clear()
 
+        self.atlas.clear()
+    
     def add_user_atlas(self,
                        elements,
                        wavelengths,

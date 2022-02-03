@@ -33,11 +33,16 @@ def find_meta(meta, meta_file=read(META_PATH)):
 
 
 def find_dependencies(meta_file=read(META_PATH)):
+<<<<<<< HEAD
     _dependencies = meta_file.split(
         "[tool.poetry.dependencies]" +
         os.linesep)[1].split(os.linesep + os.linesep +
                              "[tool.poetry.dev-dependencies]")[0].split(
                                  os.linesep)
+=======
+    _dependencies = meta_file.split("[tool.poetry.dependencies]"+os.linesep)[1].split(
+        os.linesep + os.linesep + "[tool.poetry.dev-dependencies]")[0].split(os.linesep)
+>>>>>>> a91a6b42d285555dab2e48b23c975cfa6c5d944e
     _dependencies = [i.replace(' = "', '') for i in _dependencies]
     _dependencies = [i.replace('"', '') for i in _dependencies]
     dependencies = []
@@ -50,10 +55,15 @@ def find_dependencies(meta_file=read(META_PATH)):
 
 
 def find_dev_dependencies(meta_file=read(META_PATH)):
+<<<<<<< HEAD
     dependencies = meta_file.split("[tool.poetry.dev-dependencies]" +
                                    os.linesep)[1].split(
                                        os.linesep + os.linesep +
                                        "[build-system]")[0].split(os.linesep)
+=======
+    dependencies = meta_file.split("[tool.poetry.dev-dependencies]" + os.linesep)[
+        1].split(os.linesep + os.linesep + "[build-system]")[0].split(os.linesep)
+>>>>>>> a91a6b42d285555dab2e48b23c975cfa6c5d944e
     dependencies = [i.replace(' = "', '') for i in dependencies]
     dependencies = [i.replace('"', '') for i in dependencies]
     return dependencies
