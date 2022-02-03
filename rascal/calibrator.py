@@ -1294,7 +1294,7 @@ class Calibrator:
         else:
 
             pass
-    
+
     def add_atlas(self,
                   elements,
                   min_atlas_wavelength=None,
@@ -1308,30 +1308,32 @@ class Calibrator:
                   temperature=273.15,
                   relative_humidity=0.):
         from atlas import Atlas
-        self.logger.warn("Using add_atlas is now deprecated. Please use the new Atlas class.")
+        self.logger.warn("Using add_atlas is now deprecated. "
+                         "Please use the new Atlas class.")
 
         if min_atlas_wavelength is None:
 
-            min_atlas_wavelength = self.min_wavelength - self.range_tolerance
+            min_atlas_wavelength =\
+                 self.min_wavelength - self.range_tolerance
 
         if max_atlas_wavelength is None:
 
-            max_atlas_wavelength = self.max_wavelength + self.range_tolerance
+            max_atlas_wavelength =\
+                 self.max_wavelength + self.range_tolerance
 
         new_atlas = Atlas(elements,
-                            min_atlas_wavelength=min_atlas_wavelength,
-                            max_atlas_wavelength=max_atlas_wavelength,
-                            min_intensity=min_intensity,
-                            min_distance=min_distance,
-                            range_tolerance=self.range_tolerance,
-                            vacuum=vacuum,
-                            pressure=pressure,
-                            temperature=temperature,
-                            relative_humidity=relative_humidity)
+                          min_atlas_wavelength=min_atlas_wavelength,
+                          max_atlas_wavelength=max_atlas_wavelength,
+                          min_intensity=min_intensity,
+                          min_distance=min_distance,
+                          range_tolerance=self.range_tolerance,
+                          vacuum=vacuum,
+                          pressure=pressure,
+                          temperature=temperature,
+                          relative_humidity=relative_humidity)
         self.atlas = new_atlas
 
         self._generate_pairs(candidate_tolerance, constrain_poly)
-        
 
     def remove_atlas_lines_range(self, wavelength, tolerance=10):
         '''
@@ -1353,7 +1355,7 @@ class Calibrator:
         '''
 
         self.atlas.clear()
-    
+
     def add_user_atlas(self,
                        elements,
                        wavelengths,
@@ -1366,26 +1368,19 @@ class Calibrator:
                        constrain_poly=False):
 
         from atlas import Atlas
-        self.logger.warn("Using add_user_atlas is now deprecated. Please use the new Atlas class.")
+        self.logger.warn("Using add_user_atlas is now deprecated. "
+                         "Please use the new Atlas class.")
 
         if self.atlas is None:
             new_atlas = Atlas()
-            new_atlas.add_user_atlas(elements,
-                                        wavelengths,
-                                        intensities,
-                                        vacuum,
-                                        pressure,
-                                        temperature,
-                                        relative_humidity)
+            new_atlas.add_user_atlas(elements, wavelengths, intensities,
+                                     vacuum, pressure, temperature,
+                                     relative_humidity)
             self.atlas = new_atlas
         else:
-            self.atlas.add_user_atlas(elements,
-                                        wavelengths,
-                                        intensities,
-                                        vacuum,
-                                        pressure,
-                                        temperature,
-                                        relative_humidity)
+            self.atlas.add_user_atlas(elements, wavelengths, intensities,
+                                      vacuum, pressure, temperature,
+                                      relative_humidity)
 
         self._generate_pairs(candidate_tolerance, constrain_poly)
 
@@ -1778,45 +1773,86 @@ class Calibrator:
 
             x = self.polyval(p, fit_coeff)
             diff = self.atlas.lines - x
-            diff_abs = np.abs(diff)
-            idx = np.argmin(diff_abs)
+            diff_abs = np.abs(diff) < tolerance
 
-            matched_peaks.append(p)
-            matched_atlas.append(self.atlas.lines[diff_abs])
-            residuals.append(diff_abs)
+            if diff_abs.any():
+
+                matched_peaks.append(p)
+                matched_atlas.append(
+                    list(np.asarray(self.atlas.lines)[diff_abs]))
+                residuals.append(diff_abs)
+
+        print(matched_atlas)
 
         # Create permutations:
         candidates = [[]]
 
+        # match is a list
         for match in matched_atlas:
+
+            if len(match) == 0:
+
+                continue
+
+            self.logger.info('matched: {}'.format(match))
+
+            new_candidates = []
+            # i is an int
+            # candidates is a list of list
+
             for i in range(len(candidates)):
-                new_candidates = []
+
+                # c is a list
                 c = candidates[i]
 
-                matched_peaks.append(p)
-                matched_atlas.append(self.atlas.lines[idx])
-                residuals.append(diff[idx])
+                if len(match) == 1:
 
-        matched_peaks = np.array(matched_peaks)
-        matched_atlas = np.array(matched_atlas)
-        self.residuals = np.array(residuals)
-        self.rms = np.sqrt(np.nansum(self.residuals**2.) / len(self.residuals))
+                    c.extend(match)
+
+                else:
+
+                    # rep is a list of tuple
+                    rep = ~np.in1d(match, c)
+
+                    if rep.any():
+
+                        for j in np.argwhere(rep):
+
+                            new_c = c + [match[j]]
+                            new_candidates.append(new_c)
+
+                # Only add if new_candidates is not an empty list
+                if new_candidates != []:
+
+                    if candidates[0] == []:
+
+                        candidates[0] = new_candidates
+
+                    else:
+
+                        candidates.append(new_candidates)
+
+        if len(candidates) > 1:
+
+            self.logger.info(
+                "More than one match solution found, checking permutations.")
 
         self.matched_peaks = np.array(matched_peaks)
 
         # Check all candidates
-        candidate_errors = []
         best_err = 1e9
         self.matched_atlas = None
         self.residuals = None
 
         for candidate in candidates:
+
             matched_atlas = np.array(candidate)
 
-            fit_coeff = self.polyfit(self.matched_peaks,
-                                        matched_atlas,
-                                        fit_deg)
-        
+            print(len(matched_peaks), matched_peaks)
+            print(len(matched_atlas), matched_atlas)
+
+            fit_coeff = self.polyfit(matched_peaks, matched_atlas, fit_deg)
+
             x = self.polyval(matched_peaks, fit_coeff)
             residuals = np.abs(matched_atlas - x)
             err = np.sum(residuals)
@@ -1827,16 +1863,18 @@ class Calibrator:
 
         assert self.matched_atlas is not None
         assert self.residuals is not None
-        
+
         self.rms = np.sqrt(np.nansum(self.residuals**2.) / len(self.residuals))
 
         self.peak_utilisation = len(self.matched_peaks) / len(self.peaks)
-        self.atlas_utilisation = len(self.matched_atlas) / len(self.atlas.lines)
+        self.atlas_utilisation = len(self.matched_atlas) / len(
+            self.atlas.lines)
 
         if robust_refit:
 
-            self.fit_coeff = models.robust_polyfit(self.matched_peaks,
-                                                   self.matched_atlas, fit_deg)
+            self.fit_coeff = models.robust_polyfit(
+                np.asarray(self.matched_peaks), np.asarray(self.matched_atlas),
+                fit_deg)
 
             if np.any(np.isnan(self.fit_coeff)):
 
