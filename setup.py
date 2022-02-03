@@ -33,8 +33,8 @@ def find_meta(meta, meta_file=read(META_PATH)):
 
 
 def find_dependencies(meta_file=read(META_PATH)):
-    _dependencies = meta_file.split("[tool.poetry.dependencies]\r\n")[1].split(
-        "\r\n\r\n[tool.poetry.dev-dependencies]")[0].split("\r\n")
+    _dependencies = meta_file.split("[tool.poetry.dependencies]"+os.linesep)[1].split(
+        os.linesep + os.linesep + "[tool.poetry.dev-dependencies]")[0].split(os.linesep)
     _dependencies = [i.replace(' = "', '') for i in _dependencies]
     _dependencies = [i.replace('"', '') for i in _dependencies]
     dependencies = []
@@ -47,8 +47,8 @@ def find_dependencies(meta_file=read(META_PATH)):
 
 
 def find_dev_dependencies(meta_file=read(META_PATH)):
-    dependencies = meta_file.split("\r\n\r\n[tool.poetry.dev-dependencies]")[
-        1].split("\r\n\r\n[build-system]")[0].split("\r\n")
+    dependencies = meta_file.split("[tool.poetry.dev-dependencies]" + os.linesep)[
+        1].split(os.linesep + os.linesep + "[build-system]")[0].split(os.linesep)
     dependencies = [i.replace(' = "', '') for i in dependencies]
     dependencies = [i.replace('"', '') for i in dependencies]
     return dependencies
