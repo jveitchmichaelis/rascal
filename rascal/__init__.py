@@ -6,7 +6,7 @@ import re
 
 __packagename__ = "rascal"
 
-META_PATH = os.path.join("..", "pyproject.toml")
+META_PATH = os.path.join("pyproject.toml")
 
 HERE = os.path.dirname(os.path.realpath(__file__))
 

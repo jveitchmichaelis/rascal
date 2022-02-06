@@ -4,12 +4,38 @@ import codecs
 import os
 import re
 from setuptools import setup, find_packages
+from setuptools.command.develop import develop
+from setuptools.command.install import install
+from shutil import copyfile
 
 __packagename__ = "rascal"
 
 META_PATH = "pyproject.toml"
 
 HERE = os.path.dirname(os.path.realpath(__file__))
+
+
+def copy_files(target_path):
+    source_path = HERE
+    for fn in ["pyproject.toml", "LICENSE", "CHANGELOG.rst", "README.md"]:
+        copyfile(os.path.join(source_path, fn), os.path.join(target_path, fn))
+
+
+class PostDevelopCommand(develop):
+    """Post-installation for development mode."""
+
+    def run(self):
+        develop.run(self)
+        copy_files(os.path.abspath(__packagename__))
+
+
+class PostInstallCommand(install):
+    """Post-installation for installation mode."""
+
+    def run(self):
+        install.run(self)
+        copy_files(
+            os.path.abspath(os.path.join(self.install_lib, __packagename__)))
 
 
 def read(*parts):
@@ -76,6 +102,10 @@ python_require, install_requires = find_dependencies()
 extras_require = {'dev': find_dev_dependencies()}
 
 setup(name=__packagename__,
+      cmdclass={
+          'develop': PostDevelopCommand,
+          'install': PostInstallCommand,
+      },
       version=find_meta("version"),
       packages=find_packages(),
       author=__author__,
@@ -88,7 +118,9 @@ setup(name=__packagename__,
       long_description=open('README.md').read(),
       long_description_content_type='text/markdown',
       zip_safe=False,
+      data_files=[('', ['pyproject.toml'])],
       include_package_data=True,
+      setup_requires=['setuptools_scm'],
       install_requires=install_requires,
       extras_require=extras_require,
       python_requires=python_require)

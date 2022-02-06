@@ -7,6 +7,7 @@ from rascal.atlas import Atlas
 from rascal.calibrator import Calibrator
 from rascal import util
 
+HERE = os.path.dirname(os.path.realpath(__file__))
 
 def test_sprat_manual_atlas():
 
@@ -42,7 +43,7 @@ def test_sprat_manual_atlas():
                log_spectrum=True,
                fig_type='png+html',
                save_fig=True,
-               filename='test/test_lt_sprat_arc_matplotlib')
+               filename=os.path.join(HERE, 'test_lt_sprat_arc_matplotlib'))
 
     c.set_hough_properties(num_slopes=5000,
                            range_tolerance=500.,
@@ -91,7 +92,7 @@ def test_sprat_manual_atlas():
                save_fig=True,
                fig_type='png+html',
                tolerance=5.,
-               filename='test/test_lt_sprat_fit_plotly')
+               filename=os.path.join(HERE, 'test_lt_sprat_fit_plotly'))
 
     fit_coeff_new, peak_matched, atlas_matched, rms, residual,\
         peak_utilisation, atlas_utilisation = c.match_peaks(best_p)
@@ -103,14 +104,14 @@ def test_sprat_manual_atlas():
                display=False,
                fig_type='png+html',
                save_fig=True,
-               filename='test/test_lt_sprat_fit_matplotlib',
+               filename=os.path.join(HERE, 'test_lt_sprat_fit_matplotlib'),
                tolerance=5.)
 
     # Show the parameter space for searching possible solution
     c.plot_search_space(display=False,
                         fig_type='png+html',
                         save_fig=True,
-                        filename='test/test_lt_sprat_search_space_matplotlib')
+                        filename=os.path.join(HERE, 'test_lt_sprat_search_space_matplotlib'))
 
     print("Stdev error: {} A".format(residual.std()))
     print("Peaks utilisation rate: {}%".format(peak_utilisation * 100))
@@ -121,12 +122,12 @@ def test_sprat_manual_atlas():
 
     c.plot_arc(display=False,
                save_fig=True,
-               filename='test/test_lt_sprat_arc_plotly')
+               filename=os.path.join(HERE, 'test_lt_sprat_arc_plotly'))
     c.plot_arc(log_spectrum=True,
                display=False,
                save_fig=True,
                fig_type='png+html',
-               filename='test/test_lt_sprat_arc_log_plotly')
+               filename=os.path.join(HERE, 'test_lt_sprat_arc_log_plotly'))
 
     # Plot the solution
     c.plot_fit(best_p,
@@ -137,7 +138,7 @@ def test_sprat_manual_atlas():
                display=False,
                save_fig=True,
                fig_type='png+html',
-               filename='test/test_lt_sprat_fit_plotly')
+               filename=os.path.join(HERE, 'test_lt_sprat_fit_plotly'))
 
     # Plot the solution
     c.plot_fit(best_p,
@@ -148,7 +149,7 @@ def test_sprat_manual_atlas():
                display=False,
                save_fig=True,
                fig_type='png+html',
-               filename='test/test_lt_sprat_fit_plotly')
+               filename=os.path.join(HERE, 'test_lt_sprat_fit_plotly'))
 
     # Show the parameter space for searching possible solution
     c.plot_search_space(save_fig=True, fig_type='png+html', display=False)
@@ -156,7 +157,7 @@ def test_sprat_manual_atlas():
     c.plot_arc(save_fig=True,
                fig_type='png+html',
                display=False,
-               filename='test/test_lt_sprat_arc_plotly')
+               filename=os.path.join(HERE, 'test_lt_sprat_arc_plotly'))
 
     c.plot_arc(save_fig=True,
                fig_type='png+html',
@@ -172,7 +173,7 @@ def test_sprat_manual_atlas():
                save_fig=True,
                fig_type='png+html',
                display=False,
-               filename='test/test_lt_sprat_fit_log_plotly',
+               filename=os.path.join(HERE, 'test_lt_sprat_fit_log_plotly'),
                return_jsonstring=True)
     # Plot the solution
     c.plot_fit(best_p,
@@ -183,11 +184,11 @@ def test_sprat_manual_atlas():
                save_fig=True,
                fig_type='png+html',
                display=False,
-               filename='test/test_lt_sprat_fit_log_plotly')
+               filename=os.path.join(HERE, 'test_lt_sprat_fit_log_plotly'))
 
     # Show the parameter space for searching possible solution
     c.plot_search_space(save_fig=True,
                         fig_type='png+html',
                         display=False,
-                        filename='test/test_lt_sprat_search_space_plotly',
+                        filename=os.path.join(HERE, 'test_lt_sprat_search_space_plotly'),
                         return_jsonstring=True)
