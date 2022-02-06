@@ -35,8 +35,8 @@ class Calibrator:
         self.logger = None
         self.log_level = None
 
-        self.peaks = peaks
-        self.spectrum = spectrum
+        self.peaks = copy.deepcopy(peaks)
+        self.spectrum = copy.deepcopy(spectrum)
         self.matplotlib_imported = False
         self.plotly_imported = False
         self.plot_with_matplotlib = False
@@ -713,7 +713,7 @@ class Calibrator:
                 keep_trying = False
 
         # Overfit check
-        if best_inliers == self.fit_deg + 1:
+        if best_inliers <= self.fit_deg + 1:
 
             valid_solution = False
 
@@ -1372,20 +1372,15 @@ class Calibrator:
                          "Please use the new Atlas class.")
 
         if self.atlas is None:
-            new_atlas = Atlas()
-            new_atlas.add_user_atlas(elements, wavelengths, intensities,
-                                     vacuum, pressure, temperature,
-                                     relative_humidity)
-            self.atlas = new_atlas
-        else:
-            self.atlas.add_user_atlas(elements, wavelengths, intensities,
-                                      vacuum, pressure, temperature,
-                                      relative_humidity)
+
+            self.atlas = Atlas()
+
+        self.atlas.add_user_atlas(elements, wavelengths, intensities, vacuum,
+                                  pressure, temperature, relative_humidity)
 
         self._generate_pairs(candidate_tolerance, constrain_poly)
 
     def set_atlas(self, atlas, candidate_tolerance=10., constrain_poly=False):
-        self.atlas = atlas
         '''
         Adds an atlas of arc lines to the calibrator
 
@@ -1401,6 +1396,8 @@ class Calibrator:
         constrain_poly: boolean
             Apply a polygonal constraint on possible peak/atlas pairs
         '''
+
+        self.atlas = atlas
 
         # Create a list of all possible pairs of detected peaks and lines
         # from atlas
@@ -1782,8 +1779,6 @@ class Calibrator:
                     list(np.asarray(self.atlas.lines)[diff_abs]))
                 residuals.append(diff_abs)
 
-        print(matched_atlas)
-
         # Create permutations:
         candidates = [[]]
 
@@ -1848,9 +1843,6 @@ class Calibrator:
 
             matched_atlas = np.array(candidate)
 
-            print(len(matched_peaks), matched_peaks)
-            print(len(matched_atlas), matched_atlas)
-
             fit_coeff = self.polyfit(matched_peaks, matched_atlas, fit_deg)
 
             x = self.polyval(matched_peaks, fit_coeff)
@@ -1858,8 +1850,11 @@ class Calibrator:
             err = np.sum(residuals)
 
             if err < best_err:
-                self.matched_atlas = candidate
+
+                self.matched_atlas = matched_atlas
                 self.residuals = residuals
+
+                best_err = err
 
         assert self.matched_atlas is not None
         assert self.residuals is not None
