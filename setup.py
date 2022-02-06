@@ -120,7 +120,6 @@ setup(name=__packagename__,
       zip_safe=False,
       data_files=[('', ['pyproject.toml'])],
       include_package_data=True,
-      setup_requires=['setuptools_scm'],
       install_requires=install_requires,
       extras_require=extras_require,
       python_requires=python_require)
