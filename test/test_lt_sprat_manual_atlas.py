@@ -38,10 +38,11 @@ def test_sprat_manual_atlas():
     c.use_plotly()
     assert c.which_plotting_library() == 'plotly'
 
+    # auto filename
     c.plot_arc(display=False,
                fig_type='png+html',
-               save_fig=True,
-               filename=os.path.join(HERE, 'test_output'))
+               save_fig=True)
+    # user provided filename
     c.plot_arc(display=False,
                log_spectrum=True,
                fig_type='png+html',
