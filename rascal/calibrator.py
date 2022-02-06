@@ -1837,7 +1837,7 @@ class Calibrator:
             self.logger.info(
                 "More than one match solution found, checking permutations.")
 
-        self.matched_peaks = np.array(np.deepcopy(matched_peaks))
+        self.matched_peaks = np.array(copy.deepcopy(matched_peaks))
 
         # Check all candidates
         best_err = 1e9
