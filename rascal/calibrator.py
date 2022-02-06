@@ -13,6 +13,7 @@ from .util import gauss
 from . import plotting
 from . import models
 from .houghtransform import HoughTransform
+from .atlas import Atlas
 
 
 class Calibrator:
@@ -1309,7 +1310,7 @@ class Calibrator:
                   pressure=101325.,
                   temperature=273.15,
                   relative_humidity=0.):
-        from atlas import Atlas
+
         self.logger.warn("Using add_atlas is now deprecated. "
                          "Please use the new Atlas class.")
 
@@ -1358,8 +1359,6 @@ class Calibrator:
 
         self.atlas.clear()
 
-        self.atlas.clear()
-
     def add_user_atlas(self,
                        elements,
                        wavelengths,
@@ -1371,7 +1370,6 @@ class Calibrator:
                        candidate_tolerance=10,
                        constrain_poly=False):
 
-        from atlas import Atlas
         self.logger.warn("Using add_user_atlas is now deprecated. "
                          "Please use the new Atlas class.")
 
