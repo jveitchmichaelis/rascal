@@ -1,3 +1,4 @@
+import copy
 import itertools
 import logging
 
@@ -697,12 +698,9 @@ class Calibrator:
                             """
                             break
 
-                    self.matched_peaks = matched_peaks
-                    self.matched_atlas = matched_atlas
-
                     # If the best fit is accepted, update the lists
-                    self.matched_peaks = list(matched_peaks)
-                    self.matched_atlas = list(matched_atlas)
+                    self.matched_peaks = list(copy.deepcopy(matched_peaks))
+                    self.matched_atlas = list(copy.deepcopy(matched_atlas))
 
                     # Sanity check that matching peaks/atlas lines are 1:1
                     assert len(np.unique(self.matched_peaks)) == len(
@@ -1839,7 +1837,7 @@ class Calibrator:
             self.logger.info(
                 "More than one match solution found, checking permutations.")
 
-        self.matched_peaks = np.array(matched_peaks)
+        self.matched_peaks = np.array(np.deepcopy(matched_peaks))
 
         # Check all candidates
         best_err = 1e9
@@ -2060,8 +2058,8 @@ class Calibrator:
         self.logger.info("Refit fit_coeff is {}.".format(fit_coeff_new))
 
         self.fit_coeff = fit_coeff_new
-        self.matched_peaks = matched_peaks
-        self.matched_atlas = matched_atlas
+        self.matched_peaks = copy.deepcopy(matched_peaks)
+        self.matched_atlas = copy.deepcopy(matched_atlas)
         self.residuals = y - self.polyval(x, fit_coeff_new)
         self.rms = np.sqrt(np.nansum(self.residuals**2.) / len(self.residuals))
 

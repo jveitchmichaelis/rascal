@@ -14,7 +14,7 @@ META_PATH = "pyproject.toml"
 
 HERE = os.path.dirname(os.path.realpath(__file__))
 
-
+# https://stackoverflow.com/questions/1612733/including-non-python-files-with-setup-py
 def copy_files(target_path):
     source_path = HERE
     for fn in ["pyproject.toml", "LICENSE", "CHANGELOG.rst", "README.md"]:
