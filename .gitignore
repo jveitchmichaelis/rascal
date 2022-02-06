@@ -134,3 +134,5 @@ iframe_figures/
 test/*.json
 test/*.npy
 test/*.png
+
+test/test_output/*
