@@ -36,6 +36,7 @@ def test_default():
 
     # Add our fake lines as the atlas
     a.add_user_atlas(elements=["Test"] * len(waves), wavelengths=waves)
+    c.set_ransac_properties(minimum_fit_error=1e-10)
     c.set_atlas(a)
     assert len(c.atlas.lines) > 0
 
@@ -92,7 +93,7 @@ def test_get_candidate_points_poly():
         range_tolerance=100.0, min_wavelength=100.0, max_wavelength=1500.0
     )
 
-    c.set_ransac_properties(linear=False)
+    c.set_ransac_properties(linear=False, minimum_fit_error=1e-10)
 
     # Add our fake lines as the atlas
     a.add_user_atlas(elements=["Test"] * len(waves), wavelengths=waves)
