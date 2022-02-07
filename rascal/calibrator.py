@@ -75,8 +75,8 @@ class Calibrator:
         self.minimum_fit_error = None
 
         # results
-        self.matched_peaks = None
-        self.matched_atlas = None
+        self.matched_peaks = []
+        self.matched_atlas = []
         self.fit_coeff = None
 
         self.set_calibrator_properties()
@@ -732,6 +732,7 @@ class Calibrator:
 
             valid_solution = True
 
+        # If we totally failed then this can be empty
         assert best_inliers == len(self.matched_peaks)
         assert best_inliers == len(self.matched_atlas)
 
