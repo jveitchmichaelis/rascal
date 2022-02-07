@@ -681,22 +681,28 @@ class Calibrator:
                         continue
 
                     # Make sure that we don't accept fits with zero error
-                    if best_err > self.minimum_fit_error:
+                    if best_err < self.minimum_fit_error:
 
-                        best_cost = cost
+                        self.logger.debug(
+                            'Fit error too small, '
+                            '{:1.2f}.'.format(best_err))
 
-                        if progress:
+                        continue
 
-                            sampler_list.set_description(
-                                'Most inliers: {:d}, '
-                                'best error: {:1.4f}'.format(
-                                    n_inliers, best_err))
+                    best_cost = cost
 
-                        if n_inliers == len(peaks):
-                            """
-                            all peaks matched
-                            """
-                            break
+                    if progress:
+
+                        sampler_list.set_description(
+                            'Most inliers: {:d}, '
+                            'best error: {:1.4f}'.format(
+                                n_inliers, best_err))
+
+                    if n_inliers == len(peaks):
+                        """
+                        all peaks matched
+                        """
+                        break
 
                     # If the best fit is accepted, update the lists
                     self.matched_peaks = list(copy.deepcopy(matched_peaks))
