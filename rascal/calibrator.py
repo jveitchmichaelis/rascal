@@ -639,7 +639,7 @@ class Calibrator:
                     self.logger.debug('Too few good candidates for fitting.')
                     continue
 
-                # Want the most inliers with the lowest error
+                # If this is potentially a new best fit, then handle that first
                 if (cost <= best_cost):
 
                     # Now we do a robust fit
@@ -662,6 +662,18 @@ class Calibrator:
 
                     best_err = np.sqrt(np.mean(err**2))
                     best_residual = err
+
+                    # Make sure that we don't accept fits with zero error
+                    if best_err < self.minimum_fit_error:
+
+                        self.logger.debug(
+                            'Fit error too small, '
+                            '{:1.2f}.'.format(best_err))
+
+                        continue
+                    
+                    # Check that we have enough inliers based on user specified
+                    # constraints
                     best_inliers = n_inliers
 
                     if best_inliers < self.minimum_matches:
@@ -679,32 +691,16 @@ class Calibrator:
                             'user specified {:1.2f} %.'.format(
                                 100 * self.minimum_matches))
                         continue
-
-                    # Make sure that we don't accept fits with zero error
-                    if best_err < self.minimum_fit_error:
-
-                        self.logger.debug(
-                            'Fit error too small, '
-                            '{:1.2f}.'.format(best_err))
-
-                        continue
-
-                    best_cost = cost
-
+                    
                     if progress:
 
                         sampler_list.set_description(
                             'Most inliers: {:d}, '
                             'best error: {:1.4f}'.format(
-                                n_inliers, best_err))
-
-                    if n_inliers == len(peaks):
-                        """
-                        all peaks matched
-                        """
-                        break
+                                best_inliers, best_err))
 
                     # If the best fit is accepted, update the lists
+                    best_cost = cost
                     self.matched_peaks = list(copy.deepcopy(matched_peaks))
                     self.matched_atlas = list(copy.deepcopy(matched_atlas))
 
@@ -715,7 +711,12 @@ class Calibrator:
                         self.matched_atlas)
                     assert len(np.unique(self.matched_atlas)) == len(
                         np.unique(self.matched_peaks))
+                    
+                    # Break early if all peaks are matched
+                    if best_inliers == len(peaks):
+                        break
 
+                # If we got this far, then we can continue to the next sample
                 keep_trying = False
 
         # Overfit check
