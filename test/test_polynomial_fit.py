@@ -32,7 +32,7 @@ def test_linear_fit():
                            max_wavelength=8000.)
     a.add_user_atlas(elements=elements_linear, wavelengths=wavelengths_linear)
     c.set_atlas(a)
-    c.set_ransac_properties(minimum_matches=20)
+    c.set_ransac_properties(minimum_matches=20, minimum_fit_error=1e-12)
     c.do_hough_transform(brute_force=False)
 
     # Run the wavelength calibration
@@ -66,7 +66,7 @@ def test_manual_refit():
                            max_wavelength=8000.)
     a.add_user_atlas(elements=elements_linear, wavelengths=wavelengths_linear)
     c.set_atlas(a)
-    c.set_ransac_properties(minimum_matches=25)
+    c.set_ransac_properties(minimum_matches=25, minimum_fit_error=1e-12)
     c.do_hough_transform(brute_force=False)
 
     # Run the wavelength calibration
@@ -99,7 +99,7 @@ def test_manual_refit_remove_points():
                            max_wavelength=8000.)
     a.add_user_atlas(elements=elements_linear, wavelengths=wavelengths_linear)
     c.set_atlas(a)
-    c.set_ransac_properties(minimum_matches=25)
+    c.set_ransac_properties(minimum_matches=25, minimum_fit_error=1e-12)
     c.do_hough_transform(brute_force=False)
 
     # Run the wavelength calibration
@@ -134,7 +134,7 @@ def test_manual_refit_add_points():
                            max_wavelength=8000.)
     a.add_user_atlas(elements=elements_linear, wavelengths=wavelengths_linear)
     c.set_atlas(a)
-    c.set_ransac_properties(minimum_matches=25)
+    c.set_ransac_properties(minimum_matches=25, minimum_fit_error=1e-12)
     c.do_hough_transform(brute_force=False)
 
     # Run the wavelength calibration
@@ -169,7 +169,7 @@ def test_quadratic_fit():
     a.add_user_atlas(elements=elements_quadratic,
                      wavelengths=wavelengths_quadratic)
     c.set_atlas(a)
-    c.set_ransac_properties(minimum_matches=20)
+    c.set_ransac_properties(minimum_matches=20, minimum_fit_error=1e-12)
     c.do_hough_transform(brute_force=False)
 
     # Run the wavelength calibration
@@ -206,7 +206,7 @@ def test_quadratic_fit_legendre():
     a.add_user_atlas(elements=elements_quadratic,
                      wavelengths=wavelengths_quadratic)
     c.set_atlas(a)
-    c.set_ransac_properties(sample_size=10, minimum_matches=20)
+    c.set_ransac_properties(sample_size=10, minimum_matches=20, minimum_fit_error=1e-12)
     c.do_hough_transform(brute_force=False)
 
     # Run the wavelength calibration
@@ -240,7 +240,7 @@ def test_quadratic_fit_chebyshev():
     a.add_user_atlas(elements=elements_quadratic,
                      wavelengths=wavelengths_quadratic)
     c.set_atlas(a)
-    c.set_ransac_properties(sample_size=10, minimum_matches=20)
+    c.set_ransac_properties(sample_size=10, minimum_matches=20, minimum_fit_error=1e-12)
     c.do_hough_transform(brute_force=False)
 
     # Run the wavelength calibration
