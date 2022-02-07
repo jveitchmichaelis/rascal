@@ -628,24 +628,26 @@ class Calibrator:
                 cost = sum(err) / (len(err) - len(fit_coeffs) + 1) / (weight +
                                                                       1e-9)
 
-                # reject lines outside the rms limit (ransac_tolerance)
-                best_mask = err < self.ransac_tolerance
-                n_inliers = sum(best_mask)
-                matched_peaks = matched_x[best_mask]
-                matched_atlas = matched_y[best_mask]
-
-                if len(matched_peaks) <= self.fit_deg:
-
-                    self.logger.debug('Too few good candidates for fitting.')
-                    continue
-
                 # If this is potentially a new best fit, then handle that first
                 if (cost <= best_cost):
+
+                    # reject lines outside the rms limit (ransac_tolerance)
+                    # TODO: should n_inliers be recalculated from the robust
+                    # fit?
+                    mask = err < self.ransac_tolerance
+                    n_inliers = sum(mask)
+                    matched_peaks = matched_x[mask]
+                    matched_atlas = matched_y[mask]
+
+                    if len(matched_peaks) <= self.fit_deg:
+
+                        self.logger.debug('Too few good candidates for fitting.')
+                        continue
 
                     # Now we do a robust fit
                     try:
 
-                        best_p = models.robust_polyfit(matched_peaks,
+                        coeffs = models.robust_polyfit(matched_peaks,
                                                        matched_atlas,
                                                        self.fit_deg)
 
@@ -656,15 +658,14 @@ class Calibrator:
                         continue
 
                     # Get the residual of the fit
-                    err = self.polyval(matched_peaks, best_p) - matched_atlas
-                    err[np.abs(err) >
+                    residual = self.polyval(matched_peaks, coeffs) - matched_atlas
+                    residual[np.abs(residual) >
                         self.ransac_tolerance] = self.ransac_tolerance
 
-                    best_err = np.sqrt(np.mean(err**2))
-                    best_residual = err
-
+                    rms_residual = np.sqrt(np.mean(residual**2))
+                    
                     # Make sure that we don't accept fits with zero error
-                    if best_err < self.minimum_fit_error:
+                    if rms_residual < self.minimum_fit_error:
 
                         self.logger.debug(
                             'Fit error too small, '
@@ -674,16 +675,15 @@ class Calibrator:
                     
                     # Check that we have enough inliers based on user specified
                     # constraints
-                    best_inliers = n_inliers
-
-                    if best_inliers < self.minimum_matches:
+                    
+                    if n_inliers < self.minimum_matches:
 
                         self.logger.debug(
                             'Not enough matched peaks for valid solution, '
                             'user specified {}.'.format(self.minimum_matches))
                         continue
 
-                    if best_inliers < self.minimum_peak_utilisation * len(
+                    if n_inliers < self.minimum_peak_utilisation * len(
                             self.peaks):
 
                         self.logger.debug(
@@ -692,15 +692,12 @@ class Calibrator:
                                 100 * self.minimum_matches))
                         continue
                     
-                    if progress:
-
-                        sampler_list.set_description(
-                            'Most inliers: {:d}, '
-                            'best error: {:1.4f}'.format(
-                                best_inliers, best_err))
-
                     # If the best fit is accepted, update the lists
                     best_cost = cost
+                    best_inliers = n_inliers
+                    best_p = coeffs
+                    best_err = rms_residual
+                    best_residual = residual
                     self.matched_peaks = list(copy.deepcopy(matched_peaks))
                     self.matched_atlas = list(copy.deepcopy(matched_atlas))
 
@@ -711,6 +708,13 @@ class Calibrator:
                         self.matched_atlas)
                     assert len(np.unique(self.matched_atlas)) == len(
                         np.unique(self.matched_peaks))
+
+                    if progress:
+
+                        sampler_list.set_description(
+                            'Most inliers: {:d}, '
+                            'best error: {:1.4f}'.format(
+                                best_inliers, best_err))
                     
                     # Break early if all peaks are matched
                     if best_inliers == len(peaks):
