@@ -4,6 +4,7 @@
 [![Readthedocs Status](https://readthedocs.org/projects/rascal/badge/?version=latest&style=flat)](https://rascal.readthedocs.io/en/latest/)
 [![PyPI version](https://badge.fury.io/py/rascal.svg)](https://badge.fury.io/py/rascal)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4124170.svg)](https://doi.org/10.5281/zenodo.4124170)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 Rascal is a library for automated spectrometer wavelength calibration. It has been designed primarily for astrophysics applications, but should be usable with spectra captured from any similar spectrometer.
 
@@ -39,7 +40,12 @@ The [quickstart guide](https://rascal.readthedocs.io/en/latest/tutorial/quicksta
 ## Contributing Code/Documentation
 If you are interested in contributing code to the project, thank you! For those unfamiliar with the process of contributing to an open-source project, you may want to read through Github’s own short informational section on how to submit a [contribution](https://opensource.guide/how-to-contribute/#how-to-submit-a-contribution) or send me a message.
 
-Style -- as long as it passes flake8.
+Style -- we now use black for formatting, you can easily set this up using a pre-commit hook.
+
+```
+pip install pre-commit
+pre-commit install
+```
 
 ## Disclaimer
 We duplicate some of the relevant metadata, but we do not process the raw metadata. Some of the metadata this software creates contain full path to the files in your system, which most likely includes a user name on your machine. Please be advised it is your responsibility to be compliant with the privacy law(s) that you are oblidged to follow, and it is your responsibility to remove any metadata that may reveal personal information and/or provide information that can reveal any computing vulunerability.
