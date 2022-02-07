@@ -8,22 +8,22 @@ def get_vapour_pressure(temperature):
     """
     Appendix A.I of https://emtoolbox.nist.gov/Wavelength/Documentation.asp
     """
-    K1 = 1.16705214528E+03
-    K2 = -7.24213167032E+05
-    K3 = -1.70738469401E+01
-    K4 = 1.20208247025E+04
-    K5 = -3.23255503223E+06
-    K6 = 1.49151086135E+01
-    K7 = -4.82326573616E+03
-    K8 = 4.05113405421E+05
-    K9 = -2.38555575678E-01
-    K10 = 6.50175348448E+02
+    K1 = 1.16705214528e03
+    K2 = -7.24213167032e05
+    K3 = -1.70738469401e01
+    K4 = 1.20208247025e04
+    K5 = -3.23255503223e06
+    K6 = 1.49151086135e01
+    K7 = -4.82326573616e03
+    K8 = 4.05113405421e05
+    K9 = -2.38555575678e-01
+    K10 = 6.50175348448e02
     omega = temperature + K9 / (temperature - K10)
-    A = omega**2. + K1 * omega + K2
-    B = K3 * omega**2. + K4 * omega + K5
-    C = K6 * omega**2. + K7 * omega + K8
-    X = -B + np.sqrt(B**2. - 4 * A * C)
-    vapour_pressure = 10**6. * (2. * C / X)**4.
+    A = omega**2.0 + K1 * omega + K2
+    B = K3 * omega**2.0 + K4 * omega + K5
+    C = K6 * omega**2.0 + K7 * omega + K8
+    X = -B + np.sqrt(B**2.0 - 4 * A * C)
+    vapour_pressure = 10**6.0 * (2.0 * C / X) ** 4.0
     return vapour_pressure
 
 
@@ -31,38 +31,40 @@ def get_vapour_partial_pressure(relative_humidity, vapour_pressure):
     """
     Appendix A.II of https://emtoolbox.nist.gov/Wavelength/Documentation.asp
     """
-    partial_pressure = relative_humidity / 100. * vapour_pressure
+    partial_pressure = relative_humidity / 100.0 * vapour_pressure
     return partial_pressure
 
 
-def edlen_refraction(wavelengths, temperature, pressure,
-                     vapour_partial_pressure):
+def edlen_refraction(wavelengths, temperature, pressure, vapour_partial_pressure):
     """
     Appendix A.IV of https://emtoolbox.nist.gov/Wavelength/Documentation.asp
     """
     A = 8342.54
-    B = 2406147.
-    C = 15998.
+    B = 2406147.0
+    C = 15998.0
     D = 96095.43
     E = 0.601
     F = 0.00972
     G = 0.003661
-    S = 1. / np.array(wavelengths)**2.
-    n_s = 1. + 1E-8 * (A + B / (130 - S) + C / (38.9 - S))
-    X = (1. + 1E-8 *
-         (E - F *
-          (temperature - 273.15)) * pressure) / (1. + G *
-                                                 (temperature - 273.15))
-    n_tp = 1. + pressure * (n_s - 1.) * X / D
-    n = n_tp - 1E-10 * (292.75 / temperature) * (
-        3.7345 - 0.0401 * S) * vapour_partial_pressure
+    S = 1.0 / np.array(wavelengths) ** 2.0
+    n_s = 1.0 + 1e-8 * (A + B / (130 - S) + C / (38.9 - S))
+    X = (1.0 + 1e-8 * (E - F * (temperature - 273.15)) * pressure) / (
+        1.0 + G * (temperature - 273.15)
+    )
+    n_tp = 1.0 + pressure * (n_s - 1.0) * X / D
+    n = (
+        n_tp
+        - 1e-10
+        * (292.75 / temperature)
+        * (3.7345 - 0.0401 * S)
+        * vapour_partial_pressure
+    )
     return n
 
 
-def vacuum_to_air_wavelength(wavelengths,
-                             temperature=273.15,
-                             pressure=101325,
-                             relative_humidity=0):
+def vacuum_to_air_wavelength(
+    wavelengths, temperature=273.15, pressure=101325, relative_humidity=0
+):
     """
 
     The conversion follows the Modified Edlén Equations
@@ -93,9 +95,11 @@ def vacuum_to_air_wavelength(wavelengths,
 
     vapour_pressure = get_vapour_pressure(temperature)
     vapour_partial_pressure = get_vapour_partial_pressure(
-        relative_humidity, vapour_pressure)
+        relative_humidity, vapour_pressure
+    )
     return np.array(wavelengths) / edlen_refraction(
-        wavelengths, temperature, pressure, vapour_partial_pressure)
+        wavelengths, temperature, pressure, vapour_partial_pressure
+    )
 
 
 def filter_wavelengths(lines, min_atlas_wavelength, max_atlas_wavelength):
@@ -121,8 +125,9 @@ def filter_wavelengths(lines, min_atlas_wavelength, max_atlas_wavelength):
     """
 
     wavelengths = lines[:, 1].astype(np.float32)
-    wavelength_mask = ((wavelengths >= min_atlas_wavelength) &
-                       (wavelengths <= max_atlas_wavelength))
+    wavelength_mask = (wavelengths >= min_atlas_wavelength) & (
+        wavelengths <= max_atlas_wavelength
+    )
 
     return lines[wavelength_mask]
 
@@ -193,15 +198,17 @@ def filter_intensity(lines, min_intensity=0):
     return np.array(out).astype(bool)
 
 
-def load_calibration_lines(elements=[],
-                           min_atlas_wavelength=3000,
-                           max_atlas_wavelength=15000,
-                           min_intensity=10,
-                           min_distance=10,
-                           vacuum=False,
-                           pressure=101325.,
-                           temperature=273.15,
-                           relative_humidity=0.):
+def load_calibration_lines(
+    elements=[],
+    min_atlas_wavelength=3000,
+    max_atlas_wavelength=15000,
+    min_intensity=10,
+    min_distance=10,
+    vacuum=False,
+    pressure=101325.0,
+    temperature=273.15,
+    relative_humidity=0.0,
+):
     """
     Load calibration lines from the standard NIST atlas.
     Rascal provides a cleaned set of NIST lines that can be
@@ -250,18 +257,16 @@ def load_calibration_lines(elements=[],
         elements = [elements]
 
     # Element, wavelength, intensity
-    file_path = pkg_resources.resource_filename('rascal',
-                                                'arc_lines/nist_clean.csv')
+    file_path = pkg_resources.resource_filename("rascal", "arc_lines/nist_clean.csv")
 
-    lines = np.loadtxt(file_path, delimiter=',', dtype=">U12")
+    lines = np.loadtxt(file_path, delimiter=",", dtype=">U12")
 
     # Mask elements
     mask = [(li[0] in elements) for li in lines]
     lines = lines[mask]
 
     # Filter wavelengths
-    lines = filter_wavelengths(lines, min_atlas_wavelength,
-                               max_atlas_wavelength)
+    lines = filter_wavelengths(lines, min_atlas_wavelength, max_atlas_wavelength)
 
     # Filter intensities
     if min_intensity > 0:
@@ -270,8 +275,8 @@ def load_calibration_lines(elements=[],
         intensity_mask = np.ones_like(lines[:, 0]).astype(bool)
 
     elements = lines[:, 0][intensity_mask]
-    wavelengths = lines[:, 1][intensity_mask].astype('float32')
-    intensities = lines[:, 2][intensity_mask].astype('float32')
+    wavelengths = lines[:, 1][intensity_mask].astype("float32")
+    intensities = lines[:, 2][intensity_mask].astype("float32")
 
     # Calculate peak separation
     if min_distance > 0:
@@ -285,8 +290,9 @@ def load_calibration_lines(elements=[],
 
     # Vacuum to air conversion
     if not vacuum:
-        wavelengths = vacuum_to_air_wavelength(wavelengths, temperature,
-                                               pressure, relative_humidity)
+        wavelengths = vacuum_to_air_wavelength(
+            wavelengths, temperature, pressure, relative_humidity
+        )
 
     return elements, wavelengths, intensities
 
@@ -312,7 +318,7 @@ def gauss(x, a, x0, sigma):
         The Gaussian function evaluated at provided x
     """
 
-    return a * exp(-(x - x0)**2 / (2 * sigma**2 + 1e-9))
+    return a * exp(-((x - x0) ** 2) / (2 * sigma**2 + 1e-9))
 
 
 def refine_peaks(spectrum, peaks, window_width=10, distance=None):
@@ -349,9 +355,9 @@ def refine_peaks(spectrum, peaks, window_width=10, distance=None):
 
     for peak in peaks:
 
-        y = spectrum[max(0,
-                         int(peak) -
-                         window_width):min(int(peak) + window_width, length)]
+        y = spectrum[
+            max(0, int(peak) - window_width) : min(int(peak) + window_width, length)
+        ]
         y /= np.nanmax(y)
         x = np.arange(len(y))
 
@@ -362,7 +368,7 @@ def refine_peaks(spectrum, peaks, window_width=10, distance=None):
             continue
 
         mean = np.sum(x * y) / n
-        sigma = np.sum(y * (x - mean)**2) / n
+        sigma = np.sum(y * (x - mean) ** 2) / n
 
         try:
 

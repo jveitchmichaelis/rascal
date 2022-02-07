@@ -24,22 +24,22 @@ def gaus(x, a, b, x0, sigma):
     -------
     Array or float of same type as input (x).
     """
-    return a * np.exp(-(x - x0)**2 / (2 * sigma**2)) + b
+    return a * np.exp(-((x - x0) ** 2) / (2 * sigma**2)) + b
 
 
-nist = np.loadtxt('nist_clean.csv', delimiter=',', dtype='str', skiprows=1)
+nist = np.loadtxt("nist_clean.csv", delimiter=",", dtype="str", skiprows=1)
 nist_element = nist[:, 0]
-nist_wavelength = nist[:, 1].astype('float')
-nist_intensity = nist[:, 2].astype('float')
+nist_wavelength = nist[:, 1].astype("float")
+nist_intensity = nist[:, 2].astype("float")
 
-xe_idx = (nist_element == 'Xe')
+xe_idx = nist_element == "Xe"
 xe_w = np.around(nist_wavelength[xe_idx], decimals=2)
 xe_i = nist_intensity[xe_idx]
 
 # Generate the equally spaced-wavelength array, and the corresponding intensity
-wavelength = np.around(np.arange(min(xe_w) - 500.,
-                                 max(xe_w) + 500.01, 0.01),
-                       decimals=2)
+wavelength = np.around(
+    np.arange(min(xe_w) - 500.0, max(xe_w) + 500.01, 0.01), decimals=2
+)
 intensity = np.zeros_like(wavelength)
 intensity[np.where(np.isin(wavelength, xe_w))] = xe_i
 
@@ -53,17 +53,17 @@ R = (max_wavelength - min_wavelength) / num_pix
 # Nyquist sampling rate (2.3) for CCD at seeing of 1 arcsec
 sigma = R * 2.3 * 1.0
 x = np.arange(-100, 100.01, 0.01)
-gaussian = gaus(x, a=1., b=0., x0=0., sigma=sigma)
+gaussian = gaus(x, a=1.0, b=0.0, x0=0.0, sigma=sigma)
 
 # Convolve to simulate the arc spectrum
-model_spectrum = signal.convolve(intensity, gaussian, 'same')
+model_spectrum = signal.convolve(intensity, gaussian, "same")
 
 plt.figure(1, figsize=(8, 8))
 plt.clf()
-plt.plot(wavelength, intensity, color='grey', label='NIST values')
-plt.plot(wavelength, model_spectrum, label='Convolved Arc')
-plt.xlabel('Vacuum Wavelength / A')
-plt.ylabel('NIST intensity')
+plt.plot(wavelength, intensity, color="grey", label="NIST values")
+plt.plot(wavelength, model_spectrum, label="Convolved Arc")
+plt.xlabel("Vacuum Wavelength / A")
+plt.ylabel("NIST intensity")
 plt.grid()
 plt.xlim(3800, 8200)
 plt.ylim(0, 1000)

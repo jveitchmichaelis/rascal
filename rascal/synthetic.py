@@ -4,10 +4,7 @@ from . import models
 
 
 class SyntheticSpectrum:
-    def __init__(self,
-                 coefficients=None,
-                 min_wavelength=200.,
-                 max_wavelength=1200.):
+    def __init__(self, coefficients=None, min_wavelength=200.0, max_wavelength=1200.0):
         """
         Creates a synthetic spectrum generator which, given a suitable model,
         outputs the expected pixel locations of input wavelengths.  It is
@@ -44,18 +41,19 @@ class SyntheticSpectrum:
 
         else:
 
-            raise TypeError('Please provide a list or an numpy array.')
+            raise TypeError("Please provide a list or an numpy array.")
 
     def set_wavelength_limit(self, min_wavelength=None, max_wavelength=None):
         """
         Set a wavelength filter for the 'get_pixels' function.
         """
 
-        if (not isinstance(min_wavelength, float)
-                and min_wavelength is not None):
+        if not isinstance(min_wavelength, float) and min_wavelength is not None:
 
-            raise TypeError('Please provide a numeric value or None to '
-                            'retain the min_wavelength.')
+            raise TypeError(
+                "Please provide a numeric value or None to "
+                "retain the min_wavelength."
+            )
 
         else:
 
@@ -68,11 +66,12 @@ class SyntheticSpectrum:
 
                 new_min_wavelength = self.min_wavelength
 
-        if (not isinstance(max_wavelength, float)
-                and max_wavelength is not None):
+        if not isinstance(max_wavelength, float) and max_wavelength is not None:
 
-            raise TypeError('Please provide a numeric value or None to '
-                            'retain the max_wavelength.')
+            raise TypeError(
+                "Please provide a numeric value or None to "
+                "retain the max_wavelength."
+            )
 
         else:
             if max_wavelength is not None:
@@ -91,8 +90,9 @@ class SyntheticSpectrum:
 
         else:
 
-            raise RuntimeError('Minimum wavelength cannot be larger than '
-                               'the maximum wavelength.')
+            raise RuntimeError(
+                "Minimum wavelength cannot be larger than " "the maximum wavelength."
+            )
 
     def get_pixels(self, wavelengths):
         """
@@ -101,7 +101,7 @@ class SyntheticSpectrum:
 
         if not isinstance(wavelengths, (list, np.ndarray)):
 
-            raise TypeError('Please provide a list or an numpy array.')
+            raise TypeError("Please provide a list or an numpy array.")
 
         wavelengths = np.array(wavelengths)
         wavelengths = wavelengths[wavelengths > self.min_wavelength]
@@ -109,19 +109,18 @@ class SyntheticSpectrum:
 
         # Constant function y = c
         if self.degree == 0:
-            pixels = self.coefficients[0]*np.ones(len(wavelengths))
+            pixels = self.coefficients[0] * np.ones(len(wavelengths))
         # Linear function y = mx + c
         elif self.degree == 1:
             # x = (y - c) / m
-            pixels =\
-                (wavelengths - self.coefficients[0]) / self.coefficients[1]
+            pixels = (wavelengths - self.coefficients[0]) / self.coefficients[1]
         else:
             pixels = pynverse.inversefunc(self.model, wavelengths)
 
         return pixels, wavelengths
 
 
-'''
+"""
 class RandomSyntheticSpectrum(SyntheticSpectrum):
     def __init__(self,
                  min_wavelength=400,
@@ -151,4 +150,4 @@ class RandomSyntheticSpectrum(SyntheticSpectrum):
             relative_humidity=0.)
 
         self.lines = random.choose(lines, n_lines)
-'''
+"""

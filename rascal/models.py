@@ -1,6 +1,7 @@
 import copy
 import scipy.optimize
 import numpy as np
+
 """
 Model functions for spectral fitting
 """
@@ -13,7 +14,7 @@ def polynomial(a, degree=3):
     f(x, a) = sum_i (a[degree-i] * x**i )
     """
 
-    assert (len(a) == degree + 1)
+    assert len(a) == degree + 1
 
     def poly(x):
         t = a[-1]
@@ -98,24 +99,26 @@ def robust_polyfit(x, y, degree=3, x0=None):
     # Need to normalise the fit function too
     if p_init is not None:
         for i in range(0, degree):
-            p_init[i] *= x.std()**i
+            p_init[i] *= x.std() ** i
 
         p_init /= y.std()
     else:
         p_init = np.ones(degree + 1)
 
-    res = scipy.optimize.least_squares(poly_cost_function,
-                                       p_init,
-                                       args=(x_n, y_n, degree),
-                                       loss='huber',
-                                       diff_step=1e-5)
+    res = scipy.optimize.least_squares(
+        poly_cost_function,
+        p_init,
+        args=(x_n, y_n, degree),
+        loss="huber",
+        diff_step=1e-5,
+    )
     p = res.x
 
     p *= y.std()
 
     # highest order first
     for i in range(0, degree):
-        p[i] /= x.std()**(degree - i)
+        p[i] /= x.std() ** (degree - i)
 
     return p[::-1]
 

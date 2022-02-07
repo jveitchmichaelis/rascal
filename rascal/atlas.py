@@ -4,19 +4,20 @@ from .util import vacuum_to_air_wavelength
 
 
 class Atlas:
-
-    def __init__(self,
-                 elements=None,
-                 min_atlas_wavelength=3000,
-                 max_atlas_wavelength=5000,
-                 range_tolerance=500,
-                 min_intensity=10.,
-                 min_distance=10.,
-                 vacuum=False,
-                 pressure=101325.,
-                 temperature=273.15,
-                 relative_humidity=0.):
-        '''
+    def __init__(
+        self,
+        elements=None,
+        min_atlas_wavelength=3000,
+        max_atlas_wavelength=5000,
+        range_tolerance=500,
+        min_intensity=10.0,
+        min_distance=10.0,
+        vacuum=False,
+        pressure=101325.0,
+        temperature=273.15,
+        relative_humidity=0.0,
+    ):
+        """
         Creates an atlas of arc lines.
 
         Arc lines are taken from a general list of NIST lines and can be
@@ -60,7 +61,7 @@ class Atlas:
         relative_humidity: float
             In percentage.
 
-        '''
+        """
 
         self.elements = []
         self.lines = []
@@ -72,27 +73,31 @@ class Atlas:
         self.range_tolerance = range_tolerance
 
         if elements is not None:
-            self.add(elements=elements,
-                     min_atlas_wavelength=min_atlas_wavelength,
-                     max_atlas_wavelength=max_atlas_wavelength,
-                     min_intensity=min_intensity,
-                     min_distance=min_distance,
-                     vacuum=vacuum,
-                     pressure=pressure,
-                     temperature=temperature,
-                     relative_humidity=relative_humidity)
+            self.add(
+                elements=elements,
+                min_atlas_wavelength=min_atlas_wavelength,
+                max_atlas_wavelength=max_atlas_wavelength,
+                min_intensity=min_intensity,
+                min_distance=min_distance,
+                vacuum=vacuum,
+                pressure=pressure,
+                temperature=temperature,
+                relative_humidity=relative_humidity,
+            )
 
-    def add(self,
-            elements=None,
-            min_atlas_wavelength=None,
-            max_atlas_wavelength=None,
-            min_intensity=10.,
-            min_distance=10.,
-            vacuum=False,
-            pressure=101325.,
-            temperature=273.15,
-            relative_humidity=0.):
-        '''
+    def add(
+        self,
+        elements=None,
+        min_atlas_wavelength=None,
+        max_atlas_wavelength=None,
+        min_intensity=10.0,
+        min_distance=10.0,
+        vacuum=False,
+        pressure=101325.0,
+        temperature=273.15,
+        relative_humidity=0.0,
+    ):
+        """
         Adds arc lines to the atlas
 
         Arc lines are taken from a general list of NIST lines and can be
@@ -134,29 +139,31 @@ class Atlas:
         relative_humidity: float
             In percentage.
 
-        '''
+        """
 
         if min_atlas_wavelength is None:
 
-            min_atlas_wavelength =\
-                self.min_atlas_wavelength - self.range_tolerance
+            min_atlas_wavelength = self.min_atlas_wavelength - self.range_tolerance
 
         if max_atlas_wavelength is None:
 
-            max_atlas_wavelength =\
-                self.max_atlas_wavelength + self.range_tolerance
+            max_atlas_wavelength = self.max_atlas_wavelength + self.range_tolerance
 
         if not np.isfinite(min_atlas_wavelength):
 
             raise ValueError(
-                'min_atlas_wavelength has to be finite or None. {} is given.'.
-                format(min_atlas_wavelength))
+                "min_atlas_wavelength has to be finite or None. {} is given.".format(
+                    min_atlas_wavelength
+                )
+            )
 
         if not np.isfinite(max_atlas_wavelength):
 
             raise ValueError(
-                'max_atlas_wavelength has to be finite or None. {} is given.'.
-                format(max_atlas_wavelength))
+                "max_atlas_wavelength has to be finite or None. {} is given.".format(
+                    max_atlas_wavelength
+                )
+            )
 
         if isinstance(elements, str):
 
@@ -166,25 +173,37 @@ class Atlas:
 
             for element in elements:
 
-                atlas_elements_tmp, atlas_tmp, atlas_intensities_tmp =\
-                    load_calibration_lines(
-                        element, min_atlas_wavelength, max_atlas_wavelength,
-                        min_intensity, min_distance, vacuum, pressure,
-                        temperature, relative_humidity)
+                (
+                    atlas_elements_tmp,
+                    atlas_tmp,
+                    atlas_intensities_tmp,
+                ) = load_calibration_lines(
+                    element,
+                    min_atlas_wavelength,
+                    max_atlas_wavelength,
+                    min_intensity,
+                    min_distance,
+                    vacuum,
+                    pressure,
+                    temperature,
+                    relative_humidity,
+                )
 
                 self.elements.extend(atlas_elements_tmp)
                 self.lines.extend(atlas_tmp)
                 self.intensities.extend(atlas_intensities_tmp)
 
-    def add_user_atlas(self,
-                       elements,
-                       wavelengths,
-                       intensities=None,
-                       vacuum=False,
-                       pressure=101325.,
-                       temperature=273.15,
-                       relative_humidity=0.):
-        '''
+    def add_user_atlas(
+        self,
+        elements,
+        wavelengths,
+        intensities=None,
+        vacuum=False,
+        pressure=101325.0,
+        temperature=273.15,
+        relative_humidity=0.0,
+    ):
+        """
         Add a single or list of arc lines. Each arc line should have an
         element label associated with it. It is recommended that you use
         a standard periodic table abbreviation (e.g. 'Hg'), but it makes
@@ -215,7 +234,7 @@ class Atlas:
         relative_humidity: float
             In percentage.
 
-        '''
+        """
 
         if not isinstance(elements, list):
 
@@ -236,21 +255,24 @@ class Atlas:
                 intensities = list(intensities)
 
         assert len(elements) == len(wavelengths), ValueError(
-            'Input elements and wavelengths have different length.')
+            "Input elements and wavelengths have different length."
+        )
         assert len(elements) == len(intensities), ValueError(
-            'Input elements and intensities have different length.')
+            "Input elements and intensities have different length."
+        )
 
         if vacuum:
 
-            wavelengths = vacuum_to_air_wavelength(wavelengths, temperature,
-                                                   pressure, relative_humidity)
+            wavelengths = vacuum_to_air_wavelength(
+                wavelengths, temperature, pressure, relative_humidity
+            )
 
         self.elements.extend(elements)
         self.lines.extend(wavelengths)
         self.intensities.extend(intensities)
 
     def remove_atlas_lines_range(self, wavelength, tolerance=10):
-        '''
+        """
         Remove arc lines within a certain wavelength range.
 
         Parameters
@@ -260,7 +282,7 @@ class Atlas:
         tolerance: float
             Tolerance around this wavelength where atlas lines will be removed
 
-        '''
+        """
 
         for i, line in enumerate(self.lines):
 
@@ -271,22 +293,27 @@ class Atlas:
                 self.intensities.pop(i)
 
     def list(self):
-        '''
+        """
         List all the lines loaded to the Calibrator.
 
-        '''
+        """
 
         for i in range(len(self.lines)):
 
-            print('Element ' + str(self.elements[i]) + ' at ' +
-                  str(self.lines[i]) + ' with intensity ' +
-                  str(self.intensities[i]))
+            print(
+                "Element "
+                + str(self.elements[i])
+                + " at "
+                + str(self.lines[i])
+                + " with intensity "
+                + str(self.intensities[i])
+            )
 
     def clear(self):
-        '''
+        """
         Remove all the lines loaded to the Calibrator.
 
-        '''
+        """
 
         self.elements = []
         self.lines = []

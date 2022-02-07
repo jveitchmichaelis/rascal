@@ -71,7 +71,7 @@ def test_setting_known_pairs():
 def test_setting_a_none_to_known_pairs_expect_fail():
     logger.info("Testing adding None as known pairs.")
     cal = Calibrator(peaks=np.arange(10))
-    cal.set_known_pairs([1.], [None])
+    cal.set_known_pairs([1.0], [None])
 
 
 @pytest.mark.xfail()
