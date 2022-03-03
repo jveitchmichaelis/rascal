@@ -58,7 +58,7 @@ def test_default():
     fit_diff = c.polyval(x_fit, best_p) - y_fit
     rms = np.sqrt(np.sum(fit_diff**2 / len(x_fit)))
 
-    assert peak_utilisation > 0.75
+    assert peak_utilisation > 0.7
     assert atlas_utilisation > 0.0
     assert rms < 5.0
 
@@ -118,6 +118,6 @@ def test_get_candidate_points_poly():
     fit_diff = c.polyval(x_fit, best_p) - y_fit
     rms = np.sqrt(np.sum(fit_diff**2 / len(x_fit)))
 
-    assert peak_utilisation > 0.75
+    assert peak_utilisation > 0.7
     assert atlas_utilisation > 0.0
     assert rms < 5.0
