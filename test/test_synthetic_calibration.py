@@ -74,7 +74,7 @@ def test_get_candidate_points_poly():
     s = SyntheticSpectrum(coefficients=best_p)
 
     # We add a bunch of wavelegnths between 200-1200 nm
-    waves = np.linspace(200, 1200, num=20)
+    waves = np.linspace(200, 1200, num=25)
 
     peaks, waves = s.get_pixels(waves)
     assert len(peaks) > 0
