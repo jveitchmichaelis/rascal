@@ -2373,7 +2373,7 @@ class Calibrator:
 
     def plot_fit(
         self,
-        fit_coeff,
+        fit_coeff=None,
         spectrum=None,
         tolerance=5.0,
         plot_atlas=True,
@@ -2428,9 +2428,13 @@ class Calibrator:
 
         """
 
+        if fit_coeff is None:
+
+            fit_coeff = self.fit_coeff
+
         return plotting.plot_fit(
             self,
-            fit_coeff,
+            fit_coeff=fit_coeff,
             spectrum=spectrum,
             tolerance=tolerance,
             plot_atlas=plot_atlas,
