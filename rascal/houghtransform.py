@@ -20,7 +20,9 @@ class HoughTransform:
         self.min_intercept = None
         self.max_intercept = None
 
-    def set_constraints(self, min_slope, max_slope, min_intercept, max_intercept):
+    def set_constraints(
+        self, min_slope, max_slope, min_intercept, max_intercept
+    ):
         """
         Define the minimum and maximum of the intercepts (wavelength) and
         gradients (wavelength/pixel) that Hough pairs will be generated.
@@ -81,7 +83,9 @@ class HoughTransform:
         gradients = np.concatenate(np.column_stack([slopes] * len(x)))
 
         # Apply boundaries
-        mask = (self.min_intercept <= intercepts) & (intercepts <= self.max_intercept)
+        mask = (self.min_intercept <= intercepts) & (
+            intercepts <= self.max_intercept
+        )
         intercepts = intercepts[mask]
         gradients = gradients[mask]
 
@@ -182,13 +186,17 @@ class HoughTransform:
         "create an hough_points with hough_points() first."
 
         self.hist, self.xedges, self.yedges = np.histogram2d(
-            self.hough_points[:, 0], self.hough_points[:, 1], bins=(xbins, ybins)
+            self.hough_points[:, 0],
+            self.hough_points[:, 1],
+            bins=(xbins, ybins),
         )
 
         # Get the line fit_coeffients from the promising bins in the
         # histogram
         self.hist_sorted_arg = np.dstack(
-            np.unravel_index(np.argsort(self.hist.ravel())[::-1], self.hist.shape)
+            np.unravel_index(
+                np.argsort(self.hist.ravel())[::-1], self.hist.shape
+            )
         )[0]
 
         xbin_width = (self.xedges[1] - self.xedges[0]) / 2
@@ -199,13 +207,20 @@ class HoughTransform:
         for b in self.hist_sorted_arg:
 
             lines.append(
-                (self.xedges[b[0]] + xbin_width, self.yedges[b[1]] + ybin_width)
+                (
+                    self.xedges[b[0]] + xbin_width,
+                    self.yedges[b[1]] + ybin_width,
+                )
             )
 
         self.hough_lines = lines
 
     def save(
-        self, filename="hough_transform", fileformat="npy", delimiter="+", to_disk=True
+        self,
+        filename="hough_transform",
+        fileformat="npy",
+        delimiter="+",
+        to_disk=True,
     ):
         """
         Store the binned Hough space and/or the raw Hough pairs.
@@ -269,11 +284,15 @@ class HoughTransform:
 
         if not to_disk:
 
-            if ("npy" in fileformat_split) and ("json" not in fileformat_split):
+            if ("npy" in fileformat_split) and (
+                "json" not in fileformat_split
+            ):
 
                 return output_npy
 
-            elif ("npy" not in fileformat_split) and ("json" in fileformat_split):
+            elif ("npy" not in fileformat_split) and (
+                "json" in fileformat_split
+            ):
 
                 return output_json
 
@@ -336,4 +355,6 @@ class HoughTransform:
 
         else:
 
-            raise ValueError("Unknown filetype %s, it has to be npy or json" % filetype)
+            raise ValueError(
+                "Unknown filetype %s, it has to be npy or json" % filetype
+            )

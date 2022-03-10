@@ -71,52 +71,51 @@ def plot_search_space(
     display=True,
 ):
     """
-        Plots the peak/arc line pairs that are considered as potential match
-        candidates.
+    Plots the peak/arc line pairs that are considered as potential match
+    candidates.
 
-        If fit fit_coefficients are provided, the model solution will be
-        overplotted.
+    If fit fit_coefficients are provided, the model solution will be
+    overplotted.
 
-        Parameters
-        ----------
-        fit_coeff: list (default: None)
-            List of best polynomial fit_coefficients
-        top_n_candidate: int (default: 3)
-            Top ranked lines to be fitted.
-        weighted: (default: True)
-            Draw sample based on the distance from the matched known wavelength
-            of the atlas.
-        save_fig: boolean (default: False)
-            Save an image if set to True. matplotlib uses the pyplot.save_fig()
-            while the plotly uses the pio.write_html() or pio.write_image().
-            The support format types should be provided in fig_type.
-        fig_type: string (default: 'png')
-            Image type to be saved, choose from:
-            jpg, png, svg, pdf and iframe. Delimiter is '+'.
-        filename: (default: None)
-            The destination to save the image.
-        return_jsonstring: (default: False)
-            Set to True to save the plotly figure as json string. Ignored if
-            matplotlib is used.
-        renderer: (default: 'default')
-            Set the rendered for the plotly display. Ignored if matplotlib is
-            used.
-        display: boolean (Default: False)
-            Set to True to display disgnostic plot.
+    Parameters
+    ----------
+    fit_coeff: list (default: None)
+        List of best polynomial fit_coefficients
+    top_n_candidate: int (default: 3)
+        Top ranked lines to be fitted.
+    weighted: (default: True)
+        Draw sample based on the distance from the matched known wavelength
+        of the atlas.
+    save_fig: boolean (default: False)
+        Save an image if set to True. matplotlib uses the pyplot.save_fig()
+        while the plotly uses the pio.write_html() or pio.write_image().
+        The support format types should be provided in fig_type.
+    fig_type: string (default: 'png')
+        Image type to be saved, choose from:
+        jpg, png, svg, pdf and iframe. Delimiter is '+'.
+    filename: (default: None)
+        The destination to save the image.
+    return_jsonstring: (default: False)
+        Set to True to save the plotly figure as json string. Ignored if
+        matplotlib is used.
+    renderer: (default: 'default')
+        Set the rendered for the plotly display. Ignored if matplotlib is
+        used.
+    display: boolean (Default: False)
+        Set to True to display disgnostic plot.
 
-        Return
-        ------
-    <<<<<<< HEAD
-        json object if return_jsonstring is True.
-    =======
-        json object if json is True.
-    >>>>>>> a91a6b42d285555dab2e48b23c975cfa6c5d944e
+    Return
+    ------
+    json object if return_jsonstring is True.
+
 
     """
 
     # Get top linear estimates and combine
     candidate_peak, candidate_arc = calibrator._get_most_common_candidates(
-        calibrator.candidates, top_n_candidate=top_n_candidate, weighted=weighted
+        calibrator.candidates,
+        top_n_candidate=top_n_candidate,
+        weighted=weighted,
     )
 
     # Get the search space boundaries
@@ -144,10 +143,12 @@ def plot_search_space(
     if calibrator.plot_with_matplotlib:
         _import_matplotlib()
 
-        plt.figure(figsize=(10, 10))
+        fig = plt.figure(figsize=(10, 10))
 
         # Plot all-pairs
-        plt.scatter(*calibrator.pairs.T, alpha=0.2, color="C0", label="All pairs")
+        plt.scatter(
+            *calibrator.pairs.T, alpha=0.2, color="C0", label="All pairs"
+        )
 
         plt.scatter(
             calibrator._merge_candidates(calibrator.candidates)[:, 0],
@@ -158,8 +159,17 @@ def plot_search_space(
         )
 
         # Tolerance region around the minimum wavelength
-        plt.text(5, calibrator.min_wavelength + 100, "Min wavelength (user-supplied)")
-        plt.hlines(calibrator.min_wavelength, 0, calibrator.pixel_list.max(), color="k")
+        plt.text(
+            5,
+            calibrator.min_wavelength + 100,
+            "Min wavelength (user-supplied)",
+        )
+        plt.hlines(
+            calibrator.min_wavelength,
+            0,
+            calibrator.pixel_list.max(),
+            color="k",
+        )
         plt.hlines(
             calibrator.min_wavelength + calibrator.range_tolerance,
             0,
@@ -178,8 +188,17 @@ def plot_search_space(
         )
 
         # Tolerance region around the maximum wavelength
-        plt.text(5, calibrator.max_wavelength + 100, "Max wavelength (user-supplied)")
-        plt.hlines(calibrator.max_wavelength, 0, calibrator.pixel_list.max(), color="k")
+        plt.text(
+            5,
+            calibrator.max_wavelength + 100,
+            "Max wavelength (user-supplied)",
+        )
+        plt.hlines(
+            calibrator.max_wavelength,
+            0,
+            calibrator.pixel_list.max(),
+            color="k",
+        )
         plt.hlines(
             calibrator.max_wavelength + calibrator.range_tolerance,
             0,
@@ -201,7 +220,9 @@ def plot_search_space(
         # (last pixel, maximum wavelength), and the two lines defining the
         # tolerance region.
         plt.plot(x, y_1, label="Linear Fit", color="C3")
-        plt.plot(x, y_2, linestyle="dashed", label="Tolerance Region", color="C3")
+        plt.plot(
+            x, y_2, linestyle="dashed", label="Tolerance Region", color="C3"
+        )
         plt.plot(x, y_3, linestyle="dashed", color="C3")
 
         if fit_coeff is not None:
@@ -214,7 +235,10 @@ def plot_search_space(
             )
 
         plt.scatter(
-            candidate_peak, candidate_arc, color="C2", label="Best Candidate Pairs"
+            candidate_peak,
+            candidate_arc,
+            color="C2",
+            label="Best Candidate Pairs",
         )
 
         plt.xlim(0, calibrator.pixel_list.max())
@@ -223,8 +247,8 @@ def plot_search_space(
             calibrator.max_wavelength + calibrator.range_tolerance,
         )
 
-        plt.xlabel("Pixel")
-        plt.ylabel("Wavelength / A")
+        plt.xlabel("Wavelength / A")
+        plt.ylabel("Pixel")
         plt.legend()
         plt.grid()
         plt.tight_layout()
@@ -251,6 +275,8 @@ def plot_search_space(
 
             plt.show()
 
+        return fig
+
     elif calibrator.plot_with_plotly:
         _import_plotly()
 
@@ -263,7 +289,9 @@ def plot_search_space(
                 y=calibrator.pairs[:, 1],
                 mode="markers",
                 name="All Pairs",
-                marker=dict(color=pio.templates["CN"].layout.colorway[0], opacity=0.2),
+                marker=dict(
+                    color=pio.templates["CN"].layout.colorway[0], opacity=0.2
+                ),
             )
         )
 
@@ -273,7 +301,9 @@ def plot_search_space(
                 y=calibrator._merge_candidates(calibrator.candidates)[:, 1],
                 mode="markers",
                 name="Candidate Pairs",
-                marker=dict(color=pio.templates["CN"].layout.colorway[1], opacity=0.2),
+                marker=dict(
+                    color=pio.templates["CN"].layout.colorway[1], opacity=0.2
+                ),
             )
         )
         fig.add_trace(
@@ -374,7 +404,10 @@ def plot_search_space(
                 y=y_2,
                 mode="lines",
                 name="Tolerance Region",
-                line=dict(color=pio.templates["CN"].layout.colorway[3], dash="dashdot"),
+                line=dict(
+                    color=pio.templates["CN"].layout.colorway[3],
+                    dash="dashdot",
+                ),
             )
         )
         fig.add_trace(
@@ -383,7 +416,10 @@ def plot_search_space(
                 y=y_3,
                 showlegend=False,
                 mode="lines",
-                line=dict(color=pio.templates["CN"].layout.colorway[3], dash="dashdot"),
+                line=dict(
+                    color=pio.templates["CN"].layout.colorway[3],
+                    dash="dashdot",
+                ),
             )
         )
 
@@ -405,8 +441,10 @@ def plot_search_space(
             yaxis=dict(
                 title="Pixel",
                 range=[
-                    calibrator.min_wavelength - calibrator.range_tolerance * 1.1,
-                    calibrator.max_wavelength + calibrator.range_tolerance * 1.1,
+                    calibrator.min_wavelength
+                    - calibrator.range_tolerance * 1.1,
+                    calibrator.max_wavelength
+                    + calibrator.range_tolerance * 1.1,
                 ],
                 showgrid=True,
             ),
@@ -474,50 +512,45 @@ def plot_fit(
     display=True,
 ):
     """
-        Plots of the wavelength calibrated arc spectrum, the residual and the
-        pixel-to-wavelength solution.
+    Plots of the wavelength calibrated arc spectrum, the residual and the
+    pixel-to-wavelength solution.
 
-        Parameters
-        ----------
-        fit_coeff: 1D numpy array or list
-            Best fit polynomail fit_coefficients
-        spectrum: 1D numpy array (N)
-            Array of length N pixels
-        tolerance: float (default: 5)
-            Absolute difference between model and fitted wavelengths in unit
-            of angstrom.
-        plot_atlas: boolean (default: True)
-            Display all the relavent lines available in the atlas library.
-        log_spectrum: boolean (default: False)
-            Display the arc in log-space if set to True.
-        save_fig: boolean (default: False)
-            Save an image if set to True. matplotlib uses the pyplot.save_fig()
-            while the plotly uses the pio.write_html() or pio.write_image().
-            The support format types should be provided in fig_type.
-        fig_type: string (default: 'png')
-            Image type to be saved, choose from:
-            jpg, png, svg, pdf and iframe. Delimiter is '+'.
-        filename: string (default: None)
-            Provide a filename or full path. If the extension is not provided
-            it is defaulted to png.
-        return_jsonstring: boolean (default: False)
-            Set to True to return json strings if using plotly as the plotting
-            library.
-        renderer: string (default: 'default')
-    <<<<<<< HEAD
-            Indicate the Plotly renderer. Nothing gets displayed if
-            return_jsonstring is set to True.
-    =======
-            Indicate the Plotly renderer. Nothing gets displayed if json is
-            set to True.
-    >>>>>>> a91a6b42d285555dab2e48b23c975cfa6c5d944e
-        display: boolean (Default: False)
-            Set to True to display disgnostic plot.
+    Parameters
+    ----------
+    fit_coeff: 1D numpy array or list
+        Best fit polynomail fit_coefficients
+    spectrum: 1D numpy array (N)
+        Array of length N pixels
+    tolerance: float (default: 5)
+        Absolute difference between model and fitted wavelengths in unit
+        of angstrom.
+    plot_atlas: boolean (default: True)
+        Display all the relavent lines available in the atlas library.
+    log_spectrum: boolean (default: False)
+        Display the arc in log-space if set to True.
+    save_fig: boolean (default: False)
+        Save an image if set to True. matplotlib uses the pyplot.save_fig()
+        while the plotly uses the pio.write_html() or pio.write_image().
+        The support format types should be provided in fig_type.
+    fig_type: string (default: 'png')
+        Image type to be saved, choose from:
+        jpg, png, svg, pdf and iframe. Delimiter is '+'.
+    filename: string (default: None)
+        Provide a filename or full path. If the extension is not provided
+        it is defaulted to png.
+    return_jsonstring: boolean (default: False)
+        Set to True to return json strings if using plotly as the plotting
+        library.
+    renderer: string (default: 'default')
+        Indicate the Plotly renderer. Nothing gets displayed if
+        return_jsonstring is set to True.
+    display: boolean (Default: False)
+        Set to True to display disgnostic plot.
 
-        Returns
-        -------
-        Return json strings if using plotly as the plotting library and json
-        is True.
+    Returns
+    -------
+    Return json strings if using plotly as the plotting library and json
+    is True.
 
     """
 
@@ -585,7 +618,11 @@ def plot_fit(
             #    fit, model_type='poly', degree=len(fit)-1)
             # x_locs = spec.get_pixels(calibrator.atlas)
             ax1.vlines(
-                calibrator.atlas.lines, 0, vline_max, colors="C2", label="Given Lines"
+                calibrator.atlas.lines,
+                0,
+                vline_max,
+                colors="C2",
+                label="Given Lines",
             )
 
         fitted_peaks = []
@@ -615,7 +652,9 @@ def plot_fit(
                     if first_one:
                         ax1.vlines(
                             calibrator.polyval(p, fit_coeff),
-                            spectrum[calibrator.pix_to_rawpix(p).astype("int")],
+                            spectrum[
+                                calibrator.pix_to_rawpix(p).astype("int")
+                            ],
                             vline_max,
                             colors="C1",
                             label="Fitted Peaks",
@@ -625,7 +664,9 @@ def plot_fit(
                     else:
                         ax1.vlines(
                             calibrator.polyval(p, fit_coeff),
-                            spectrum[calibrator.pix_to_rawpix(p).astype("int")],
+                            spectrum[
+                                calibrator.pix_to_rawpix(p).astype("int")
+                            ],
                             vline_max,
                             colors="C1",
                         )
@@ -634,7 +675,8 @@ def plot_fit(
                     x - 3,
                     text_box_pos,
                     s="{}:{:1.2f}".format(
-                        calibrator.atlas.elements[idx], calibrator.atlas.lines[idx]
+                        calibrator.atlas.elements[idx],
+                        calibrator.atlas.lines[idx],
                     ),
                     rotation=90,
                     bbox=dict(facecolor="white", alpha=1),
@@ -666,9 +708,16 @@ def plot_fit(
         )
         ax2.hlines(0, wave.min(), wave.max(), linestyles="dashed")
         ax2.hlines(
-            rms, wave.min(), wave.max(), linestyles="dashed", color="k", label="RMS"
+            rms,
+            wave.min(),
+            wave.max(),
+            linestyles="dashed",
+            color="k",
+            label="RMS",
         )
-        ax2.hlines(-rms, wave.min(), wave.max(), linestyles="dashed", color="k")
+        ax2.hlines(
+            -rms, wave.min(), wave.max(), linestyles="dashed", color="k"
+        )
         ax2.grid(linestyle=":")
         ax2.set_ylabel("Residual / A")
         ax2.legend()
@@ -721,6 +770,8 @@ def plot_fit(
 
             fig.show()
 
+        return fig
+
     elif calibrator.plot_with_plotly:
         _import_plotly()
 
@@ -730,7 +781,11 @@ def plot_fit(
         if spectrum is not None:
             fig.add_trace(
                 go.Scatter(
-                    x=wave, y=spectrum, mode="lines", yaxis="y3", name="Arc Spectrum"
+                    x=wave,
+                    y=spectrum,
+                    mode="lines",
+                    yaxis="y3",
+                    name="Arc Spectrum",
                 )
             )
 
@@ -754,7 +809,9 @@ def plot_fit(
                 y0=0,
                 x1=x,
                 y1=spec_max,
-                line=dict(color=pio.templates["CN"].layout.colorway[1], width=1),
+                line=dict(
+                    color=pio.templates["CN"].layout.colorway[1], width=1
+                ),
             )
 
             diff = calibrator.atlas.lines - x
@@ -767,7 +824,9 @@ def plot_fit(
 
                 fitted_peaks.append(p)
                 if spectrum is not None:
-                    fitted_peaks_adu.append(spectrum[int(calibrator.pix_to_rawpix(p))])
+                    fitted_peaks_adu.append(
+                        spectrum[int(calibrator.pix_to_rawpix(p))]
+                    )
                     fitted_diff.append(diff[idx])
                     calibrator.logger.info(
                         "- matched to {} A".format(calibrator.atlas.lines[idx])
@@ -803,7 +862,9 @@ def plot_fit(
                 x=[wave.min(), wave.max()],
                 y=[0, 0],
                 mode="lines",
-                line=dict(color=pio.templates["CN"].layout.colorway[0], dash="dash"),
+                line=dict(
+                    color=pio.templates["CN"].layout.colorway[0], dash="dash"
+                ),
                 yaxis="y2",
                 showlegend=False,
             )
@@ -967,44 +1028,40 @@ def plot_arc(
     display=True,
 ):
     """
-        Plots the 1D spectrum of the extracted arc.
+    Plots the 1D spectrum of the extracted arc.
 
-        parameters
-        ----------
-        pixel_list: array (default: None)
-            pixel value of the of the spectrum, this is only needed if the
-            spectrum spans multiple detector arrays.
-        log_spectrum: boolean (default: False)
-            Set to true to display the wavelength calibrated arc spectrum in
-            logarithmic space.
-        save_fig: boolean (default: False)
-            Save an image if set to True. matplotlib uses the pyplot.save_fig()
-            while the plotly uses the pio.write_html() or pio.write_image().
-            The support format types should be provided in fig_type.
-        fig_type: string (default: 'png')
-            Image type to be saved, choose from:
-            jpg, png, svg, pdf and iframe. Delimiter is '+'.
-        filename: string (default: None)
-            Provide a filename or full path. If the extension is not provided
-            it is defaulted to png.
-        return_jsonstring: boolean (default: False)
-            Set to True to return json strings if using plotly as the plotting
-            library.
-        renderer: string (default: 'default')
-    <<<<<<< HEAD
-            Indicate the Plotly renderer. Nothing gets displayed if
-            return_jsonstring is set to True.
-    =======
-            Indicate the Plotly renderer. Nothing gets displayed if json is
-            set to True.
-    >>>>>>> a91a6b42d285555dab2e48b23c975cfa6c5d944e
-        display: boolean (Default: False)
-            Set to True to display disgnostic plot.
+    parameters
+    ----------
+    pixel_list: array (default: None)
+        pixel value of the of the spectrum, this is only needed if the
+        spectrum spans multiple detector arrays.
+    log_spectrum: boolean (default: False)
+        Set to true to display the wavelength calibrated arc spectrum in
+        logarithmic space.
+    save_fig: boolean (default: False)
+        Save an image if set to True. matplotlib uses the pyplot.save_fig()
+        while the plotly uses the pio.write_html() or pio.write_image().
+        The support format types should be provided in fig_type.
+    fig_type: string (default: 'png')
+        Image type to be saved, choose from:
+        jpg, png, svg, pdf and iframe. Delimiter is '+'.
+    filename: string (default: None)
+        Provide a filename or full path. If the extension is not provided
+        it is defaulted to png.
+    return_jsonstring: boolean (default: False)
+        Set to True to return json strings if using plotly as the plotting
+        library.
+    renderer: string (default: 'default')
+        Indicate the Plotly renderer. Nothing gets displayed if
+        return_jsonstring is set to True.
 
-        Returns
-        -------
-        Return json strings if using plotly as the plotting library and json
-        is True.
+    display: boolean (Default: False)
+        Set to True to display disgnostic plot.
+
+    Returns
+    -------
+    Return json strings if using plotly as the plotting library and json
+    is True.
 
     """
 
@@ -1015,7 +1072,7 @@ def plot_arc(
     if calibrator.plot_with_matplotlib:
         _import_matplotlib()
 
-        plt.figure(figsize=(18, 5))
+        fig = plt.figure(figsize=(18, 5))
 
         if calibrator.spectrum is not None:
             if log_spectrum:
@@ -1024,7 +1081,9 @@ def plot_arc(
                     np.log10(calibrator.spectrum / calibrator.spectrum.max()),
                     label="Arc Spectrum",
                 )
-                plt.vlines(calibrator.peaks, -2, 0, label="Detected Peaks", color="C1")
+                plt.vlines(
+                    calibrator.peaks, -2, 0, label="Detected Peaks", color="C1"
+                )
                 plt.ylabel("log(Normalised Count)")
                 plt.ylim(-2, 0)
             else:
@@ -1035,7 +1094,11 @@ def plot_arc(
                 )
                 plt.ylabel("Normalised Count")
                 plt.vlines(
-                    calibrator.peaks, 0, 1.05, label="Detected Peaks", color="C1"
+                    calibrator.peaks,
+                    0,
+                    1.05,
+                    label="Detected Peaks",
+                    color="C1",
                 )
             plt.title("Number of pixels: " + str(calibrator.spectrum.shape[0]))
             plt.xlim(0, calibrator.spectrum.shape[0])
@@ -1071,6 +1134,8 @@ def plot_arc(
 
             plt.show()
 
+        return fig
+
     if calibrator.plot_with_plotly:
 
         _import_plotly()
@@ -1083,13 +1148,21 @@ def plot_arc(
             fig.add_trace(
                 go.Scatter(
                     x=list(pixel_list),
-                    y=list(np.log10(calibrator.spectrum / calibrator.spectrum.max())),
+                    y=list(
+                        np.log10(
+                            calibrator.spectrum / calibrator.spectrum.max()
+                        )
+                    ),
                     mode="lines",
                     name="Arc",
                 )
             )
-            xmin = min(np.log10(calibrator.spectrum / calibrator.spectrum.max()))
-            xmax = max(np.log10(calibrator.spectrum / calibrator.spectrum.max()))
+            xmin = min(
+                np.log10(calibrator.spectrum / calibrator.spectrum.max())
+            )
+            xmax = max(
+                np.log10(calibrator.spectrum / calibrator.spectrum.max())
+            )
 
         else:
 
@@ -1115,12 +1188,16 @@ def plot_arc(
                 y0=0,
                 x1=i,
                 y1=1.05,
-                line=dict(color=pio.templates["CN"].layout.colorway[1], width=1),
+                line=dict(
+                    color=pio.templates["CN"].layout.colorway[1], width=1
+                ),
             )
 
         fig.update_layout(
             autosize=True,
-            yaxis=dict(title="Normalised Count", range=[xmin, xmax], showgrid=True),
+            yaxis=dict(
+                title="Normalised Count", range=[xmin, xmax], showgrid=True
+            ),
             xaxis=dict(
                 title="Pixel",
                 zeroline=False,
@@ -1133,9 +1210,13 @@ def plot_arc(
             width=1000,
         )
 
-        fig.update_xaxes(showline=True, linewidth=1, linecolor="black", mirror=True)
+        fig.update_xaxes(
+            showline=True, linewidth=1, linecolor="black", mirror=True
+        )
 
-        fig.update_yaxes(showline=True, linewidth=1, linecolor="black", mirror=True)
+        fig.update_yaxes(
+            showline=True, linewidth=1, linecolor="black", mirror=True
+        )
 
         if save_fig:
 

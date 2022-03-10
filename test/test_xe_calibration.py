@@ -118,7 +118,8 @@ def run_sprat_calibration(fit_deg):
 def test_sprat_calibration():
 
     logger.info(
-        "Test if LT/SPRAT Xe calibration return the order of " "polynomial properly."
+        "Test if LT/SPRAT Xe calibration return the order of "
+        "polynomial properly."
     )
 
     for i in range(3, 6):

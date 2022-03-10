@@ -36,7 +36,9 @@ plt.savefig("output/gemini-gmosls-arc-image.png")
 spectrum = np.median(spectrum2D[300:310], axis=0)[::-1]
 
 # Identify the peaks
-peaks, _ = find_peaks(spectrum, height=1000, prominence=500, distance=5, threshold=None)
+peaks, _ = find_peaks(
+    spectrum, height=1000, prominence=500, distance=5, threshold=None
+)
 peaks = util.refine_peaks(spectrum, peaks, window_width=5)
 
 peaks_shifted = rawpix_to_pix_itp(peaks)
@@ -44,7 +46,9 @@ peaks_shifted = rawpix_to_pix_itp(peaks)
 # Initialise the calibrator
 c = Calibrator(peaks_shifted, spectrum=spectrum)
 c.set_calibrator_properties(pixel_list=pixels)
-c.plot_arc(pixels, save_fig="png", filename="output/gemini-gmosls-arc-spectrum")
+c.plot_arc(
+    pixels, save_fig="png", filename="output/gemini-gmosls-arc-spectrum"
+)
 c.set_hough_properties(
     num_slopes=5000,
     range_tolerance=500.0,
@@ -143,7 +147,9 @@ c.plot_fit(
 )
 
 # Show the parameter space for searching possible solution
-c.plot_search_space(save_fig="png", filename="output/gemini-gmosls-search-space")
+c.plot_search_space(
+    save_fig="png", filename="output/gemini-gmosls-search-space"
+)
 
 print("Stdev error: {} A".format(residual.std()))
 print("Peaks utilisation rate: {}%".format(peak_utilisation * 100))

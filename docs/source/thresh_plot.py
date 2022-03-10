@@ -6,7 +6,9 @@ plt.clf()
 # data point
 pix = np.arange(0, 1001, 50)
 wave = 4000.0 + pix**0.63437 * 50.0
-plt.scatter(pix, wave, label="Solution", c="midnightblue", s=10, marker="x", zorder=15)
+plt.scatter(
+    pix, wave, label="Solution", c="midnightblue", s=10, marker="x", zorder=15
+)
 
 # minmax & range tolerance
 wave_min = 4000.0
@@ -27,7 +29,9 @@ plt.plot(
     lw=1,
     c="orangered",
 )
-plt.plot([pix[0], pix[-1]], [wave_min, wave_min], c="orangered", lw=1, label="")
+plt.plot(
+    [pix[0], pix[-1]], [wave_min, wave_min], c="orangered", lw=1, label=""
+)
 plt.plot(
     [pix[0], pix[-1]],
     [wave_max - range_tolerance, wave_max - range_tolerance],
@@ -43,7 +47,9 @@ plt.plot(
     lw=1,
     c="orangered",
 )
-plt.plot([pix[0], pix[-1]], [wave_max, wave_max], c="orangered", lw=1, label="")
+plt.plot(
+    [pix[0], pix[-1]], [wave_max, wave_max], c="orangered", lw=1, label=""
+)
 
 plt.annotate(
     s="",

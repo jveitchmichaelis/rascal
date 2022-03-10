@@ -99,7 +99,9 @@ class Calibrator:
 
         """
 
-        pairs = [pair for pair in itertools.product(self.peaks, self.atlas.lines)]
+        pairs = [
+            pair for pair in itertools.product(self.peaks, self.atlas.lines)
+        ]
 
         if constrain_poly:
 
@@ -151,7 +153,9 @@ class Calibrator:
 
         return np.sort(np.array(merged))
 
-    def _get_most_common_candidates(self, candidates, top_n_candidate, weighted):
+    def _get_most_common_candidates(
+        self, candidates, top_n_candidate, weighted
+    ):
         """
         Takes a number of candidate pair sets and returns the most common
         pair for each wavelength
@@ -202,7 +206,9 @@ class Calibrator:
 
                     counts = np.ones_like(probabilities[idx])
 
-                n = int(min(top_n_candidate, len(np.unique(wavelengths_matched))))
+                n = int(
+                    min(top_n_candidate, len(np.unique(wavelengths_matched)))
+                )
 
                 unique_wavelengths = np.unique(wavelengths_matched)
                 aggregated_count = np.zeros_like(unique_wavelengths)
@@ -259,7 +265,9 @@ class Calibrator:
                 (self.range_tolerance + self.linearity_tolerance) * 1.1775,
             )
 
-            self.candidates.append((self.pairs[:, 0][mask], actual[mask], weight))
+            self.candidates.append(
+                (self.pairs[:, 0][mask], actual[mask], weight)
+            )
 
     def _get_candidate_points_poly(self, candidate_tolerance):
         """
@@ -384,7 +392,13 @@ class Calibrator:
         return err, matched_x, matched_y
 
     def _solve_candidate_ransac(
-        self, fit_deg, fit_coeff, max_tries, candidate_tolerance, brute_force, progress
+        self,
+        fit_deg,
+        fit_coeff,
+        max_tries,
+        candidate_tolerance,
+        brute_force,
+        progress,
     ):
         """
         Use RANSAC to sample the parameter space and give best guess
@@ -429,7 +443,10 @@ class Calibrator:
 
             self._get_candidate_points_poly(candidate_tolerance)
 
-        self.candidate_peak, self.candidate_arc = self._get_most_common_candidates(
+        (
+            self.candidate_peak,
+            self.candidate_arc,
+        ) = self._get_most_common_candidates(
             self.candidates,
             top_n_candidate=self.top_n_candidate,
             weighted=self.candidate_weighted,
@@ -454,7 +471,9 @@ class Calibrator:
         if self.filter_close:
 
             unique_y = np.unique(y)
-            idx = np.argwhere(unique_y[1:] - unique_y[0:-1] < 3 * self.ransac_tolerance)
+            idx = np.argwhere(
+                unique_y[1:] - unique_y[0:-1] < 3 * self.ransac_tolerance
+            )
             separation_mask = np.argwhere((y == unique_y[idx]).sum(0) == 0)
             y = y[separation_mask].flatten()
             x = x[separation_mask].flatten()
@@ -604,11 +623,17 @@ class Calibrator:
                 self.logger.debug((pix_min, pix_max))
 
                 if not np.all(
-                    np.diff(self.polyval(np.arange(pix_min, pix_max, 1), fit_coeffs))
+                    np.diff(
+                        self.polyval(
+                            np.arange(pix_min, pix_max, 1), fit_coeffs
+                        )
+                    )
                     > 0
                 ):
 
-                    self.logger.debug("Solution is not monotonically increasing.")
+                    self.logger.debug(
+                        "Solution is not monotonically increasing."
+                    )
                     continue
 
                 # Compute error and filter out many-to-one matches
@@ -624,7 +649,9 @@ class Calibrator:
 
                 # use the Hough space density as weights for the cost function
                 wave = self.polyval(self.pixel_list, fit_coeffs)
-                gradient = self.polyval(self.pixel_list, _derivative(fit_coeffs))
+                gradient = self.polyval(
+                    self.pixel_list, _derivative(fit_coeffs)
+                )
                 intercept = wave - gradient * self.pixel_list
 
                 # modified cost function weighted by the Hough space density
@@ -638,7 +665,11 @@ class Calibrator:
 
                     weight = 1.0
 
-                cost = sum(err) / (len(err) - len(fit_coeffs) + 1) / (weight + 1e-9)
+                cost = (
+                    sum(err)
+                    / (len(err) - len(fit_coeffs) + 1)
+                    / (weight + 1e-9)
+                )
 
                 # If this is potentially a new best fit, then handle that first
                 if cost <= best_cost:
@@ -653,7 +684,9 @@ class Calibrator:
 
                     if len(matched_peaks) <= self.fit_deg:
 
-                        self.logger.debug("Too few good candidates for fitting.")
+                        self.logger.debug(
+                            "Too few good candidates for fitting."
+                        )
                         continue
 
                     # Now we do a robust fit
@@ -665,11 +698,15 @@ class Calibrator:
 
                     except np.linalg.LinAlgError:
 
-                        self.logger.warning("Linear algebra error in robust fit")
+                        self.logger.warning(
+                            "Linear algebra error in robust fit"
+                        )
                         continue
 
                     # Get the residual of the fit
-                    residual = self.polyval(matched_peaks, coeffs) - matched_atlas
+                    residual = (
+                        self.polyval(matched_peaks, coeffs) - matched_atlas
+                    )
                     residual[
                         np.abs(residual) > self.ransac_tolerance
                     ] = self.ransac_tolerance
@@ -696,7 +733,9 @@ class Calibrator:
                         )
                         continue
 
-                    if n_inliers < self.minimum_peak_utilisation * len(self.peaks):
+                    if n_inliers < self.minimum_peak_utilisation * len(
+                        self.peaks
+                    ):
 
                         self.logger.debug(
                             "Not enough matched peaks for valid solution, "
@@ -716,8 +755,12 @@ class Calibrator:
                     self.matched_atlas = list(copy.deepcopy(matched_atlas))
 
                     # Sanity check that matching peaks/atlas lines are 1:1
-                    assert len(np.unique(self.matched_peaks)) == len(self.matched_peaks)
-                    assert len(np.unique(self.matched_atlas)) == len(self.matched_atlas)
+                    assert len(np.unique(self.matched_peaks)) == len(
+                        self.matched_peaks
+                    )
+                    assert len(np.unique(self.matched_atlas)) == len(
+                        self.matched_atlas
+                    )
                     assert len(np.unique(self.matched_atlas)) == len(
                         np.unique(self.matched_peaks)
                     )
@@ -726,7 +769,9 @@ class Calibrator:
 
                         sampler_list.set_description(
                             "Most inliers: {:d}, "
-                            "best error: {:1.4f}".format(best_inliers, best_err)
+                            "best error: {:1.4f}".format(
+                                best_inliers, best_err
+                            )
                         )
 
                     # Break early if all peaks are matched
@@ -814,12 +859,16 @@ class Calibrator:
 
             return np.inf
 
-        if not np.all(np.diff(self.polyval(np.sort(self.pixel_list), fit_new)) > 0):
+        if not np.all(
+            np.diff(self.polyval(np.sort(self.pixel_list), fit_new)) > 0
+        ):
 
             self.logger.info("not monotonic")
             return np.inf
 
-        lsq = np.sum((y_matched - self.polyval(x_matched, fit_new)) ** 2.0) / dof
+        lsq = (
+            np.sum((y_matched - self.polyval(x_matched, fit_new)) ** 2.0) / dof
+        )
 
         return lsq
 
@@ -904,7 +953,8 @@ class Calibrator:
         self.log_level = level
 
         formatter = logging.Formatter(
-            "[%(asctime)s] %(levelname)s [%(filename)s:%(lineno)d] " "%(message)s",
+            "[%(asctime)s] %(levelname)s [%(filename)s:%(lineno)d] "
+            "%(message)s",
             datefmt="%a, %d %b %Y %H:%M:%S",
         )
 
@@ -1129,13 +1179,29 @@ class Calibrator:
         self.max_intercept = self.min_wavelength + self.range_tolerance
 
         self.min_slope = (
-            (self.max_wavelength - self.range_tolerance - self.linearity_tolerance)
-            - (self.min_intercept + self.range_tolerance + self.linearity_tolerance)
+            (
+                self.max_wavelength
+                - self.range_tolerance
+                - self.linearity_tolerance
+            )
+            - (
+                self.min_intercept
+                + self.range_tolerance
+                + self.linearity_tolerance
+            )
         ) / self.pixel_list.max()
 
         self.max_slope = (
-            (self.max_wavelength + self.range_tolerance + self.linearity_tolerance)
-            - (self.min_intercept - self.range_tolerance - self.linearity_tolerance)
+            (
+                self.max_wavelength
+                + self.range_tolerance
+                + self.linearity_tolerance
+            )
+            - (
+                self.min_intercept
+                - self.range_tolerance
+                - self.linearity_tolerance
+            )
         ) / self.pixel_list.max()
 
     def set_ransac_properties(
@@ -1304,7 +1370,10 @@ class Calibrator:
         # Set the minimum utilisation required
         if minimum_peak_utilisation is not None:
 
-            assert minimum_peak_utilisation >= 0 and minimum_peak_utilisation <= 1.0
+            assert (
+                minimum_peak_utilisation >= 0
+                and minimum_peak_utilisation <= 1.0
+            )
             self.minimum_peak_utilisation = minimum_peak_utilisation
 
         elif self.minimum_peak_utilisation is None:
@@ -1345,7 +1414,8 @@ class Calibrator:
     ):
 
         self.logger.warn(
-            "Using add_atlas is now deprecated. " "Please use the new Atlas class."
+            "Using add_atlas is now deprecated. "
+            "Please use the new Atlas class."
         )
 
         if min_atlas_wavelength is None:
@@ -1407,7 +1477,8 @@ class Calibrator:
     ):
 
         self.logger.warn(
-            "Using add_user_atlas is now deprecated. " "Please use the new Atlas class."
+            "Using add_user_atlas is now deprecated. "
+            "Please use the new Atlas class."
         )
 
         if self.atlas is None:
@@ -1453,7 +1524,10 @@ class Calibrator:
 
         # Generate the hough_points from the pairs
         self.ht.set_constraints(
-            self.min_slope, self.max_slope, self.min_intercept, self.max_intercept
+            self.min_slope,
+            self.max_slope,
+            self.min_intercept,
+            self.max_intercept,
         )
         if brute_force:
             self.ht.generate_hough_points_brute_force(
@@ -1469,7 +1543,11 @@ class Calibrator:
         self.hough_lines = self.ht.hough_lines
 
     def save_hough_transform(
-        self, filename="hough_transform", fileformat="npy", delimiter="+", to_disk=True
+        self,
+        filename="hough_transform",
+        fileformat="npy",
+        delimiter="+",
+        to_disk=True,
     ):
         """
         Save the HoughTransform object to memory or to disk.
@@ -1549,11 +1627,15 @@ class Calibrator:
             "and wave has size {}.".format(pix.size, wave.size)
         )
 
-        if not all(isinstance(p, (float, int)) & (not np.isnan(p)) for p in pix):
+        if not all(
+            isinstance(p, (float, int)) & (not np.isnan(p)) for p in pix
+        ):
 
             raise ValueError("All pix elements have to be numeric.")
 
-        if not all(isinstance(w, (float, int)) & (not np.isnan(w)) for w in wave):
+        if not all(
+            isinstance(w, (float, int)) & (not np.isnan(w)) for w in wave
+        ):
 
             raise ValueError("All wave elements have to be numeric.")
 
@@ -1675,7 +1757,13 @@ class Calibrator:
         # TODO also check whether minimum peak utilisation is greater than
         # minimum matches.
 
-        fit_coeff, rms, residual, n_inliers, valid = self._solve_candidate_ransac(
+        (
+            fit_coeff,
+            rms,
+            residual,
+            n_inliers,
+            valid,
+        ) = self._solve_candidate_ransac(
             fit_deg=self.fit_deg,
             fit_coeff=self.fit_coeff,
             max_tries=self.max_tries,
@@ -1693,7 +1781,9 @@ class Calibrator:
 
         if rms > self.fit_tolerance:
 
-            self.logger.warning("RMS too large {} > {}".format(rms, self.fit_tolerance))
+            self.logger.warning(
+                "RMS too large {} > {}".format(rms, self.fit_tolerance)
+            )
 
         assert fit_coeff is not None, "Couldn't fit"
 
@@ -1820,7 +1910,8 @@ class Calibrator:
             if np.any(np.isnan(fit_coeff_new)):
 
                 self.logger.warning(
-                    "_adjust_polyfit() returns None. " "Input solution is returned."
+                    "_adjust_polyfit() returns None. "
+                    "Input solution is returned."
                 )
                 return fit_coeff, None, None, None, None
 
@@ -1838,7 +1929,9 @@ class Calibrator:
             if diff_abs.any():
 
                 matched_peaks.append(p)
-                matched_atlas.append(list(np.asarray(self.atlas.lines)[diff_abs]))
+                matched_atlas.append(
+                    list(np.asarray(self.atlas.lines)[diff_abs])
+                )
                 residuals.append(diff_abs)
 
         # Create permutations:
@@ -1922,21 +2015,28 @@ class Calibrator:
         assert self.matched_atlas is not None
         assert self.residuals is not None
 
-        self.rms = np.sqrt(np.nansum(self.residuals**2.0) / len(self.residuals))
+        self.rms = np.sqrt(
+            np.nansum(self.residuals**2.0) / len(self.residuals)
+        )
 
         self.peak_utilisation = len(self.matched_peaks) / len(self.peaks)
-        self.atlas_utilisation = len(self.matched_atlas) / len(self.atlas.lines)
+        self.atlas_utilisation = len(self.matched_atlas) / len(
+            self.atlas.lines
+        )
 
         if robust_refit:
 
             self.fit_coeff = models.robust_polyfit(
-                np.asarray(self.matched_peaks), np.asarray(self.matched_atlas), fit_deg
+                np.asarray(self.matched_peaks),
+                np.asarray(self.matched_atlas),
+                fit_deg,
             )
 
             if np.any(np.isnan(self.fit_coeff)):
 
                 self.logger.warning(
-                    "robust_polyfit() returns None. " "Input solution is returned."
+                    "robust_polyfit() returns None. "
+                    "Input solution is returned."
                 )
                 return (
                     fit_coeff,
@@ -1986,11 +2086,15 @@ class Calibrator:
 
         pw_pairs = []
 
-        for i, (p, w) in enumerate(zip(self.matched_peaks, self.matched_atlas)):
+        for i, (p, w) in enumerate(
+            zip(self.matched_peaks, self.matched_atlas)
+        ):
 
             pw_pairs.append((i, p, w))
             self.logger.info(
-                "Position {}: pixel {} is matched to wavelength {}".format(i, p, w)
+                "Position {}: pixel {} is matched to wavelength {}".format(
+                    i, p, w
+                )
             )
 
         return pw_pairs
@@ -2130,7 +2234,9 @@ class Calibrator:
         self.matched_peaks = copy.deepcopy(matched_peaks)
         self.matched_atlas = copy.deepcopy(matched_atlas)
         self.residuals = y - self.polyval(x, fit_coeff_new)
-        self.rms = np.sqrt(np.nansum(self.residuals**2.0) / len(self.residuals))
+        self.rms = np.sqrt(
+            np.nansum(self.residuals**2.0) / len(self.residuals)
+        )
 
         return (
             self.fit_coeff,

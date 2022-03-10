@@ -11,9 +11,9 @@ from rascal import util
 
 # Load the LT SPRAT data
 base_dir = os.path.dirname(__file__)
-spectrum2D = fits.open(os.path.join(base_dir, "data_wht_isis/r2701004_red_arc.fit"))[
-    1
-].data.T
+spectrum2D = fits.open(
+    os.path.join(base_dir, "data_wht_isis/r2701004_red_arc.fit")
+)[1].data.T
 
 # Collapse into 1D spectrum between row 500 and 520
 spectrum = np.median(spectrum2D[500:520], axis=0)
@@ -27,12 +27,16 @@ plt.tight_layout()
 plt.savefig("output/wht-isis-arc-image.png")
 
 # Identify the peaks
-peaks, _ = find_peaks(spectrum, height=500, prominence=100, distance=5, threshold=None)
+peaks, _ = find_peaks(
+    spectrum, height=500, prominence=100, distance=5, threshold=None
+)
 peaks = util.refine_peaks(spectrum, peaks, window_width=3)
 
 # Initialise the calibrator
 c = Calibrator(peaks, spectrum=spectrum)
-c.plot_arc(log_spectrum=True, save_fig="png", filename="output/wht-isis-arc-spectrum")
+c.plot_arc(
+    log_spectrum=True, save_fig="png", filename="output/wht-isis-arc-spectrum"
+)
 c.set_hough_properties(
     num_slopes=10000,
     xbins=500,

@@ -27,7 +27,9 @@ spectrum2D = fits.open(
 spectrum = np.median(spectrum2D[300:310], axis=0)[::-1]
 
 # Identify the peaks
-peaks, _ = find_peaks(spectrum, height=1000, prominence=500, distance=5, threshold=None)
+peaks, _ = find_peaks(
+    spectrum, height=1000, prominence=500, distance=5, threshold=None
+)
 peaks = util.refine_peaks(spectrum, peaks, window_width=3)
 
 peaks_shifted = rawpix_to_pix_itp(peaks)
@@ -71,7 +73,9 @@ c.do_hough_transform()
 ) = c.fit(max_tries=1000, fit_deg=4)
 
 # Plot the solution
-c.plot_fit(best_p, spectrum, plot_atlas=True, log_spectrum=False, tolerance=5.0)
+c.plot_fit(
+    best_p, spectrum, plot_atlas=True, log_spectrum=False, tolerance=5.0
+)
 
 # Show the parameter space for searching possible solution
 c.plot_search_space()

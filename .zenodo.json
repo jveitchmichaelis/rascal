@@ -5,7 +5,7 @@
     "upload_type": "software",
     "creators": [
         {
-            "affiliation": "Wisconsin-Madison University", 
+            "affiliation": "ETH Zurich", 
             "name": "Veitch-Michaelis, Joshua L",
             "orcid": "0000-0003-2780-7843"
         }, 
@@ -15,5 +15,5 @@
             "orcid": "0000-0002-9347-2298"
         }
     ], 
-    "access_right": "open", 
+    "access_right": "open"
 }

@@ -1,8 +1,8 @@
-sphinx-autoapi
 astropy
 matplotlib
-plotly
-tqdm
 numpy
-scipy
+plotly
 pynverse
+scipy
+sphinx-autoapi
+tqdm

@@ -8,7 +8,9 @@ from rascal.atlas import Atlas
 from rascal.util import refine_peaks
 
 # Load the 1D Spectrum from Pypeit
-spectrum_json = json.load(open("data_keck_deimos/keck_deimos_830g_l_PYPIT.json"))
+spectrum_json = json.load(
+    open("data_keck_deimos/keck_deimos_830g_l_PYPIT.json")
+)
 spectrum = np.array(spectrum_json["spec"])
 
 # Identify the arc lines

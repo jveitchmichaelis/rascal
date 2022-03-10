@@ -7,7 +7,9 @@ from rascal.calibrator import HoughTransform, Calibrator
 HERE = os.path.dirname(os.path.realpath(__file__))
 
 ht = HoughTransform()
-ht.set_constraints(min_slope=1, max_slope=4, min_intercept=3000.0, max_intercept=5000.0)
+ht.set_constraints(
+    min_slope=1, max_slope=4, min_intercept=3000.0, max_intercept=5000.0
+)
 ht.generate_hough_points(
     x=(np.random.random(1000) * 3 + 1),
     y=(np.random.random(1000) * 2000 + 3000),
@@ -25,7 +27,9 @@ def test_save_as_npy():
 
 def test_save_as_json():
     ht.save(
-        filename=os.path.join(HERE, "test_output", "test_hough_transform_json"),
+        filename=os.path.join(
+            HERE, "test_output", "test_hough_transform_json"
+        ),
         fileformat="json",
     )
 
@@ -33,7 +37,9 @@ def test_save_as_json():
 def test_load_npy():
     ht_loaded = HoughTransform()
     ht_loaded.load(
-        filename=os.path.join(HERE, "test_output", "test_hough_transform_npy.npy"),
+        filename=os.path.join(
+            HERE, "test_output", "test_hough_transform_npy.npy"
+        ),
         filetype="npy",
     )
 
@@ -50,7 +56,9 @@ def test_load_npy():
 def test_load_json():
     ht_loaded = HoughTransform()
     ht_loaded.load(
-        filename=os.path.join(HERE, "test_output", "test_hough_transform_json.json"),
+        filename=os.path.join(
+            HERE, "test_output", "test_hough_transform_json.json"
+        ),
         filetype="json",
     )
 
@@ -68,7 +76,9 @@ def test_load_json():
 def test_load_fail():
     ht_fail = HoughTransform()
     ht_fail.load(
-        filename=os.path.join(HERE, "test_output", "test_hough_transform_json.json"),
+        filename=os.path.join(
+            HERE, "test_output", "test_hough_transform_json.json"
+        ),
         filetype="lalala",
     )
 

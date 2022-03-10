@@ -35,7 +35,9 @@ def get_vapour_partial_pressure(relative_humidity, vapour_pressure):
     return partial_pressure
 
 
-def edlen_refraction(wavelengths, temperature, pressure, vapour_partial_pressure):
+def edlen_refraction(
+    wavelengths, temperature, pressure, vapour_partial_pressure
+):
     """
     Appendix A.IV of https://emtoolbox.nist.gov/Wavelength/Documentation.asp
     """
@@ -257,7 +259,9 @@ def load_calibration_lines(
         elements = [elements]
 
     # Element, wavelength, intensity
-    file_path = pkg_resources.resource_filename("rascal", "arc_lines/nist_clean.csv")
+    file_path = pkg_resources.resource_filename(
+        "rascal", "arc_lines/nist_clean.csv"
+    )
 
     lines = np.loadtxt(file_path, delimiter=",", dtype=">U12")
 
@@ -266,7 +270,9 @@ def load_calibration_lines(
     lines = lines[mask]
 
     # Filter wavelengths
-    lines = filter_wavelengths(lines, min_atlas_wavelength, max_atlas_wavelength)
+    lines = filter_wavelengths(
+        lines, min_atlas_wavelength, max_atlas_wavelength
+    )
 
     # Filter intensities
     if min_intensity > 0:
@@ -356,7 +362,9 @@ def refine_peaks(spectrum, peaks, window_width=10, distance=None):
     for peak in peaks:
 
         y = spectrum[
-            max(0, int(peak) - window_width) : min(int(peak) + window_width, length)
+            max(0, int(peak) - window_width) : min(
+                int(peak) + window_width, length
+            )
         ]
         y /= np.nanmax(y)
         x = np.arange(len(y))

@@ -16,7 +16,11 @@ def test_sprat_manual_atlas():
     # Load the LT SPRAT data
     fits_file = fits.open(
         os.path.join(
-            HERE, "..", "examples", "data_lt_sprat", "v_a_20190516_57_1_0_1.fits"
+            HERE,
+            "..",
+            "examples",
+            "data_lt_sprat",
+            "v_a_20190516_57_1_0_1.fits",
         )
     )[0]
 
@@ -48,7 +52,9 @@ def test_sprat_manual_atlas():
         log_spectrum=True,
         fig_type="png+html",
         save_fig=True,
-        filename=os.path.join(HERE, "test_output", "test_lt_sprat_arc_matplotlib"),
+        filename=os.path.join(
+            HERE, "test_output", "test_lt_sprat_arc_matplotlib"
+        ),
     )
 
     c.set_hough_properties(
@@ -112,7 +118,9 @@ def test_sprat_manual_atlas():
     )
     c.set_atlas(a, constrain_poly=True)
 
-    c.set_ransac_properties(sample_size=5, top_n_candidate=5, filter_close=True)
+    c.set_ransac_properties(
+        sample_size=5, top_n_candidate=5, filter_close=True
+    )
 
     c.do_hough_transform(brute_force=True)
 
@@ -152,7 +160,9 @@ def test_sprat_manual_atlas():
         display=False,
         fig_type="png+html",
         save_fig=True,
-        filename=os.path.join(HERE, "test_output", "test_lt_sprat_fit_matplotlib"),
+        filename=os.path.join(
+            HERE, "test_output", "test_lt_sprat_fit_matplotlib"
+        ),
         tolerance=5.0,
     )
 
@@ -183,7 +193,9 @@ def test_sprat_manual_atlas():
         display=False,
         save_fig=True,
         fig_type="png+html",
-        filename=os.path.join(HERE, "test_output", "test_lt_sprat_arc_log_plotly"),
+        filename=os.path.join(
+            HERE, "test_output", "test_lt_sprat_arc_log_plotly"
+        ),
     )
 
     # Plot the solution
@@ -228,7 +240,10 @@ def test_sprat_manual_atlas():
     )
 
     c.plot_arc(
-        save_fig=True, fig_type="png+html", display=False, return_jsonstring=True
+        save_fig=True,
+        fig_type="png+html",
+        display=False,
+        return_jsonstring=True,
     )
 
     # Plot the solution
@@ -241,7 +256,9 @@ def test_sprat_manual_atlas():
         save_fig=True,
         fig_type="png+html",
         display=False,
-        filename=os.path.join(HERE, "test_output", "test_lt_sprat_fit_log_plotly"),
+        filename=os.path.join(
+            HERE, "test_output", "test_lt_sprat_fit_log_plotly"
+        ),
         return_jsonstring=True,
     )
     # Plot the solution
@@ -254,7 +271,9 @@ def test_sprat_manual_atlas():
         save_fig=True,
         fig_type="png+html",
         display=False,
-        filename=os.path.join(HERE, "test_output", "test_lt_sprat_fit_log_plotly"),
+        filename=os.path.join(
+            HERE, "test_output", "test_lt_sprat_fit_log_plotly"
+        ),
     )
 
     # Show the parameter space for searching possible solution
@@ -262,6 +281,8 @@ def test_sprat_manual_atlas():
         save_fig=True,
         fig_type="png+html",
         display=False,
-        filename=os.path.join(HERE, "test_output", "test_lt_sprat_search_space_plotly"),
+        filename=os.path.join(
+            HERE, "test_output", "test_lt_sprat_search_space_plotly"
+        ),
         return_jsonstring=True,
     )

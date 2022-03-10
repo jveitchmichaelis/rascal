@@ -33,7 +33,9 @@ pressure = fits_file.header["REFPRES"] * 100.0
 relative_humidity = fits_file.header["REFHUMID"]
 
 # Identify the peaks
-peaks, _ = find_peaks(spectrum, height=300, prominence=150, distance=5, threshold=None)
+peaks, _ = find_peaks(
+    spectrum, height=300, prominence=150, distance=5, threshold=None
+)
 peaks = util.refine_peaks(spectrum, peaks, window_width=5)
 
 # Initialise the calibrator
@@ -117,7 +119,9 @@ c.do_hough_transform()
 ) = c.fit(max_tries=1000)
 
 # Plot the solution
-c.plot_fit(best_p, spectrum, plot_atlas=True, log_spectrum=False, tolerance=5.0)
+c.plot_fit(
+    best_p, spectrum, plot_atlas=True, log_spectrum=False, tolerance=5.0
+)
 
 # Show the parameter space for searching possible solution
 c.plot_search_space()

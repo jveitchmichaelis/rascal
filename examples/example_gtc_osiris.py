@@ -52,7 +52,9 @@ plt.savefig(os.path.join(base_dir, "output", "gtc-osiris-arc-image.png"))
 spectrum = np.median(data.data.T[550:570], axis=0)
 
 # Identify the arc lines
-peaks, _ = find_peaks(spectrum, height=1250, prominence=20, distance=3, threshold=None)
+peaks, _ = find_peaks(
+    spectrum, height=1250, prominence=20, distance=3, threshold=None
+)
 peaks_refined = refine_peaks(spectrum, peaks, window_width=3)
 
 c = Calibrator(peaks_refined, spectrum=spectrum)

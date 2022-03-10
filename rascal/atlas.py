@@ -143,11 +143,15 @@ class Atlas:
 
         if min_atlas_wavelength is None:
 
-            min_atlas_wavelength = self.min_atlas_wavelength - self.range_tolerance
+            min_atlas_wavelength = (
+                self.min_atlas_wavelength - self.range_tolerance
+            )
 
         if max_atlas_wavelength is None:
 
-            max_atlas_wavelength = self.max_atlas_wavelength + self.range_tolerance
+            max_atlas_wavelength = (
+                self.max_atlas_wavelength + self.range_tolerance
+            )
 
         if not np.isfinite(min_atlas_wavelength):
 

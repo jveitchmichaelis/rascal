@@ -1,6 +1,6 @@
-numpy
-scipy
-pynverse
-matplotlib
-tqdm
 astropy
+matplotlib
+numpy
+pynverse
+scipy
+tqdm

@@ -4,7 +4,9 @@ from . import models
 
 
 class SyntheticSpectrum:
-    def __init__(self, coefficients=None, min_wavelength=200.0, max_wavelength=1200.0):
+    def __init__(
+        self, coefficients=None, min_wavelength=200.0, max_wavelength=1200.0
+    ):
         """
         Creates a synthetic spectrum generator which, given a suitable model,
         outputs the expected pixel locations of input wavelengths.  It is
@@ -48,7 +50,10 @@ class SyntheticSpectrum:
         Set a wavelength filter for the 'get_pixels' function.
         """
 
-        if not isinstance(min_wavelength, float) and min_wavelength is not None:
+        if (
+            not isinstance(min_wavelength, float)
+            and min_wavelength is not None
+        ):
 
             raise TypeError(
                 "Please provide a numeric value or None to "
@@ -66,7 +71,10 @@ class SyntheticSpectrum:
 
                 new_min_wavelength = self.min_wavelength
 
-        if not isinstance(max_wavelength, float) and max_wavelength is not None:
+        if (
+            not isinstance(max_wavelength, float)
+            and max_wavelength is not None
+        ):
 
             raise TypeError(
                 "Please provide a numeric value or None to "
@@ -91,7 +99,8 @@ class SyntheticSpectrum:
         else:
 
             raise RuntimeError(
-                "Minimum wavelength cannot be larger than " "the maximum wavelength."
+                "Minimum wavelength cannot be larger than "
+                "the maximum wavelength."
             )
 
     def get_pixels(self, wavelengths):
@@ -113,7 +122,9 @@ class SyntheticSpectrum:
         # Linear function y = mx + c
         elif self.degree == 1:
             # x = (y - c) / m
-            pixels = (wavelengths - self.coefficients[0]) / self.coefficients[1]
+            pixels = (wavelengths - self.coefficients[0]) / self.coefficients[
+                1
+            ]
         else:
             pixels = pynverse.inversefunc(self.model, wavelengths)
 

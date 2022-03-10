@@ -61,13 +61,18 @@ apidoc_args = [
     "--output-dir=.",  # Directory to place all output
 ]
 
-autodoc_mock_imports = ["matplotlib", "plotly", "pynverse", "tdqm", "numpy", "scipy"]
+autodoc_mock_imports = [
+    "matplotlib",
+    "plotly",
+    "pynverse",
+    "tdqm",
+    "numpy",
+    "scipy",
+]
 
 autoclass_content = "both"
 
-mathjax_path = (
-    "https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"
-)
+mathjax_path = "https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"
 
 # -- Options for HTML output -------------------------------------------------
 

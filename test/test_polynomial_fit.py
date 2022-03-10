@@ -107,9 +107,13 @@ def test_manual_refit():
         atlas_utilisation,
     ) = c.match_peaks(best_p, refine=False, robust_refit=True)
 
-    (best_p_manual, matched_peaks, matched_atlas, rms, residuals) = c.manual_refit(
-        matched_peaks, matched_atlas
-    )
+    (
+        best_p_manual,
+        matched_peaks,
+        matched_atlas,
+        rms,
+        residuals,
+    ) = c.manual_refit(matched_peaks, matched_atlas)
 
     assert np.allclose(best_p_manual, best_p)
 
@@ -157,9 +161,13 @@ def test_manual_refit_remove_points():
 
     c.remove_pix_wave_pair(5)
 
-    (best_p_manual, matched_peaks, matched_atlas, rms, residuals) = c.manual_refit(
-        matched_peaks, matched_atlas
-    )
+    (
+        best_p_manual,
+        matched_peaks,
+        matched_atlas,
+        rms,
+        residuals,
+    ) = c.manual_refit(matched_peaks, matched_atlas)
 
     assert np.allclose(best_p_manual, best_p)
 
@@ -206,9 +214,13 @@ def test_manual_refit_add_points():
     ) = c.match_peaks(best_p, refine=False, robust_refit=True)
 
     c.add_pix_wave_pair(2000.0, 3000.0 + 4 * 2000.0 + 1.0e-3 * 2000.0**2.0)
-    (best_p_manual, matched_peaks, matched_atlas, rms, residuals) = c.manual_refit(
-        matched_peaks, matched_atlas
-    )
+    (
+        best_p_manual,
+        matched_peaks,
+        matched_atlas,
+        rms,
+        residuals,
+    ) = c.manual_refit(matched_peaks, matched_atlas)
 
     assert np.allclose(best_p_manual, best_p)
 
@@ -227,7 +239,9 @@ def test_quadratic_fit():
         min_wavelength=3000.0,
         max_wavelength=8000.0,
     )
-    a.add_user_atlas(elements=elements_quadratic, wavelengths=wavelengths_quadratic)
+    a.add_user_atlas(
+        elements=elements_quadratic, wavelengths=wavelengths_quadratic
+    )
     c.set_atlas(a)
     c.set_ransac_properties(minimum_matches=20, minimum_fit_error=1e-12)
     c.do_hough_transform(brute_force=False)
@@ -241,7 +255,9 @@ def test_quadratic_fit():
         residual,
         peak_utilisation,
         atlas_utilisation,
-    ) = c.fit(max_tries=2000, fit_tolerance=5.0, candidate_tolerance=2.0, fit_deg=2)
+    ) = c.fit(
+        max_tries=2000, fit_tolerance=5.0, candidate_tolerance=2.0, fit_deg=2
+    )
     # Refine solution
     (
         best_p_robust,
@@ -274,9 +290,13 @@ def test_quadratic_fit_legendre():
         min_wavelength=3000.0,
         max_wavelength=8000.0,
     )
-    a.add_user_atlas(elements=elements_quadratic, wavelengths=wavelengths_quadratic)
+    a.add_user_atlas(
+        elements=elements_quadratic, wavelengths=wavelengths_quadratic
+    )
     c.set_atlas(a)
-    c.set_ransac_properties(sample_size=10, minimum_matches=20, minimum_fit_error=1e-12)
+    c.set_ransac_properties(
+        sample_size=10, minimum_matches=20, minimum_fit_error=1e-12
+    )
     c.do_hough_transform(brute_force=False)
 
     # Run the wavelength calibration
@@ -318,9 +338,13 @@ def test_quadratic_fit_chebyshev():
         min_wavelength=3000.0,
         max_wavelength=8000.0,
     )
-    a.add_user_atlas(elements=elements_quadratic, wavelengths=wavelengths_quadratic)
+    a.add_user_atlas(
+        elements=elements_quadratic, wavelengths=wavelengths_quadratic
+    )
     c.set_atlas(a)
-    c.set_ransac_properties(sample_size=10, minimum_matches=20, minimum_fit_error=1e-12)
+    c.set_ransac_properties(
+        sample_size=10, minimum_matches=20, minimum_fit_error=1e-12
+    )
     c.do_hough_transform(brute_force=False)
 
     # Run the wavelength calibration

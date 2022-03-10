@@ -67,7 +67,9 @@ c.do_hough_transform()
 ) = c.fit(max_tries=500)
 
 # Plot the solution
-c.plot_fit(best_p, spectrum, plot_atlas=True, log_spectrum=False, tolerance=5.0)
+c.plot_fit(
+    best_p, spectrum, plot_atlas=True, log_spectrum=False, tolerance=5.0
+)
 
 # Show the parameter space for searching possible solution
 c.plot_search_space()
