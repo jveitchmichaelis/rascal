@@ -82,7 +82,45 @@ class Calibrator:
         self.set_hough_properties()
         self.set_ransac_properties()
 
-    def _generate_pairs(self, candidate_tolerance, constrain_poly):
+    def _sync_calibrator_atlas_wavelength_range(self):
+
+        if self.atlas is None:
+
+            pass
+
+        else:
+
+            # Update the calibrator and HT wavelength limits
+            calibrator_min_wave = self.min_wavelength
+            calibrator_max_wave = self.max_wavelength
+
+            # Update the Atlas wavelength limits
+            atlas_min_wave = self.atlas.min_atlas_wavelength
+            atlas_max_wave = self.atlas.max_atlas_wavelength
+
+            # Get the more restrictive range
+            min_wave = max(calibrator_min_wave, atlas_min_wave)
+            max_wave = min(calibrator_max_wave, atlas_max_wave)
+
+            # update the wavelength limits
+            self.min_wavelength = min_wave
+            self.max_wavelength = max_wave
+            self.atlas.min_atlas_wavelength = min_wave
+            self.atlas.max_atlas_wavelength = max_wave
+
+            # Removes atlas lines outside the new limits
+            self.atlas.remove_atlas_lines_range(0, min_wave)
+            self.atlas.remove_atlas_lines_range(max_wave, 1e10)
+
+            for line in self.atlas.lines:
+
+                if (line < min_wave) or (line > max_wave):
+
+                    self.remove_atlas_lines_range(line, 1e-2)
+
+            self._generate_pairs()
+
+    def _generate_pairs(self):
         """
         Generate pixel-wavelength pairs without the allowed regions set by the
         linearity limit. This assumes a relatively linear spectrograph.
@@ -103,24 +141,24 @@ class Calibrator:
             pair for pair in itertools.product(self.peaks, self.atlas.lines)
         ]
 
-        if constrain_poly:
+        if self.constrain_poly:
 
             # Remove pairs outside polygon
             valid_area = Delaunay(
                 [
-                    (0, self.max_intercept + candidate_tolerance),
-                    (0, self.min_intercept - candidate_tolerance),
+                    (0, self.max_intercept + self.candidate_tolerance),
+                    (0, self.min_intercept - self.candidate_tolerance),
                     (
                         self.pixel_list.max(),
                         self.max_wavelength
                         - self.range_tolerance
-                        - candidate_tolerance,
+                        - self.candidate_tolerance,
                     ),
                     (
                         self.pixel_list.max(),
                         self.max_wavelength
                         + self.range_tolerance
-                        + candidate_tolerance,
+                        + self.candidate_tolerance,
                     ),
                 ]
             )
@@ -1204,6 +1242,8 @@ class Calibrator:
             )
         ) / self.pixel_list.max()
 
+        self._sync_calibrator_atlas_wavelength_range()
+
     def set_ransac_properties(
         self,
         sample_size=None,
@@ -1440,7 +1480,12 @@ class Calibrator:
         )
         self.atlas = new_atlas
 
-        self._generate_pairs(candidate_tolerance, constrain_poly)
+        self.candidate_tolerance = candidate_tolerance
+        self.constrain_poly = constrain_poly
+
+        # this checks the wavelegnth range and choose the most retrictive
+        # requirement and then run _generate_pairs()
+        self._sync_calibrator_atlas_wavelength_range()
 
     def remove_atlas_lines_range(self, wavelength, tolerance=10):
         """
@@ -1495,7 +1540,12 @@ class Calibrator:
             relative_humidity,
         )
 
-        self._generate_pairs(candidate_tolerance, constrain_poly)
+        self.candidate_tolerance = candidate_tolerance
+        self.constrain_poly = constrain_poly
+
+        # this checks the wavelegnth range and choose the most retrictive
+        # requirement and then run _generate_pairs()
+        self._sync_calibrator_atlas_wavelength_range()
 
     def set_atlas(self, atlas, candidate_tolerance=10.0, constrain_poly=False):
         """
@@ -1516,9 +1566,12 @@ class Calibrator:
 
         self.atlas = atlas
 
+        self.candidate_tolerance = candidate_tolerance
+        self.constrain_poly = constrain_poly
+
         # Create a list of all possible pairs of detected peaks and lines
         # from atlas
-        self._generate_pairs(candidate_tolerance, constrain_poly)
+        self._generate_pairs()
 
     def do_hough_transform(self, brute_force=False):
 
