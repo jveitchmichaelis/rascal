@@ -1978,7 +1978,7 @@ class Calibrator:
         matched_atlas = []
         residuals = []
 
-        atlas_lines = sel.atlas.get_lines()
+        atlas_lines = self.atlas.get_lines()
 
         # Find all Atlas peaks within tolerance
         for p in self.peaks:
