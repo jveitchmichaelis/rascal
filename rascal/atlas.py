@@ -3,6 +3,13 @@ from .util import load_calibration_lines
 from .util import vacuum_to_air_wavelength
 
 
+class AtlasLine:
+    def __init__(self, wavelength, element=None, intensity=None):
+        self.wavelength = wavelength
+        self.element = element
+        self.intensity = intensity
+
+
 class Atlas:
     def __init__(
         self,
@@ -63,9 +70,7 @@ class Atlas:
 
         """
 
-        self.elements = []
-        self.lines = []
-        self.intensities = []
+        self.atlas_lines = []
         self.min_atlas_wavelength = min_atlas_wavelength
         self.max_atlas_wavelength = max_atlas_wavelength
         self.min_intensity = min_intensity
@@ -193,9 +198,12 @@ class Atlas:
                     relative_humidity,
                 )
 
-                self.elements.extend(atlas_elements_tmp)
-                self.lines.extend(atlas_tmp)
-                self.intensities.extend(atlas_intensities_tmp)
+                for element, line, intensity in list(
+                    zip(atlas_elements_tmp, atlas_tmp, atlas_intensities_tmp)
+                ):
+                    self.atlas_lines.append(
+                        AtlasLine(line, element, intensity)
+                    )
 
     def add_user_atlas(
         self,
@@ -274,9 +282,42 @@ class Atlas:
         self.min_atlas_wavelength = min(wavelengths)
         self.max_atlas_wavelength = max(wavelengths)
 
-        self.elements.extend(elements)
-        self.lines.extend(wavelengths)
-        self.intensities.extend(intensities)
+        for element, line, intensity in list(
+            zip(elements, wavelengths, intensities)
+        ):
+            self.atlas_lines.append(AtlasLine(line, element, intensity))
+
+    def get_lines(self):
+        """
+        Returns a list of line wavelengths in the atlas
+
+        Returns
+            wavelength_list: list
+
+        """
+        return [line.wavelength for line in self.atlas_lines]
+
+    def get_elements(self):
+        """
+        Returns a list of per-line elements in the atlas
+
+        Returns
+            element_list: list
+
+        """
+
+        return [line.element for line in self.atlas_lines]
+
+    def get_intensities(self):
+        """
+        Returns a list of per-line intensities in the atlas
+
+        Returns
+            intensity_list: list
+
+        """
+
+        return [line.intensity for line in self.atlas_lines]
 
     def remove_atlas_lines_range(self, wavelength, tolerance=10):
         """
@@ -291,13 +332,11 @@ class Atlas:
 
         """
 
-        for i, line in enumerate(self.lines):
+        for atlas_line in self.atlas_lines:
 
-            if abs(line - wavelength) < tolerance:
+            if abs(atlas_line.wavelength - wavelength) < tolerance:
 
-                self.elements.pop(i)
-                self.lines.pop(i)
-                self.intensities.pop(i)
+                self.atlas_lines.remove(atlas_line)
 
     def list(self):
         """
@@ -305,15 +344,15 @@ class Atlas:
 
         """
 
-        for i in range(len(self.lines)):
+        for line in self.atlas_lines:
 
             print(
                 "Element "
-                + str(self.elements[i])
+                + str(line.element)
                 + " at "
-                + str(self.lines[i])
+                + str(line.wavelength)
                 + " with intensity "
-                + str(self.intensities[i])
+                + str(line.intensity)
             )
 
     def clear(self):
@@ -322,6 +361,7 @@ class Atlas:
 
         """
 
-        self.elements = []
-        self.lines = []
-        self.intensities = []
+        self.atlas_lines.clear()
+
+    def __len__(self):
+        return len(self.atlas_lines)

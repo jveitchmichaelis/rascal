@@ -618,7 +618,7 @@ def plot_fit(
             #    fit, model_type='poly', degree=len(fit)-1)
             # x_locs = spec.get_pixels(calibrator.atlas)
             ax1.vlines(
-                calibrator.atlas.lines,
+                calibrator.atlas.get_lines(),
                 0,
                 vline_max,
                 colors="C2",
@@ -633,7 +633,7 @@ def plot_fit(
         for p in calibrator.peaks:
 
             x = calibrator.polyval(p, fit_coeff)
-            diff = calibrator.atlas.lines - x
+            diff = calibrator.atlas.get_lines() - x
             idx = np.argmin(np.abs(diff))
             all_diff.append(diff[idx])
 
@@ -644,7 +644,9 @@ def plot_fit(
                 fitted_peaks.append(p)
                 fitted_diff.append(diff[idx])
                 calibrator.logger.info(
-                    "- matched to {} A".format(calibrator.atlas.lines[idx])
+                    "- matched to {} A".format(
+                        calibrator.atlas.get_lines()[idx]
+                    )
                 )
 
                 if spectrum is not None:
@@ -675,8 +677,8 @@ def plot_fit(
                     x - 3,
                     text_box_pos,
                     s="{}:{:1.2f}".format(
-                        calibrator.atlas.elements[idx],
-                        calibrator.atlas.lines[idx],
+                        calibrator.atlas.get_elements()[idx],
+                        calibrator.atlas.get_lines()[idx],
                     ),
                     rotation=90,
                     bbox=dict(facecolor="white", alpha=1),
@@ -814,7 +816,7 @@ def plot_fit(
                 ),
             )
 
-            diff = calibrator.atlas.lines - x
+            diff = calibrator.atlas.get_lines() - x
             idx = np.argmin(np.abs(diff))
             all_diff.append(diff[idx])
 
@@ -829,7 +831,9 @@ def plot_fit(
                     )
                     fitted_diff.append(diff[idx])
                     calibrator.logger.info(
-                        "- matched to {} A".format(calibrator.atlas.lines[idx])
+                        "- matched to {} A".format(
+                            calibrator.atlas.get_lines()[idx]
+                        )
                     )
 
         x_fitted = calibrator.polyval(fitted_peaks, fit_coeff)

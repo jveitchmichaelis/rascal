@@ -109,11 +109,11 @@ class Calibrator:
             self.atlas.max_atlas_wavelength = max_wave
 
             # Removes atlas lines outside the new limits
-            for line in copy.deepcopy(self.atlas.lines):
+            for line in copy.deepcopy(self.atlas.atlas_lines):
 
-                if (line < min_wave) | (line > max_wave):
+                if (line.wavelength < min_wave) | (line.wavelength > max_wave):
 
-                    self.remove_atlas_lines_range(line, 1e-2)
+                    self.remove_atlas_lines_range(line.wavelength, 1e-2)
 
             self._generate_pairs()
 
@@ -135,7 +135,8 @@ class Calibrator:
         """
 
         pairs = [
-            pair for pair in itertools.product(self.peaks, self.atlas.lines)
+            pair
+            for pair in itertools.product(self.peaks, self.atlas.get_lines())
         ]
 
         if self.constrain_poly:
@@ -338,12 +339,14 @@ class Calibrator:
         w_match = []
         self.candidates = []
 
+        atlas_lines = self.atlas.get_lines()
+
         for p in self.peaks:
 
             x0 = self.polyval(p, self.fit_coeff)
-            diff = np.abs(self.atlas.lines - x0)
+            diff = np.abs(atlas_lines - x0)
 
-            x = np.array(self.atlas.lines)[diff < candidate_tolerance]
+            x = np.array(atlas_lines)[diff < candidate_tolerance]
 
             weight = gauss(x, 1.0, x0, self.range_tolerance)
 
@@ -865,6 +868,8 @@ class Calibrator:
         y_matched = []
         fit_new = fit.copy()
 
+        atlas_lines = self.atlas.get_lines()
+
         for i, d in enumerate(delta):
 
             fit_new[i] += d
@@ -872,14 +877,14 @@ class Calibrator:
         for p in self.peaks:
 
             x = self.polyval(p, fit_new)
-            diff = self.atlas.lines - x
+            diff = atlas_lines - x
             diff_abs = np.abs(diff)
             idx = np.argmin(diff_abs)
 
             if diff_abs[idx] < tolerance:
 
                 x_matched.append(p)
-                y_matched.append(self.atlas.lines[idx])
+                y_matched.append(atlas_lines[idx])
 
         x_matched = np.array(x_matched)
         y_matched = np.array(y_matched)
@@ -1780,15 +1785,15 @@ class Calibrator:
             )
 
         # Reduce sample_size if it is larger than the number of atlas available
-        if self.sample_size > len(self.atlas.lines):
+        if self.sample_size > len(self.atlas):
 
             self.logger.warning(
                 "Size of sample_size is larger than the size of atlas, "
                 + "the sample_size is set to match the size of atlas = "
-                + str(len(self.atlas.lines))
+                + str(len(self.atlas))
                 + "."
             )
-            self.sample_size = len(self.atlas.lines)
+            self.sample_size = len(self.atlas)
 
         if self.sample_size <= fit_deg:
 
@@ -1798,15 +1803,15 @@ class Calibrator:
 
             self.do_hough_transform()
 
-        if self.minimum_matches > len(self.atlas.lines):
+        if self.minimum_matches > len(self.atlas):
             self.logger.warning(
                 "Requested minimum matches is greater than the atlas size"
                 + "setting the minimum number of matches to equal the atlas"
                 + "size = "
-                + str(len(self.atlas.lines))
+                + str(len(self.atlas))
                 + "."
             )
-            self.minimum_matches = len(self.atlas.lines)
+            self.minimum_matches = len(self.atlas)
 
         # TODO also check whether minimum peak utilisation is greater than
         # minimum matches.
@@ -1827,7 +1832,7 @@ class Calibrator:
         )
 
         peak_utilisation = n_inliers / len(self.peaks)
-        atlas_utilisation = n_inliers / len(self.atlas.lines)
+        atlas_utilisation = n_inliers / len(self.atlas)
 
         if not valid:
 
@@ -1973,19 +1978,19 @@ class Calibrator:
         matched_atlas = []
         residuals = []
 
+        atlas_lines = sel.atlas.get_lines()
+
         # Find all Atlas peaks within tolerance
         for p in self.peaks:
 
             x = self.polyval(p, fit_coeff)
-            diff = self.atlas.lines - x
+            diff = atlas_lines - x
             diff_abs = np.abs(diff) < tolerance
 
             if diff_abs.any():
 
                 matched_peaks.append(p)
-                matched_atlas.append(
-                    list(np.asarray(self.atlas.lines)[diff_abs])
-                )
+                matched_atlas.append(list(np.asarray(atlas_lines)[diff_abs]))
                 residuals.append(diff_abs)
 
         # Create permutations:
@@ -2074,9 +2079,7 @@ class Calibrator:
         )
 
         self.peak_utilisation = len(self.matched_peaks) / len(self.peaks)
-        self.atlas_utilisation = len(self.matched_atlas) / len(
-            self.atlas.lines
-        )
+        self.atlas_utilisation = len(self.matched_atlas) / len(self.atlas)
 
         if robust_refit:
 
