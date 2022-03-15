@@ -1734,6 +1734,10 @@ class Calibrator:
         -------
         fit_coeff: list
             List of best fit polynomial fit_coefficient.
+        matched_peaks: list
+            Peaks used for final fit
+        matched_atlas: list
+            Atlas lines used for final fit
         rms: float
             The root-mean-squared of the residuals
         residual: float
