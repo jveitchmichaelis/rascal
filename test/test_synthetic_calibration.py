@@ -38,7 +38,7 @@ def test_default():
     a.add_user_atlas(elements=["Test"] * len(waves), wavelengths=waves)
     c.set_ransac_properties(minimum_fit_error=1e-12)
     c.set_atlas(a)
-    assert len(c.atlas.lines) > 0
+    assert len(c.atlas.atlas_lines) > 0
 
     # And let's try and fit...
     best_p, x, y, rms, residual, peak_utilisation, atlas_utilisation = c.fit(
@@ -98,7 +98,7 @@ def test_get_candidate_points_poly():
     # Add our fake lines as the atlas
     a.add_user_atlas(elements=["Test"] * len(waves), wavelengths=waves)
     c.set_atlas(a)
-    assert len(c.atlas.lines) > 0
+    assert len(c.atlas.atlas_lines) > 0
 
     # And let's try and fit...
     best_p, x, y, rms, residual, peak_utilisation, atlas_utilisation = c.fit(

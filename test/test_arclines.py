@@ -33,8 +33,7 @@ def test_load_single_line():
         logger.info("Testing load single element: {}".format(element))
         atlas.add(elements=element)
         cal.set_atlas(atlas)
-        assert len(cal.atlas.lines) > 0
-        assert len(cal.atlas.elements) > 0
+        assert len(cal.atlas.atlas_lines) > 0
 
 
 def test_load_mutliple_lines():
@@ -47,8 +46,7 @@ def test_load_mutliple_lines():
             logger.info("Testing load elements: {}".format(elements))
         atlas.add(elements=element_list)
         cal.set_atlas(atlas)
-        assert len(cal.atlas.lines) > 0
-        assert len(cal.atlas.elements) > 0
+        assert len(cal.atlas.atlas_lines) > 0
 
 
 def test_setting_a_known_pair():

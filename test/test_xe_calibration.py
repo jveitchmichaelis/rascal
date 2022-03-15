@@ -86,11 +86,11 @@ def run_sprat_calibration(fit_deg):
     a.add_user_atlas(elements=elements, wavelengths=wavelengths)
     c.set_atlas(a)
     c.atlas.clear()
-    assert len(a.lines) == 0
+    assert len(a.atlas_lines) == 0
     a.add_user_atlas(elements=elements, wavelengths=wavelengths)
     c.set_atlas(a)
     c.atlas.remove_atlas_lines_range(9999.0)
-    assert len(c.atlas.lines) == len(wavelengths) - 1
+    assert len(c.atlas.atlas_lines) == len(wavelengths) - 1
     c.atlas.list()
 
     # Run the wavelength calibration
