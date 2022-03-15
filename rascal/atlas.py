@@ -7,8 +7,8 @@ class Atlas:
     def __init__(
         self,
         elements=None,
-        min_atlas_wavelength=3000,
-        max_atlas_wavelength=5000,
+        min_atlas_wavelength=3000.0,
+        max_atlas_wavelength=5000.0,
         range_tolerance=500,
         min_intensity=10.0,
         min_distance=10.0,
@@ -270,6 +270,9 @@ class Atlas:
             wavelengths = vacuum_to_air_wavelength(
                 wavelengths, temperature, pressure, relative_humidity
             )
+
+        self.min_atlas_wavelength = min(wavelengths)
+        self.max_atlas_wavelength = max(wavelengths)
 
         self.elements.extend(elements)
         self.lines.extend(wavelengths)

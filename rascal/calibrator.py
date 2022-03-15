@@ -109,12 +109,9 @@ class Calibrator:
             self.atlas.max_atlas_wavelength = max_wave
 
             # Removes atlas lines outside the new limits
-            self.atlas.remove_atlas_lines_range(0, min_wave)
-            self.atlas.remove_atlas_lines_range(max_wave, 1e10)
+            for line in copy.deepcopy(self.atlas.lines):
 
-            for line in self.atlas.lines:
-
-                if (line < min_wave) or (line > max_wave):
+                if (line < min_wave) | (line > max_wave):
 
                     self.remove_atlas_lines_range(line, 1e-2)
 
@@ -1167,7 +1164,7 @@ class Calibrator:
 
         elif self.min_wavelength is None:
 
-            self.min_wavelength = 3000
+            self.min_wavelength = 3000.0
 
         else:
 
@@ -1180,7 +1177,7 @@ class Calibrator:
 
         elif self.max_wavelength is None:
 
-            self.max_wavelength = 9000
+            self.max_wavelength = 9000.0
 
         else:
 

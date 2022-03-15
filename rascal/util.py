@@ -202,8 +202,8 @@ def filter_intensity(lines, min_intensity=0):
 
 def load_calibration_lines(
     elements=[],
-    min_atlas_wavelength=3000,
-    max_atlas_wavelength=15000,
+    min_atlas_wavelength=3000.0,
+    max_atlas_wavelength=15000.0,
     min_intensity=10,
     min_distance=10,
     vacuum=False,
