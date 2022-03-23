@@ -3,7 +3,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/jveitchmichaelis/rascal/badge.svg?branch=main)](https://coveralls.io/github/jveitchmichaelis/rascal?branch=main)
 [![Readthedocs Status](https://readthedocs.org/projects/rascal/badge/?version=latest&style=flat)](https://rascal.readthedocs.io/en/latest/)
 [![PyPI version](https://badge.fury.io/py/rascal.svg)](https://badge.fury.io/py/rascal)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4124170.svg)](https://doi.org/10.5281/zenodo.4124170)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4117516.svg)](https://doi.org/10.5281/zenodo.4117516)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 Rascal is a library for automated spectrometer wavelength calibration. It has been designed primarily for astrophysics applications, but should be usable with spectra captured from any similar spectrometer.
