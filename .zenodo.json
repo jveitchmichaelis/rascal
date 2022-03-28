@@ -1,6 +1,6 @@
 {
     "description": "Rascal is a Python library for automated wavelength calibration of spectrometers used for astrophysical research.", 
-    "license": "BSD 3-Clause", 
+    "license": "BSD-3-Clause", 
     "title": "rascal: RANSAC Assisted Spectral CALibration",
     "upload_type": "software",
     "creators": [
