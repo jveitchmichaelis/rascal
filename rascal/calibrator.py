@@ -1771,12 +1771,18 @@ class Calibrator:
         if self.minimum_matches > len(self.atlas):
             self.logger.warning(
                 "Requested minimum matches is greater than the atlas size"
-                + "setting the minimum number of matches to equal the atlas"
-                + "size = "
-                + str(len(self.atlas))
-                + "."
+                "setting the minimum number of matches to equal the atlas"
+                "size = " + str(len(self.atlas)) + "."
             )
             self.minimum_matches = len(self.atlas)
+
+        if self.minimum_matches > len(self.peaks):
+            self.logger.warning(
+                "Requested minimum matches is greater than the number of "
+                "peaks detected, which has a size of "
+                "size = " + str(len(self.peaks)) + "."
+            )
+            self.minimum_matches = len(self.peaks)
 
         # TODO also check whether minimum peak utilisation is greater than
         # minimum matches.
