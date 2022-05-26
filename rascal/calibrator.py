@@ -82,41 +82,6 @@ class Calibrator:
         self.set_hough_properties()
         self.set_ransac_properties()
 
-    def _sync_calibrator_atlas_wavelength_range(self):
-
-        if self.atlas is None:
-
-            pass
-
-        else:
-
-            # Update the calibrator and HT wavelength limits
-            calibrator_min_wave = self.min_wavelength
-            calibrator_max_wave = self.max_wavelength
-
-            # Update the Atlas wavelength limits
-            atlas_min_wave = self.atlas.min_atlas_wavelength
-            atlas_max_wave = self.atlas.max_atlas_wavelength
-
-            # Get the more restrictive range
-            min_wave = max(calibrator_min_wave, atlas_min_wave)
-            max_wave = min(calibrator_max_wave, atlas_max_wave)
-
-            # update the wavelength limits
-            self.min_wavelength = min_wave
-            self.max_wavelength = max_wave
-            self.atlas.min_atlas_wavelength = min_wave
-            self.atlas.max_atlas_wavelength = max_wave
-
-            # Removes atlas lines outside the new limits
-            for line in copy.deepcopy(self.atlas.atlas_lines):
-
-                if (line.wavelength < min_wave) | (line.wavelength > max_wave):
-
-                    self.remove_atlas_lines_range(line.wavelength, 1e-2)
-
-            self._generate_pairs()
-
     def _generate_pairs(self):
         """
         Generate pixel-wavelength pairs without the allowed regions set by the
@@ -1244,7 +1209,9 @@ class Calibrator:
             )
         ) / self.pixel_list.max()
 
-        self._sync_calibrator_atlas_wavelength_range()
+        if self.atlas is not None:
+
+            self._generate_pairs()
 
     def set_ransac_properties(
         self,
@@ -1485,9 +1452,9 @@ class Calibrator:
         self.candidate_tolerance = candidate_tolerance
         self.constrain_poly = constrain_poly
 
-        # this checks the wavelegnth range and choose the most retrictive
-        # requirement and then run _generate_pairs()
-        self._sync_calibrator_atlas_wavelength_range()
+        if self.atlas is not None:
+
+            self._generate_pairs()
 
     def remove_atlas_lines_range(self, wavelength, tolerance=10):
         """
@@ -1545,9 +1512,7 @@ class Calibrator:
         self.candidate_tolerance = candidate_tolerance
         self.constrain_poly = constrain_poly
 
-        # this checks the wavelegnth range and choose the most retrictive
-        # requirement and then run _generate_pairs()
-        self._sync_calibrator_atlas_wavelength_range()
+        self._generate_pairs()
 
     def set_atlas(self, atlas, candidate_tolerance=10.0, constrain_poly=False):
         """
