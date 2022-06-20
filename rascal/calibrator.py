@@ -1012,7 +1012,8 @@ class Calibrator:
 
         # map the list position to the pixel value
         self.pix_to_rawpix = interpolate.interp1d(
-            self.pixel_list, np.arange(len(self.pixel_list))
+            self.pixel_list,
+            np.arange(len(self.pixel_list), fill_value="extrapolate"),
         )
 
         if seed is not None:
