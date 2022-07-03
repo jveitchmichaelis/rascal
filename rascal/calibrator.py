@@ -1424,7 +1424,7 @@ class Calibrator:
         relative_humidity=0.0,
     ):
 
-        self.logger.warn(
+        self.logger.warning(
             "Using add_atlas is now deprecated. "
             "Please use the new Atlas class."
         )
@@ -1492,7 +1492,7 @@ class Calibrator:
         constrain_poly=False,
     ):
 
-        self.logger.warn(
+        self.logger.warning(
             "Using add_user_atlas is now deprecated. "
             "Please use the new Atlas class."
         )
