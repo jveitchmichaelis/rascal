@@ -1,5 +1,22 @@
+Version 0.3.3
+-------------
+
+:Date: 26 May 2022
+
+* `@jveitchmichaelis <https://github.com/jveitchmichaelis>`__:
+
+  * Fixed some metadata.
+
+* `@cylammarco <https://github.com/cylammarco>`__:
+
+  * Fixed some syncing issues between calibrator and atlas.
+  * Fixed the CHANGELOG.rst
+  * Included an empty Atlas() during a calibrator initialisation so that different ways of adding atlas can work smoothly.
+
 Version 0.3.2
 -------------
+
+:Date: 23 March 2022
 
 This version adds quite a lot of small fixes, in particular some nasty bugs in RANSAC which would return duplicate atlas lines,
 or incorrect match lists. Error checking has been improved throughout with sanity checks to prevent obviously wrong fits from
@@ -8,7 +25,7 @@ sneaking through. Overall fitting should be a bit more robust. This release bene
 We've added a contributor requirement to use pre-commit, which performs some simple linting and runs black to format code prior to commit.
 
 There is a new Atlas class which is the new recommended way to add arc lines. The old methods are still present, but are deprecated
-and will be removed in 4.0.
+and will be removed in 0.4.0.
 
 On top of bugfixes, @cylanmarco has done a lot of work to improve automated installation, CI and testing.
 
@@ -34,6 +51,8 @@ On top of bugfixes, @cylanmarco has done a lot of work to improve automated inst
 
 Version 0.3.1
 -------------
+
+:Date: 17 October 2021
 
 * `@jveitchmichaelis <https://github.com/jveitchmichaelis>`__:
 

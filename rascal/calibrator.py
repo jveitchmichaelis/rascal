@@ -51,6 +51,7 @@ class Calibrator:
         self.num_pix = None
         self.pixel_list = None
         self.plotting_library = None
+        self.constrain_poly = None
 
         # hough_properties
         self.num_slopes = None
@@ -1450,13 +1451,10 @@ class Calibrator:
             relative_humidity=relative_humidity,
         )
         self.atlas = new_atlas
-
         self.candidate_tolerance = candidate_tolerance
         self.constrain_poly = constrain_poly
 
-        if self.atlas is not None:
-
-            self._generate_pairs()
+        self._generate_pairs()
 
     def remove_atlas_lines_range(self, wavelength, tolerance=10):
         """
@@ -1544,6 +1542,15 @@ class Calibrator:
 
     def do_hough_transform(self, brute_force=False):
 
+        if self.pairs == []:
+
+            logging.warning("pairs list is empty. Try generating now.")
+            self._generate_pairs()
+
+            if self.pairs == []:
+
+                logging.error("pairs list is still empty.")
+
         # Generate the hough_points from the pairs
         self.ht.set_constraints(
             self.min_slope,
@@ -1551,6 +1558,7 @@ class Calibrator:
             self.min_intercept,
             self.max_intercept,
         )
+
         if brute_force:
             self.ht.generate_hough_points_brute_force(
                 self.pairs[:, 0], self.pairs[:, 1]

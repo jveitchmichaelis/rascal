@@ -161,17 +161,15 @@ class Atlas:
         if not np.isfinite(min_atlas_wavelength):
 
             raise ValueError(
-                "min_atlas_wavelength has to be finite or None. {} is given.".format(
-                    min_atlas_wavelength
-                )
+                "min_atlas_wavelength has to be finite or None. "
+                "{} is given.".format(min_atlas_wavelength)
             )
 
         if not np.isfinite(max_atlas_wavelength):
 
             raise ValueError(
-                "max_atlas_wavelength has to be finite or None. {} is given.".format(
-                    max_atlas_wavelength
-                )
+                "max_atlas_wavelength has to be finite or None. "
+                "{} is given.".format(max_atlas_wavelength)
             )
 
         if isinstance(elements, str):
