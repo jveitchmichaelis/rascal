@@ -1,4 +1,4 @@
-# Rascal
+# Rascal: RANSAC Assisted Spectral CALibration
 [![Python package](https://github.com/jveitchmichaelis/rascal/actions/workflows/python-package.yml/badge.svg)](https://github.com/jveitchmichaelis/rascal/actions/workflows/python-package.yml)
 [![Coverage Status](https://coveralls.io/repos/github/jveitchmichaelis/rascal/badge.svg?branch=main)](https://coveralls.io/github/jveitchmichaelis/rascal?branch=main)
 [![Readthedocs Status](https://readthedocs.org/projects/rascal/badge/?version=latest&style=flat)](https://rascal.readthedocs.io/en/latest/)

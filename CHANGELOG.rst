@@ -1,11 +1,7 @@
-Version 0.3.3
+Version 0.3.4
 -------------
 
 :Date: 26 May 2022
-
-* `@jveitchmichaelis <https://github.com/jveitchmichaelis>`__:
-
-  * Fixed some metadata.
 
 * `@cylammarco <https://github.com/cylammarco>`__:
 
@@ -13,10 +9,25 @@ Version 0.3.3
   * Fixed the CHANGELOG.rst
   * Included an empty Atlas() during a calibrator initialisation so that different ways of adding atlas can work smoothly.
 
-Version 0.3.2
+Version 0.3.3
 -------------
 
 :Date: 23 March 2022
+
+* `@jveitchmichaelis <https://github.com/jveitchmichaelis>`__:
+
+  * Fixed some metadata.
+  * Fixed the license on Zenodo.
+
+* `@cylammarco <https://github.com/cylammarco>`__:
+
+  * Fixed some syncing issues between calibrator and atlas.
+
+
+Version 0.3.2
+-------------
+
+:Date: 10 March 2022
 
 This version adds quite a lot of small fixes, in particular some nasty bugs in RANSAC which would return duplicate atlas lines,
 or incorrect match lists. Error checking has been improved throughout with sanity checks to prevent obviously wrong fits from
@@ -31,6 +42,7 @@ On top of bugfixes, @cylanmarco has done a lot of work to improve automated inst
 
 * `@jveitchmichaelis <https://github.com/jveitchmichaelis>`__:
 
+  * Adopted black style.
   * Added default values for some variables in RANSAC https://github.com/jveitchmichaelis/rascal/commit/83ee2d6eafc2dd58ef791857b531209841ebd20c
   * Some modifications to tolerances in testing to allow for "perfect" synthetic fits
   * Add pre-commit/black code https://github.com/jveitchmichaelis/rascal/commit/8d332879f846c5f7100442a3f5ff1f1a366e5b60
@@ -48,6 +60,8 @@ On top of bugfixes, @cylanmarco has done a lot of work to improve automated inst
   * Fixes to testing https://github.com/jveitchmichaelis/rascal/commit/123d8acbcee8ebe99da4b6e66499aadbdcb4cbb9
   * Bugfix https://github.com/jveitchmichaelis/rascal/commit/b76659bfdda20954ccc70bb689614a043b91dac1
   * Bugfix https://github.com/jveitchmichaelis/rascal/commit/fb881fdedffaf357012d1aa86e2b7082525f27d7
+  * Fixed `plot_search_space()` xlabel and ylabel bug when using matplotlib.
+  * Paths in the example are no longer hard-coded.
 
 Version 0.3.1
 -------------
