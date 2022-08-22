@@ -1,6 +1,7 @@
 astropy
 matplotlib
 numpy
+plotly
 pynverse
 scipy
 tqdm
