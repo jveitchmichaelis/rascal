@@ -68,7 +68,7 @@ def create_pixel_array(northsouth, binning):
 pixels = create_pixel_array("north", 2)
 rawpix_to_pix_itp = interpolate.interp1d(np.arange(len(pixels)), pixels)
 
-# Load the LT SPRAT data
+# Load the GMOS data
 base_dir = os.path.dirname(__file__)
 spectrum2D = fits.open(
     os.path.join(base_dir, "data_gemini_gmos/N20181115S0215_flattened.fits")
@@ -79,7 +79,7 @@ plt.imshow(np.log10(spectrum2D), aspect="auto", origin="lower")
 plt.xlabel("Spectral Direction / Pix")
 plt.ylabel("Spatial Direction / Pix")
 plt.tight_layout()
-plt.savefig("output/gemini-gmosls-manual-atlas-arc-image.png")
+plt.savefig("output/gemini-gmosls-auto-atlas-arc-image.png")
 
 # Collapse into 1D spectrum between row 300 and 310
 spectrum = np.median(spectrum2D[300:310], axis=0)[::-1]
@@ -88,7 +88,7 @@ spectrum = np.median(spectrum2D[300:310], axis=0)[::-1]
 peaks, _ = find_peaks(
     spectrum, height=1000, prominence=500, distance=5, threshold=None
 )
-peaks = util.refine_peaks(spectrum, peaks, window_width=5)
+peaks = util.refine_peaks(spectrum, peaks, window_width=3)
 
 peaks_shifted = rawpix_to_pix_itp(peaks)
 
@@ -99,7 +99,7 @@ c.plot_arc(
     pixels,
     display=False,
     save_fig="png",
-    filename="output/gemini-gmosls-manual-atlas-arc-spectrum",
+    filename="output/gemini-gmosls-auto-atlas-arc-spectrum",
 )
 c.set_hough_properties(
     num_slopes=5000,
@@ -109,68 +109,20 @@ c.set_hough_properties(
     min_wavelength=5000.0,
     max_wavelength=9500.0,
 )
-c.set_ransac_properties(sample_size=8, top_n_candidate=10)
+c.set_ransac_properties(sample_size=5, top_n_candidate=10, minimum_matches=18)
 # Vacuum wavelengths
-# blend: 5143.21509, 5146.74143
-# something weird near there, so not used: 8008.359, 8016.990
-atlas_lines = [
-    4703.632,
-    4728.19041,
-    4766.19677,
-    4807.36348,
-    4849.16386,
-    4881.22627,
-    4890.40721,
-    4906.12088,
-    4934.58593,
-    4966.46490,
-    5018.56194,
-    5063.44827,
-    5163.723,
-    5189.191,
-    5497.401,
-    5560.246,
-    5608.290,
-    5913.723,
-    6754.698,
-    6873.185,
-    6967.352,
-    7032.190,
-    7069.167,
-    7149.012,
-    7274.940,
-    7386.014,
-    7505.935,
-    7516.721,
-    7637.208,
-    7725.887,
-    7893.246,
-    7950.362,
-    8105.921,
-    8117.542,
-    8266.794,
-    8410.521,
-    8426.963,
-    8523.783,
-    8670.325,
-    9125.471,
-    9197.161,
-    9227.03,
-    9356.787,
-    9660.435,
-    9787.186,
-]
 
-element = ["CuAr"] * len(atlas_lines)
-
-atlas = Atlas(range_tolerance=500.0)
-atlas.add_user_atlas(
-    elements=element,
-    wavelengths=atlas_lines,
+atlas = Atlas(
+    elements=["Cu", "Ar"],
+    min_intensity=25,
+    min_distance=5,
+    range_tolerance=500.0,
     vacuum=True,
     pressure=61700.0,
     temperature=276.55,
     relative_humidity=4.0,
+    min_atlas_wavelength=5000.0,
+    max_atlas_wavelength=9500.0,
 )
 c.set_atlas(atlas)
 
@@ -196,12 +148,12 @@ c.plot_fit(
     tolerance=5.0,
     display=False,
     save_fig="png",
-    filename="output/gemini-gmosls-manual-atlas-wavelength-calibration",
+    filename="output/gemini-gmosls-auto-atlas-wavelength-calibration",
 )
 
 # Show the parameter space for searching possible solution
 c.plot_search_space(
-    save_fig="png", filename="output/gemini-gmosls-manual-atlas-search-space"
+    save_fig="png", filename="output/gemini-gmosls-auto-atlas-search-space"
 )
 
 print("Stdev error: {} A".format(residual.std()))
