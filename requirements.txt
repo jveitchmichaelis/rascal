@@ -1,4 +1,5 @@
 astropy
+kaleido
 matplotlib
 numpy
 plotly
