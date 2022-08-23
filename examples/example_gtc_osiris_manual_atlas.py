@@ -32,11 +32,13 @@ atlas_lines = [
 ]
 element = ["HgAr"] * len(atlas_lines)
 
-base_dir = os.path.dirname(__file__)
+base_dir = os.path.dirname(os.path.abspath(__file__))
+
 data = fits.open(
     os.path.join(
         base_dir,
-        "data_gtc_osiris/0002672523-20200911-OSIRIS-OsirisCalibrationLamp.fits",
+        "data_gtc_osiris",
+        "0002672523-20200911-OSIRIS-OsirisCalibrationLamp.fits",
     )
 )[1]
 

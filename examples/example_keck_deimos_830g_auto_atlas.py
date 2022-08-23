@@ -1,4 +1,5 @@
 import json
+import os
 
 import numpy as np
 from scipy.signal import find_peaks
@@ -7,9 +8,15 @@ from rascal.calibrator import Calibrator
 from rascal.atlas import Atlas
 from rascal.util import refine_peaks
 
+base_dir = os.path.dirname(os.path.abspath(__file__))
+
 # Load the 1D Spectrum from Pypeit
 spectrum_json = json.load(
-    open("data_keck_deimos/keck_deimos_830g_l_PYPIT.json")
+    open(
+        os.path.join(
+            base_dir, "data_keck_deimos", "keck_deimos_830g_l_PYPIT.json"
+        )
+    )
 )
 spectrum = np.array(spectrum_json["spec"])
 

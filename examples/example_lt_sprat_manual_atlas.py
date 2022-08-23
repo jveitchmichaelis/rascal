@@ -10,14 +10,14 @@ from rascal.atlas import Atlas
 from rascal import util
 
 # Load the LT SPRAT data
-base_dir = os.path.dirname(__file__)
+base_dir = os.path.dirname(os.path.abspath(__file__))
+
 fits_file = fits.open(
-    os.path.join(base_dir, "data_lt_sprat/v_a_20190516_57_1_0_1.fits")
+    os.path.join(base_dir, "data_lt_sprat", "v_a_20190516_57_1_0_1.fits")
 )[0]
 
 spectrum2D = fits_file.data
 
-plt.ion()
 plt.figure(1, figsize=(10, 4))
 plt.imshow(np.log10(spectrum2D), aspect="auto", origin="lower")
 plt.xlabel("Spectral Direction / Pix")

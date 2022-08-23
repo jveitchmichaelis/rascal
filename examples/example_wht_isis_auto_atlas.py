@@ -10,9 +10,10 @@ from rascal.atlas import Atlas
 from rascal import util
 
 # Load the LT SPRAT data
-base_dir = os.path.dirname(__file__)
+base_dir = os.path.dirname(os.path.abspath(__file__))
+
 spectrum2D = fits.open(
-    os.path.join(base_dir, "data_wht_isis/r2701004_red_arc.fit")
+    os.path.join(base_dir, "data_wht_isis", "r2701004_red_arc.fit")
 )[1].data.T
 
 # Collapse into 1D spectrum between row 500 and 520

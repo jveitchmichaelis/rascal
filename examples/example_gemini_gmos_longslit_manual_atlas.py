@@ -68,10 +68,10 @@ def create_pixel_array(northsouth, binning):
 pixels = create_pixel_array("north", 2)
 rawpix_to_pix_itp = interpolate.interp1d(np.arange(len(pixels)), pixels)
 
-# Load the LT SPRAT data
-base_dir = os.path.dirname(__file__)
+# Load the GMOS data
+base_dir = os.path.dirname(os.path.abspath(__file__))
 spectrum2D = fits.open(
-    os.path.join(base_dir, "data_gemini_gmos/N20181115S0215_flattened.fits")
+    os.path.join(base_dir, "data_gemini_gmos", "N20181115S0215_flattened.fits")
 )[0].data
 
 plt.figure(1, figsize=(10, 4))

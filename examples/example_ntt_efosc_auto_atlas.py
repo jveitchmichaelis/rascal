@@ -1,3 +1,5 @@
+import os
+
 from astropy.io import fits
 import numpy as np
 from scipy.signal import find_peaks
@@ -6,8 +8,12 @@ from rascal.calibrator import Calibrator
 from rascal.atlas import Atlas
 from rascal.util import refine_peaks
 
+base_dir = os.path.dirname(os.path.abspath(__file__))
+
 # Load the 1D Spectrum from Pypeit
-data = fits.open("data_eso36_efosc/EFOSC_spec_HeAr227_0005.fits")[0]
+data = fits.open(
+    os.path.join(base_dir, "data_eso36_efosc", "EFOSC_spec_HeAr227_0005.fits")
+)[0]
 spectrum = np.median(data.data.T, axis=0)
 
 # Identify the arc lines

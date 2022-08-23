@@ -10,8 +10,9 @@ from rascal.util import refine_peaks
 
 # Load the LT SPRAT data
 base_dir = os.path.dirname(os.path.abspath(__file__))
+
 spectrum2D = fits.open(
-    os.path.join(base_dir, "data_int_ids/int20180101_01355922.fits.fz")
+    os.path.join(base_dir, "data_int_ids", "int20180101_01355922.fits.fz")
 )
 
 data = spectrum2D[1].data
