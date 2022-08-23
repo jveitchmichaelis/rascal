@@ -101,7 +101,7 @@ atlas.add_user_atlas(
     temperature=temperature,
     relative_humidity=relative_humidity,
 )
-c.set_atlas(atlas, candidate_tolerance=5.0)
+c.set_atlas(atlas, candidate_tolerance=3.0)
 
 
 c.do_hough_transform()

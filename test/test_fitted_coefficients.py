@@ -30,15 +30,7 @@ osiris_fit_coeff = np.array(
         9.00463547e-12,
     ]
 )
-sprat_fit_coeff = np.array(
-    [
-        3.48888535e03,
-        3.80147651e00,
-        1.74826021e-03,
-        -1.37695946e-06,
-        4.04726228e-10,
-    ]
-)
+sprat_fit_coeff = np.array([3.48888535e03, 3.80147651e00, 1.74826021e-03])
 
 # All pixel values here are unbinned
 # n for north
@@ -386,7 +378,7 @@ def test_sprat_fit():
         temperature=temperature,
         relative_humidity=relative_humidity,
     )
-    c.set_atlas(atlas, candidate_tolerance=5.0)
+    c.set_atlas(atlas, candidate_tolerance=3.0)
 
     c.do_hough_transform()
 
