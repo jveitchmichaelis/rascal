@@ -46,6 +46,7 @@ def test_sprat_manual_atlas():
 
     # auto filename
     c.plot_arc(display=False, fig_type="png+html", save_fig=True)
+    os.remove("rascal_arc.png")
     # user provided filename
     c.plot_arc(
         display=False,

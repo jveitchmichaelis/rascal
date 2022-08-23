@@ -1,13 +1,19 @@
+from collections import Counter
+import os
+import time
+
 import numpy as np
+
 from .util import load_calibration_lines
 from .util import vacuum_to_air_wavelength
 
 
 class AtlasLine:
-    def __init__(self, wavelength, element=None, intensity=None):
+    def __init__(self, wavelength, element=None, intensity=None, source=None):
         self.wavelength = wavelength
         self.element = element
         self.intensity = intensity
+        self.source = source
 
 
 class Atlas:
@@ -200,7 +206,7 @@ class Atlas:
                     zip(atlas_elements_tmp, atlas_tmp, atlas_intensities_tmp)
                 ):
                     self.atlas_lines.append(
-                        AtlasLine(line, element, intensity)
+                        AtlasLine(line, element, intensity, "Auto")
                     )
 
     def add_user_atlas(
@@ -283,14 +289,17 @@ class Atlas:
         for element, line, intensity in list(
             zip(elements, wavelengths, intensities)
         ):
-            self.atlas_lines.append(AtlasLine(line, element, intensity))
+            self.atlas_lines.append(
+                AtlasLine(line, element, intensity, "User")
+            )
 
     def get_lines(self):
         """
         Returns a list of line wavelengths in the atlas
 
         Returns
-            wavelength_list: list
+        -------
+        wavelength_list: list
 
         """
         return [line.wavelength for line in self.atlas_lines]
@@ -300,22 +309,133 @@ class Atlas:
         Returns a list of per-line elements in the atlas
 
         Returns
-            element_list: list
+        -------
+        element_list: list
 
         """
 
-        return [line.element for line in self.atlas_lines]
+        element_list = [line.element for line in self.atlas_lines]
+
+        return element_list
 
     def get_intensities(self):
         """
         Returns a list of per-line intensities in the atlas
 
         Returns
-            intensity_list: list
+        -------
+        intensity_list: list
 
         """
 
-        return [line.intensity for line in self.atlas_lines]
+        intensity_list = [line.intensity for line in self.atlas_lines]
+
+        return intensity_list
+
+    def get_sources(self):
+        """
+        Returns a list of per-line source in the atlas
+
+        Returns
+        -------
+        source_list: list
+
+        """
+
+        source_list = [line.source for line in self.atlas_lines]
+
+        return source_list
+
+    def summary(self, mode="executive", return_string=False):
+        """
+        Return a summary of the content of the Atlas object. The executive
+        mode only return basic info. The full mode list items in details.
+
+        Parameters
+        ----------
+        mode : str, optional
+            Mode of summery, choose from "executive" and "full".
+            (Default: "executive")
+
+        """
+
+        n_lines = len(self.atlas_lines)
+        output = "Number of lines in Atlas: {}.{}".format(n_lines, os.linesep)
+        output_line_width = len(output) - len(os.linesep)
+
+        lines = np.array(self.get_lines())
+        elements = np.array(self.get_elements())
+        intensities = np.array(self.get_intensities())
+        sources = np.array(self.get_sources())
+
+        order_arg = np.argsort(lines)
+        lines = lines[order_arg]
+        elements = elements[order_arg]
+        intensities = intensities[order_arg]
+        sources = sources[order_arg]
+
+        elements_count = Counter(elements)
+
+        for i in elements_count:
+
+            output += "--> Number of {} lines: {}.{}".format(
+                i, elements_count[i], os.linesep
+            )
+
+        if mode == "executive":
+
+            print(output)
+
+        else:
+
+            output += os.linesep
+            output2 = ""
+            output2_max_width = 0
+            for e, l, i, s in zip(elements, lines, intensities, sources):
+
+                output2_temp = "Element: {} at {} Angstrom with intensity {}. Added from: {}.{}".format(
+                    e, l, i, s, os.linesep
+                )
+                if len(output2_temp) > output2_max_width:
+                    output2_max_width = len(output2_temp)
+                output2 += output2_temp
+
+            output += "+" * (output2_max_width - len(os.linesep)) + os.linesep
+            output += output2
+
+            print(output)
+
+        if return_string:
+
+            return output
+
+    def save_summary(self, mode="full", filename=None):
+        """
+        Save the summary of the Atlas object, see `summary` for more detail.
+
+        Parameters
+        ----------
+        mode : str, optional
+            Mode of summery, choose from "executive" and "full".
+            (Default: "full")
+        filename : str, optional
+            The export destination path, None will return with filename
+            "atlas_summary_YYMMDD_HHMMSS"  (Default: None)
+
+        """
+
+        if filename == None:
+
+            filename = "atlas_{}_summary_{}.txt".format(
+                mode, time.strftime("%Y%m%d_%H%M%S", time.gmtime())
+            )
+
+        summary = self.summary(mode=mode, return_string=True)
+
+        with open(filename, "w+") as f:
+            f.write(summary)
+
+        return filename
 
     def remove_atlas_lines_range(self, wavelength, tolerance=10):
         """

@@ -1,5 +1,7 @@
-import logging
 from itertools import combinations
+import logging
+import os
+from unittest.mock import mock_open, patch
 
 import numpy as np
 import pytest
@@ -9,6 +11,8 @@ from rascal.atlas import Atlas
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger()
+
+HERE = os.path.dirname(os.path.realpath(__file__))
 
 
 @pytest.mark.xfail()
@@ -77,3 +81,60 @@ def test_setting_nones_to_known_pairs_expect_fail():
     logger.info("Testing adding None as known pairs.")
     cal = Calibrator(peaks=np.arange(10))
     cal.set_known_pairs([None], [None])
+
+
+element_list = ["Hg", "Ar", "Xe", "Kr"]
+atlas = Atlas()
+atlas.add(elements=element_list)
+cal = Calibrator(peaks=np.arange(10))
+cal.set_atlas(atlas)
+
+
+def test_get_summary_executive():
+    cal.atlas_summary(mode="executive")
+
+
+def test_get_summary_full():
+    cal.atlas_summary(mode="full")
+
+
+def test_get_summary_executive_return_string():
+    something = cal.atlas_summary(mode="executive", return_string=True)
+    assert type(something) == str
+
+
+def test_get_summary_full_return_string():
+    something = cal.atlas_summary(mode="full", return_string=True)
+    assert type(something) == str
+
+
+def test_save_executive_summary():
+    filepath = os.path.join(HERE, "test_save_atlas_executive_summary.txt")
+    cal.save_atlas_summary(
+        mode="executive",
+        filename=filepath,
+    )
+    assert os.path.exists(filepath)
+
+
+def test_save_full_summary():
+    filepath = os.path.join(HERE, "test_save_atlas_full_summary.txt")
+    cal.save_atlas_summary(
+        mode="full",
+        filename=filepath,
+    )
+    assert os.path.exists(filepath)
+
+
+def test_save_executive_summary_default():
+    output_path = cal.save_atlas_summary(
+        mode="executive",
+    )
+    os.remove(output_path)
+
+
+def test_save_full_summary_default():
+    output_path = cal.save_atlas_summary(
+        mode="full",
+    )
+    os.remove(output_path)

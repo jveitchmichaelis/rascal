@@ -1540,6 +1540,44 @@ class Calibrator:
         # from atlas
         self._generate_pairs()
 
+    def atlas_summary(self, mode="executive", return_string=False):
+        """
+        Return a summary of the content of the Atlas object. The executive
+        mode only return basic info. The full mode list items in details.
+
+        Parameters
+        ----------
+        mode : str, optional
+            Mode of summery, choose from "executive" and "full".
+            (Default: "executive")
+
+        """
+
+        summary = self.atlas.summary(mode=mode, return_string=return_string)
+
+        if return_string:
+
+            return summary
+
+    def save_atlas_summary(self, mode="full", filename=None):
+        """
+        Save the summary of the Atlas object, see `summary` for more detail.
+
+        Parameters
+        ----------
+        mode : str, optional
+            Mode of summery, choose from "executive" and "full".
+            (Default: "full")
+        filename : str, optional
+            The export destination path, None will return with filename
+            "atlas_summary_YYMMDD_HHMMSS"  (Default: None)
+
+        """
+
+        output_path = self.atlas.save_summary(mode=mode, filename=filename)
+
+        return output_path
+
     def do_hough_transform(self, brute_force=False):
 
         if self.pairs == []:
