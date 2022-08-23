@@ -272,7 +272,7 @@ def test_quadratic_fit():
     assert np.abs(best_p_robust[2] - 1e-3) / 1e-3 < 0.001
     assert np.abs(best_p_robust[1] - 4.0) / 4.0 < 0.001
     assert np.abs(best_p_robust[0] - 3000.0) / 3000.0 < 0.001
-    assert peak_utilisation > 0.8
+    assert peak_utilisation > 0.7
     assert atlas_utilisation > 0.5
 
 
@@ -320,7 +320,7 @@ def test_quadratic_fit_legendre():
     assert np.abs(best_p[2] - 1e-3) / 1e-3 < 0.001
     assert np.abs(best_p[1] - 4.0) / 4.0 < 0.001
     assert np.abs(best_p[0] - 3000.0) / 3000.0 < 0.001
-    assert peak_utilisation > 0.7
+    assert peak_utilisation > 0.6
     assert atlas_utilisation > 0.5
 
 
@@ -367,5 +367,5 @@ def test_quadratic_fit_chebyshev():
     assert np.abs(best_p[2] - 1e-3) / 1e-3 < 0.001
     assert np.abs(best_p[1] - 4.0) / 4.0 < 0.001
     assert np.abs(best_p[0] - 3000.0) / 3000.0 < 0.001
-    assert peak_utilisation > 0.7
+    assert peak_utilisation > 0.6
     assert atlas_utilisation > 0.5

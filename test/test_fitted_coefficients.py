@@ -401,4 +401,4 @@ def test_sprat_fit():
         atlas_utilisation,
     ) = c.fit(max_tries=2500)
 
-    assert np.isclose(c.fit_coeff, sprat_fit_coeff, rtol=0.05).all()
+    assert np.isclose(c.fit_coeff[:3], sprat_fit_coeff[:3], rtol=0.01).all()
