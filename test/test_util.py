@@ -91,6 +91,33 @@ def test_get_calibration_lines():
     assert len(get_calibration_lines(elements=["He"], min_distance=0)[0]) == 25
 
 
+def test_get_calibration_lines_top_10_only():
+    assert (
+        len(
+            get_calibration_lines(
+                elements=["He"], min_intensity=10, brightest_n_lines=10
+            )[0]
+        )
+        <= 10
+    )
+    assert (
+        len(
+            get_calibration_lines(
+                elements=["He"], min_intensity=0, brightest_n_lines=10
+            )[0]
+        )
+        <= 10
+    )
+    assert (
+        len(
+            get_calibration_lines(
+                elements=["He"], min_distance=0, brightest_n_lines=10
+            )[0]
+        )
+        <= 10
+    )
+
+
 def test_get_calibration_lines_vacuum_vs_air():
     wave_air = get_calibration_lines(elements=["He"], min_intensity=10)[1]
     wave_vacuum = get_calibration_lines(

@@ -254,6 +254,7 @@ def get_calibration_lines(
     max_atlas_wavelength=15000.0,
     min_intensity=10.0,
     min_distance=10.0,
+    brightest_n_lines=None,
     vacuum=False,
     pressure=101325.0,
     temperature=273.15,
@@ -288,6 +289,8 @@ def get_calibration_lines(
     min_distance: int
         All ines within this separation from other lines are treated
         as unresolved, all of them get removed from the list.
+    brightest_n_lines: int
+        Only return the brightest n lines
     vacuum: bool
         Return vacuum wavelengths
     pressure: float
@@ -328,9 +331,16 @@ def get_calibration_lines(
     else:
         intensity_mask = np.ones_like(lines[:, 0]).astype(bool)
 
-    elements = lines[:, 0][intensity_mask]
-    wavelengths = lines[:, 1][intensity_mask].astype("float32")
-    intensities = lines[:, 2][intensity_mask].astype("float32")
+    elements = np.array(lines[:, 0][intensity_mask])
+    wavelengths = np.array(lines[:, 1][intensity_mask].astype("float32"))
+    intensities = np.array(lines[:, 2][intensity_mask].astype("float32"))
+
+    if brightest_n_lines is not None:
+
+        to_keep = np.argsort(intensities)[::-1][:brightest_n_lines]
+        elements = elements[to_keep]
+        intensities = intensities[to_keep]
+        wavelengths = wavelengths[to_keep]
 
     # Calculate peak separation
     if min_distance > 0:
@@ -357,6 +367,7 @@ def print_calibration_lines(
     max_atlas_wavelength=15000.0,
     min_intensity=10.0,
     min_distance=10.0,
+    brightest_n_lines=None,
     vacuum=False,
     pressure=101325.0,
     temperature=273.15,
@@ -390,6 +401,8 @@ def print_calibration_lines(
     min_distance: int
         All ines within this separation from other lines are treated
         as unresolved, all of them get removed from the list.
+    brightest_n_lines: int
+        Only return the brightest n lines
     vacuum: bool
         Return vacuum wavelengths
     pressure: float
@@ -407,6 +420,7 @@ def print_calibration_lines(
         max_atlas_wavelength=max_atlas_wavelength,
         min_intensity=min_intensity,
         min_distance=min_distance,
+        brightest_n_lines=brightest_n_lines,
         vacuum=vacuum,
         pressure=pressure,
         temperature=temperature,
@@ -429,6 +443,7 @@ def plot_calibration_lines(
     max_atlas_wavelength=15000.0,
     min_intensity=10.0,
     min_distance=10.0,
+    brightest_n_lines=None,
     pixel_scale=2.0,
     vacuum=False,
     pressure=101325.0,
@@ -452,6 +467,8 @@ def plot_calibration_lines(
     min_distance: int
         All ines within this separation from other lines are treated
         as unresolved, all of them get removed from the list.
+    brightest_n_lines: int
+        Only return the brightest n lines
     vacuum: bool
         Return vacuum wavelengths
     pressure: float
@@ -474,6 +491,7 @@ def plot_calibration_lines(
         max_atlas_wavelength=max_atlas_wavelength,
         min_intensity=min_intensity,
         min_distance=min_distance,
+        brightest_n_lines=brightest_n_lines,
         vacuum=vacuum,
         pressure=pressure,
         temperature=temperature,
@@ -527,6 +545,7 @@ def load_calibration_lines(
     max_atlas_wavelength=15000.0,
     min_intensity=10.0,
     min_distance=10.0,
+    brightest_n_lines=None,
     vacuum=False,
     pressure=101325.0,
     temperature=273.15,
@@ -561,6 +580,8 @@ def load_calibration_lines(
     min_distance: int
         All ines within this separation from other lines are treated
         as unresolved, all of them get removed from the list.
+    brightest_n_lines: int
+        Only return the brightest n lines
     vacuum: bool
         Return vacuum wavelengths
     pressure: float
@@ -572,8 +593,13 @@ def load_calibration_lines(
 
     Returns
     -------
-    out: list
-        Emission lines corresponding to the parameters specified
+    elements: list
+        Emission line names corresponding to the parameters specified
+    wavelengths: list
+        Emission line wavelengths corresponding to the parameters specified
+    intensities: list
+        Emission line intensities corresponding to the parameters specified
+
     """
 
     elements, wavelengths, intensities = get_calibration_lines(
@@ -582,6 +608,7 @@ def load_calibration_lines(
         max_atlas_wavelength=max_atlas_wavelength,
         min_intensity=min_intensity,
         min_distance=min_distance,
+        brightest_n_lines=brightest_n_lines,
         vacuum=vacuum,
         pressure=pressure,
         temperature=temperature,
