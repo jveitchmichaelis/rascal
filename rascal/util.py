@@ -81,7 +81,7 @@ def edlen_refraction(
     """
 
     # Convert to micron for computing variable S
-    w = wavelengths / 1e4
+    w = np.array(wavelengths) / 1e4
 
     t = temperature
     T = temperature + 273.15
