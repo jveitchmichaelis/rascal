@@ -25,6 +25,7 @@ class Atlas:
         range_tolerance=500,
         min_intensity=10.0,
         min_distance=10.0,
+        brightest_n_lines=None,
         vacuum=False,
         pressure=101325.0,
         temperature=273.15,
@@ -62,6 +63,8 @@ class Atlas:
             intensity.
         min_distance: float (default: None)
             Minimum separation between neighbouring arc lines.
+        brightest_n_lines: int
+            Only return the n brightest lines
         vacuum: boolean
             Set to True if the light path from the arc lamb to the detector
             plane is entirely in vacuum.
@@ -90,6 +93,7 @@ class Atlas:
                 max_atlas_wavelength=max_atlas_wavelength,
                 min_intensity=min_intensity,
                 min_distance=min_distance,
+                brightest_n_lines=brightest_n_lines,
                 vacuum=vacuum,
                 pressure=pressure,
                 temperature=temperature,
@@ -103,6 +107,7 @@ class Atlas:
         max_atlas_wavelength=None,
         min_intensity=10.0,
         min_distance=10.0,
+        brightest_n_lines=None,
         vacuum=False,
         pressure=101325.0,
         temperature=273.15,
@@ -191,15 +196,16 @@ class Atlas:
                     atlas_tmp,
                     atlas_intensities_tmp,
                 ) = load_calibration_lines(
-                    element,
-                    min_atlas_wavelength,
-                    max_atlas_wavelength,
-                    min_intensity,
-                    min_distance,
-                    vacuum,
-                    pressure,
-                    temperature,
-                    relative_humidity,
+                    elements=element,
+                    min_atlas_wavelength=min_atlas_wavelength,
+                    max_atlas_wavelength=max_atlas_wavelength,
+                    min_intensity=min_intensity,
+                    min_distance=min_distance,
+                    brightest_n_lines=brightest_n_lines,
+                    vacuum=vacuum,
+                    pressure=pressure,
+                    temperature=temperature,
+                    relative_humidity=relative_humidity,
                 )
 
                 for element, line, intensity in list(

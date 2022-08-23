@@ -290,7 +290,7 @@ def get_calibration_lines(
         All ines within this separation from other lines are treated
         as unresolved, all of them get removed from the list.
     brightest_n_lines: int
-        Only return the brightest n lines
+        Only return the n brightest lines
     vacuum: bool
         Return vacuum wavelengths
     pressure: float
@@ -331,13 +331,12 @@ def get_calibration_lines(
     else:
         intensity_mask = np.ones_like(lines[:, 0]).astype(bool)
 
-    elements = np.array(lines[:, 0][intensity_mask])
-    wavelengths = np.array(lines[:, 1][intensity_mask].astype("float32"))
-    intensities = np.array(lines[:, 2][intensity_mask].astype("float32"))
+    elements = lines[:, 0][intensity_mask]
+    wavelengths = lines[:, 1][intensity_mask].astype("float32")
+    intensities = lines[:, 2][intensity_mask].astype("float32")
 
     if brightest_n_lines is not None:
-
-        to_keep = np.argsort(intensities)[::-1][:brightest_n_lines]
+        to_keep = np.argsort(np.array(intensities))[::-1][:brightest_n_lines]
         elements = elements[to_keep]
         intensities = intensities[to_keep]
         wavelengths = wavelengths[to_keep]
@@ -402,7 +401,7 @@ def print_calibration_lines(
         All ines within this separation from other lines are treated
         as unresolved, all of them get removed from the list.
     brightest_n_lines: int
-        Only return the brightest n lines
+        Only return the n brightest lines
     vacuum: bool
         Return vacuum wavelengths
     pressure: float
@@ -468,7 +467,7 @@ def plot_calibration_lines(
         All ines within this separation from other lines are treated
         as unresolved, all of them get removed from the list.
     brightest_n_lines: int
-        Only return the brightest n lines
+        Only return the n brightest lines
     vacuum: bool
         Return vacuum wavelengths
     pressure: float
@@ -581,7 +580,7 @@ def load_calibration_lines(
         All ines within this separation from other lines are treated
         as unresolved, all of them get removed from the list.
     brightest_n_lines: int
-        Only return the brightest n lines
+        Only return the n brightest lines
     vacuum: bool
         Return vacuum wavelengths
     pressure: float
