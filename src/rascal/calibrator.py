@@ -404,6 +404,7 @@ class Calibrator:
         candidate_tolerance,
         brute_force,
         progress,
+        use_msac=False,
     ):
         """
         Use RANSAC to sample the parameter space and give best guess
@@ -425,6 +426,9 @@ class Calibrator:
             Solve all pixel-wavelength combinations with set to True.
         progress: boolean
             Show the progress bar with tdqm if set to True.
+        use_msac: boolean
+            Use M-SAC cost instead of inlier count
+
 
         Returns
         -------
@@ -670,15 +674,17 @@ class Calibrator:
 
                     weight = 1.0
 
-                cost = (
-                    sum(err)
-                    / (len(err) - len(fit_coeffs) + 1)
-                    / (weight + 1e-9)
-                )
+                if use_msac:
+                    cost = (
+                        sum(err)
+                        / (len(err) - len(fit_coeffs) + 1)
+                        / (weight + 1e-9)
+                    )
+                else:
+                    cost = 1.0 / (sum(err < self.ransac_tolerance) + 1e-9)
 
                 # If this is potentially a new best fit, then handle that first
                 if cost <= best_cost:
-
                     # reject lines outside the rms limit (ransac_tolerance)
                     # TODO: should n_inliers be recalculated from the robust
                     # fit?
@@ -746,6 +752,19 @@ class Calibrator:
                             "Not enough matched peaks for valid solution, "
                             "user specified {:1.2f} %.".format(
                                 100 * self.minimum_matches
+                            )
+                        )
+                        continue
+
+                    if (
+                        not use_msac
+                        and n_inliers == best_inliers
+                        and rms_residual > best_err
+                    ):
+                        self.logger.info(
+                            "Match has same number of inliers, "
+                            "but fit error is worse ({:1.2f} > {:1.2f}) %.".format(
+                                rms_residual, best_err
                             )
                         )
                         continue
