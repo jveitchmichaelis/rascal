@@ -1,3 +1,4 @@
+from fileinput import filename
 import os
 
 import numpy as np
@@ -34,15 +35,14 @@ def test_sprat_manual_atlas():
     relative_humidity = fits_file.header["REFHUMID"]
 
     # Identify the peaks
-    peaks, _ = find_peaks(spectrum, height=300, distance=5, threshold=None)
-    peaks = util.refine_peaks(spectrum, peaks, window_width=5)
+    peaks, _ = find_peaks(
+        spectrum, height=300, prominence=150, distance=5, threshold=None
+    )
+    peaks = util.refine_peaks(spectrum, peaks, window_width=3)
 
     # Initialise the calibrator
     c = Calibrator(peaks, spectrum=spectrum)
-    a = Atlas()
-
-    c.use_plotly()
-    assert c.which_plotting_library() == "plotly"
+    atlas = Atlas()
 
     # auto filename
     c.plot_arc(display=False, fig_type="png+html", save_fig=True)
@@ -58,12 +58,27 @@ def test_sprat_manual_atlas():
         ),
     )
 
+    c.use_plotly()
+    assert c.which_plotting_library() == "plotly"
+
+    # auto filename
+    c.plot_arc(display=False, fig_type="png+html", save_fig=True)
+    os.remove("rascal_arc.png")
+    # user provided filename
+    c.plot_arc(
+        display=False,
+        log_spectrum=True,
+        fig_type="png+html",
+        save_fig=True,
+        filename=os.path.join(HERE, "test_output", "test_lt_sprat_arc_plotly"),
+    )
+
     c.set_hough_properties(
-        num_slopes=5000,
-        range_tolerance=500.0,
+        num_slopes=2000,
+        range_tolerance=200.0,
         xbins=100,
         ybins=100,
-        min_wavelength=3500.0,
+        min_wavelength=3600.0,
         max_wavelength=8000.0,
     )
     # blend: 4829.71, 4844.33
@@ -72,7 +87,7 @@ def test_sprat_manual_atlas():
     # blend: 6872.11, 6882.16
     # blend: 7283.961, 7285.301
     # blend: 7316.272, 7321.452
-    atlas = [
+    atlas_lines = [
         4193.5,
         4385.77,
         4500.98,
@@ -108,26 +123,27 @@ def test_sprat_manual_atlas():
         7967.34,
         8057.258,
     ]
-    element = ["Xe"] * len(atlas)
+    element = ["Xe"] * len(atlas_lines)
 
-    a.add_user_atlas(
+    atlas = Atlas(range_tolerance=200)
+    atlas.add_user_atlas(
         element,
-        atlas,
+        atlas_lines,
         pressure=pressure,
         temperature=temperature,
         relative_humidity=relative_humidity,
     )
-    c.set_atlas(a, constrain_poly=True)
+    c.set_atlas(atlas)
 
     c.set_ransac_properties(
-        sample_size=5, top_n_candidate=5, filter_close=True
+        sample_size=5, top_n_candidate=10, filter_close=True
     )
 
     c.do_hough_transform(brute_force=True)
 
     # Run the wavelength calibration
     best_p, x, y, rms, residual, peak_utilisation, atlas_utilisation = c.fit(
-        max_tries=250
+        max_tries=1000, candidate_tolerance=5.0
     )
 
     # Plot the solution
@@ -161,9 +177,7 @@ def test_sprat_manual_atlas():
         display=False,
         fig_type="png+html",
         save_fig=True,
-        filename=os.path.join(
-            HERE, "test_output", "test_lt_sprat_fit_matplotlib"
-        ),
+        filename=os.path.join(HERE, "test_output", "test_lt_sprat_fit_plotly"),
         tolerance=5.0,
     )
 
@@ -173,7 +187,7 @@ def test_sprat_manual_atlas():
         fig_type="png+html",
         save_fig=True,
         filename=os.path.join(
-            HERE, "test_output", "test_lt_sprat_search_space_matplotlib"
+            HERE, "test_output", "test_lt_sprat_search_space_plotly"
         ),
     )
 
@@ -187,7 +201,9 @@ def test_sprat_manual_atlas():
     c.plot_arc(
         display=False,
         save_fig=True,
-        filename=os.path.join(HERE, "test_output", "test_lt_sprat_arc_plotly"),
+        filename=os.path.join(
+            HERE, "test_output", "test_lt_sprat_arc_matplotlib"
+        ),
     )
     c.plot_arc(
         log_spectrum=True,
@@ -195,7 +211,7 @@ def test_sprat_manual_atlas():
         save_fig=True,
         fig_type="png+html",
         filename=os.path.join(
-            HERE, "test_output", "test_lt_sprat_arc_log_plotly"
+            HERE, "test_output", "test_lt_sprat_arc_log_matplotlib"
         ),
     )
 
@@ -209,7 +225,9 @@ def test_sprat_manual_atlas():
         display=False,
         save_fig=True,
         fig_type="png+html",
-        filename=os.path.join(HERE, "test_output", "test_lt_sprat_fit_plotly"),
+        filename=os.path.join(
+            HERE, "test_output", "test_lt_sprat_fit_matplotlib"
+        ),
     )
 
     # Plot the solution
@@ -222,7 +240,9 @@ def test_sprat_manual_atlas():
         display=False,
         save_fig=True,
         fig_type="png+html",
-        filename=os.path.join(HERE, "test_output", "test_lt_sprat_fit_plotly"),
+        filename=os.path.join(
+            HERE, "test_output", "test_lt_sprat_fit_matplotlib"
+        ),
     )
 
     # Show the parameter space for searching possible solution
@@ -230,14 +250,18 @@ def test_sprat_manual_atlas():
         save_fig=True,
         fig_type="png+html",
         display=False,
-        filename=os.path.join(HERE, "test_output"),
+        filename=os.path.join(
+            HERE, "test_output", "test_lt_sprat_search_space_matplotlib"
+        ),
     )
 
     c.plot_arc(
         save_fig=True,
         fig_type="png+html",
         display=False,
-        filename=os.path.join(HERE, "test_output", "test_lt_sprat_arc_plotly"),
+        filename=os.path.join(
+            HERE, "test_output", "test_lt_sprat_arc_matplotlib"
+        ),
     )
 
     c.plot_arc(
@@ -258,7 +282,7 @@ def test_sprat_manual_atlas():
         fig_type="png+html",
         display=False,
         filename=os.path.join(
-            HERE, "test_output", "test_lt_sprat_fit_log_plotly"
+            HERE, "test_output", "test_lt_sprat_fit_log_matplotlib"
         ),
         return_jsonstring=True,
     )
@@ -273,7 +297,7 @@ def test_sprat_manual_atlas():
         fig_type="png+html",
         display=False,
         filename=os.path.join(
-            HERE, "test_output", "test_lt_sprat_fit_log_plotly"
+            HERE, "test_output", "test_lt_sprat_fit_log_matplotlib"
         ),
     )
 
@@ -283,7 +307,18 @@ def test_sprat_manual_atlas():
         fig_type="png+html",
         display=False,
         filename=os.path.join(
-            HERE, "test_output", "test_lt_sprat_search_space_plotly"
+            HERE, "test_output", "test_lt_sprat_search_space_matplotlib"
         ),
         return_jsonstring=True,
     )
+
+    c.summary()
+
+    # save with a filename provided
+    c.save_summary(
+        filename=os.path.join(HERE, "test_output", "test_lt_sprat_summary.txt")
+    )
+
+    # save without providing a filename
+    out_path = c.save_summary()
+    os.remove(out_path)

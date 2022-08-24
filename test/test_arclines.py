@@ -109,21 +109,27 @@ def test_get_summary_full_return_string():
 
 
 def test_save_executive_summary():
-    filepath = os.path.join(HERE, "test_save_atlas_executive_summary.txt")
+    filepath = os.path.join(
+        HERE, "test_output", "test_save_atlas_executive_summary.txt"
+    )
     cal.save_atlas_summary(
         mode="executive",
         filename=filepath,
     )
     assert os.path.exists(filepath)
+    os.remove(filepath)
 
 
 def test_save_full_summary():
-    filepath = os.path.join(HERE, "test_save_atlas_full_summary.txt")
+    filepath = os.path.join(
+        HERE, "test_output", "test_save_atlas_full_summary.txt"
+    )
     cal.save_atlas_summary(
         mode="full",
         filename=filepath,
     )
     assert os.path.exists(filepath)
+    os.remove(filepath)
 
 
 def test_save_executive_summary_default():

@@ -501,7 +501,6 @@ def plot_fit(
     calibrator,
     fit_coeff,
     spectrum=None,
-    tolerance=5.0,
     plot_atlas=True,
     log_spectrum=False,
     save_fig=False,
@@ -521,9 +520,6 @@ def plot_fit(
         Best fit polynomail fit_coefficients
     spectrum: 1D numpy array (N)
         Array of length N pixels
-    tolerance: float (default: 5)
-        Absolute difference between model and fitted wavelengths in unit
-        of angstrom.
     plot_atlas: boolean (default: True)
         Display all the relavent lines available in the atlas library.
     log_spectrum: boolean (default: False)
@@ -633,20 +629,17 @@ def plot_fit(
         for p in calibrator.peaks:
 
             x = calibrator.polyval(p, fit_coeff)
-            diff = calibrator.atlas.get_lines() - x
-            idx = np.argmin(np.abs(diff))
-            all_diff.append(diff[idx])
 
             calibrator.logger.info("Peak at: {} A".format(x))
 
-            if np.abs(diff[idx]) < tolerance:
+            if p in calibrator.matched_peaks:
 
+                idx = np.argwhere(p == calibrator.matched_peaks)[0][0]
+                diff = calibrator.matched_atlas[idx] - x
                 fitted_peaks.append(p)
-                fitted_diff.append(diff[idx])
+                fitted_diff.append(diff)
                 calibrator.logger.info(
-                    "- matched to {} A".format(
-                        calibrator.atlas.get_lines()[idx]
-                    )
+                    "- matched to {} A".format(calibrator.matched_atlas[idx])
                 )
 
                 if spectrum is not None:
@@ -676,9 +669,8 @@ def plot_fit(
                 ax1.text(
                     x - 3,
                     text_box_pos,
-                    s="{}:{:1.2f}".format(
-                        calibrator.atlas.get_elements()[idx],
-                        calibrator.atlas.get_lines()[idx],
+                    s="{:1.2f}".format(
+                        calibrator.matched_atlas[idx],
                     ),
                     rotation=90,
                     bbox=dict(facecolor="white", alpha=1),
@@ -816,25 +808,21 @@ def plot_fit(
                 ),
             )
 
-            diff = calibrator.atlas.get_lines() - x
-            idx = np.argmin(np.abs(diff))
-            all_diff.append(diff[idx])
+            if p in calibrator.matched_peaks:
 
-            calibrator.logger.info("Peak at: {} A".format(x))
-
-            if np.abs(diff[idx]) < tolerance:
-
+                idx = np.argwhere(p == calibrator.matched_peaks)[0][0]
+                diff = calibrator.matched_atlas[idx] - x
                 fitted_peaks.append(p)
+                fitted_diff.append(diff)
+
                 if spectrum is not None:
                     fitted_peaks_adu.append(
                         spectrum[int(calibrator.pix_to_rawpix(p))]
                     )
-                    fitted_diff.append(diff[idx])
-                    calibrator.logger.info(
-                        "- matched to {} A".format(
-                            calibrator.atlas.get_lines()[idx]
-                        )
-                    )
+
+                calibrator.logger.info(
+                    "- matched to {} A".format(calibrator.matched_atlas[idx])
+                )
 
         x_fitted = calibrator.polyval(fitted_peaks, fit_coeff)
 

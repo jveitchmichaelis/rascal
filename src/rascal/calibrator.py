@@ -1,6 +1,8 @@
 import copy
 import itertools
 import logging
+import os
+import time
 
 import numpy as np
 from scipy.spatial import Delaunay
@@ -10,7 +12,6 @@ from tqdm.autonotebook import tqdm
 
 from .util import _derivative
 from .util import gauss
-
 from . import plotting
 from . import models
 from .houghtransform import HoughTransform
@@ -1867,7 +1868,7 @@ class Calibrator:
 
         self.fit_coeff = fit_coeff
         self.rms = rms
-        self.residual = residual
+        self.residuals = residual
         self.peak_utilisation = peak_utilisation
         self.atlas_utilisation = atlas_utilisation
 
@@ -1876,7 +1877,7 @@ class Calibrator:
             self.matched_peaks,
             self.matched_atlas,
             self.rms,
-            self.residual,
+            self.residuals,
             self.peak_utilisation,
             self.atlas_utilisation,
         )
@@ -2107,6 +2108,9 @@ class Calibrator:
                 np.asarray(self.matched_atlas),
                 fit_deg,
             )
+            self.residuals = self.matched_atlas - self.polyval(
+                self.matched_peaks, self.fit_coeff
+            )
 
             if np.any(np.isnan(self.fit_coeff)):
 
@@ -2126,9 +2130,6 @@ class Calibrator:
 
             else:
 
-                self.residuals = self.matched_atlas - self.polyval(
-                    self.matched_peaks, self.fit_coeff
-                )
                 self.rms = np.sqrt(
                     np.nansum(self.residuals**2.0) / len(self.residuals)
                 )
@@ -2146,6 +2147,109 @@ class Calibrator:
             self.peak_utilisation,
             self.atlas_utilisation,
         )
+
+    def summary(self, return_string=False):
+        """
+        Return a summary of the fitted results of the Calibrator object.
+
+        Parameters
+        ----------
+        return_string: bool
+            Set to True to return the output string.
+
+        """
+
+        order_of_polynomial = len(self.fit_coeff)
+        output = "Order of polynomial fitted: {}{}".format(
+            order_of_polynomial, os.linesep
+        )
+
+        for i in range(order_of_polynomial):
+
+            if i == 0:
+
+                ordinal = "st"
+
+            elif i == 1:
+
+                ordinal = "nd"
+
+            elif i == 2:
+
+                ordinal = "rd"
+
+            else:
+
+                ordinal = "th"
+
+            output += "--> Coefficient of {}{} order: {}{}".format(
+                i + 1, ordinal, self.fit_coeff[i], os.linesep
+            )
+
+        output += "RMS of the best fit solution: {}{}".format(
+            self.rms, os.linesep
+        )
+        output += "Percentage of peaks unsed for fitting: {:.2f}%{}".format(
+            self.peak_utilisation * 100.0, os.linesep
+        )
+        output += (
+            "Percentage of atlas lines unsed for fitting: {:.2f}%{}".format(
+                self.atlas_utilisation * 100.0, os.linesep
+            )
+        )
+
+        output2 = ""
+        output2_max_width = 0
+
+        for p, a, r in zip(
+            self.matched_peaks, self.matched_atlas, self.residuals
+        ):
+
+            output2_tmp = (
+                "Peak {} (pix) is matched to wavelength {} A with a residual "
+                "of {} A.{}".format(p, a, r, os.linesep)
+            )
+
+            if len(output2_tmp) - 2 > output2_max_width:
+
+                output2_max_width = len(output2_tmp) - 2
+
+            output2 += output2_tmp
+
+        output += "+" * output2_max_width + os.linesep
+        output += output2
+
+        print(output)
+
+        if return_string:
+
+            return output
+
+    def save_summary(self, filename=None):
+        """
+        Save the summary of the Calibrator object, see `summary` for more
+        detail.
+
+        Parameters
+        ----------
+        filename : str, optional
+            The export destination path, None will return with filename
+            "atlas_summary_YYMMDD_HHMMSS"  (Default: None)
+
+        """
+
+        if filename is None:
+
+            filename = "rascal_fit_summary_{}.txt".format(
+                time.strftime("%Y%m%d_%H%M%S", time.gmtime())
+            )
+
+        summary = self.summary(return_string=True)
+
+        with open(filename, "w+") as f:
+            f.write(summary)
+
+        return filename
 
     def get_pix_wave_pairs(self):
         """
@@ -2451,7 +2555,6 @@ class Calibrator:
         self,
         fit_coeff=None,
         spectrum=None,
-        tolerance=5.0,
         plot_atlas=True,
         log_spectrum=False,
         save_fig=False,
@@ -2471,9 +2574,6 @@ class Calibrator:
             Best fit polynomial fit_coefficients
         spectrum: 1D numpy array (N)
             Array of length N pixels
-        tolerance: float (default: 5)
-            Absolute difference between model and fitted wavelengths in unit
-            of angstrom.
         plot_atlas: boolean (default: True)
             Display all the relavent lines available in the atlas library.
         log_spectrum: boolean (default: False)
@@ -2512,7 +2612,6 @@ class Calibrator:
             self,
             fit_coeff=fit_coeff,
             spectrum=spectrum,
-            tolerance=tolerance,
             plot_atlas=plot_atlas,
             log_spectrum=log_spectrum,
             save_fig=save_fig,

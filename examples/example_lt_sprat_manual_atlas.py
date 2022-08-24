@@ -5,8 +5,8 @@ from astropy.io import fits
 from matplotlib import pyplot as plt
 from scipy.signal import find_peaks
 
-from rascal.calibrator import Calibrator
 from rascal.atlas import Atlas
+from rascal.calibrator import Calibrator
 from rascal import util
 
 # Load the LT SPRAT data

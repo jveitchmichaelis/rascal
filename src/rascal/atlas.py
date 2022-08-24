@@ -359,9 +359,11 @@ class Atlas:
 
         Parameters
         ----------
-        mode : str, optional
+        mode : str
             Mode of summery, choose from "executive" and "full".
             (Default: "executive")
+        return_string: bool
+            Set to True to return the output string.
 
         """
 
