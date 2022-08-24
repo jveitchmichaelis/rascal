@@ -28,7 +28,9 @@ c.set_calibrator_properties(
 c.plot_arc(
     save_fig="png",
     display=False,
-    filename="output/ntt-efosc-auto-atlas-arc-spectrum",
+    filename=os.path.join(
+        base_dir, "output", "ntt-efosc-auto-atlas-arc-spectrum"
+    ),
 )
 
 c.set_known_pairs(998.53393246, 7053.9)
@@ -74,11 +76,16 @@ c.plot_fit(
     tolerance=5.0,
     display=False,
     save_fig="png",
-    filename="output/ntt-efosc-auto-atlas-wavelength-calibration",
+    filename=os.path.join(
+        base_dir, "output", "ntt-efosc-auto-atlas-wavelength-calibration"
+    ),
 )
 
 c.plot_search_space(
-    save_fig="png", filename="output/ntt-efosc-auto-atlas-search-space"
+    save_fig="png",
+    filename=os.path.join(
+        base_dir, "output", "ntt-efosc-auto-atlas-search-space"
+    ),
 )
 
 print("Stdev error: {} A".format(np.abs(residual).std()))

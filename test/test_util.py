@@ -1,10 +1,8 @@
 from unittest.mock import patch
 
 import numpy as np
-import pytest
 
-from rascal.util import *
-from rascal.util import _derivative
+from rascal import util
 
 
 pressure = np.array([9, 10, 12, 10, 10, 10, 10, 10]) * 1e4
@@ -20,11 +18,13 @@ elden = np.array(
 def test_edlen_refractive_index():
     for t, p, h, e in zip(temperature, pressure, relative_humidity, elden):
         nm1e8 = (
-            edlen_refraction(
+            util.edlen_refraction(
                 6330.0,
                 t,
                 p,
-                get_vapour_partial_pressure(h, get_vapour_pressure(t)),
+                util.get_vapour_partial_pressure(
+                    h, util.get_vapour_pressure(t)
+                ),
             )
             - 1
         ) * 1e8
@@ -73,7 +73,7 @@ def test_vacuum_to_air_wavelength():
     )
     assert np.isclose(
         wave_air,
-        vacuum_to_air_wavelength(
+        util.vacuum_to_air_wavelength(
             wave_vacuum, temperature=288.15, pressure=101325
         ),
         atol=0.1,
@@ -83,18 +83,23 @@ def test_vacuum_to_air_wavelength():
 
 def test_get_calibration_lines():
     assert (
-        len(get_calibration_lines(elements=["He"], min_intensity=10)[0]) == 20
+        len(util.get_calibration_lines(elements=["He"], min_intensity=10)[0])
+        == 20
     )
     assert (
-        len(get_calibration_lines(elements=["He"], min_intensity=0)[0]) == 33
+        len(util.get_calibration_lines(elements=["He"], min_intensity=0)[0])
+        == 33
     )
-    assert len(get_calibration_lines(elements=["He"], min_distance=0)[0]) == 25
+    assert (
+        len(util.get_calibration_lines(elements=["He"], min_distance=0)[0])
+        == 25
+    )
 
 
 def test_get_calibration_lines_top_10_only():
     assert (
         len(
-            get_calibration_lines(
+            util.get_calibration_lines(
                 elements=["He"], min_intensity=10, brightest_n_lines=10
             )[0]
         )
@@ -102,7 +107,7 @@ def test_get_calibration_lines_top_10_only():
     )
     assert (
         len(
-            get_calibration_lines(
+            util.get_calibration_lines(
                 elements=["He"], min_intensity=0, brightest_n_lines=10
             )[0]
         )
@@ -110,7 +115,7 @@ def test_get_calibration_lines_top_10_only():
     )
     assert (
         len(
-            get_calibration_lines(
+            util.get_calibration_lines(
                 elements=["He"], min_distance=0, brightest_n_lines=10
             )[0]
         )
@@ -119,23 +124,23 @@ def test_get_calibration_lines_top_10_only():
 
 
 def test_get_calibration_lines_vacuum_vs_air():
-    wave_air = get_calibration_lines(elements=["He"], min_intensity=10)[1]
-    wave_vacuum = get_calibration_lines(
+    wave_air = util.get_calibration_lines(elements=["He"], min_intensity=10)[1]
+    wave_vacuum = util.get_calibration_lines(
         elements=["He"], min_intensity=10, vacuum=True
     )[1]
     assert (np.array(wave_air) < np.array(wave_vacuum)).all()
 
 
 def test_print_calibration_lines(capfd):
-    print_calibration_lines(elements=["He"])
+    util.print_calibration_lines(elements=["He"])
     out, err = capfd.readouterr()
     assert type(out) == str
 
 
 @patch("matplotlib.pyplot.show")
 def test_plot_calibration_lines(mock_show):
-    plot_calibration_lines(elements=["He"])
+    util.plot_calibration_lines(elements=["He"])
 
 
 def test_derivative():
-    assert _derivative([2, 3, 4, 5]) == [3, 8, 15]
+    assert util._derivative([2, 3, 4, 5]) == [3, 8, 15]

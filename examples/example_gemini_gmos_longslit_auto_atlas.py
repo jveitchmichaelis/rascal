@@ -80,7 +80,9 @@ plt.imshow(np.log10(spectrum2D), aspect="auto", origin="lower")
 plt.xlabel("Spectral Direction / Pix")
 plt.ylabel("Spatial Direction / Pix")
 plt.tight_layout()
-plt.savefig("output/gemini-gmosls-auto-atlas-arc-image.png")
+plt.savefig(
+    os.path.join(base_dir, "output", "gemini-gmosls-auto-atlas-arc-image.png")
+)
 
 # Collapse into 1D spectrum between row 300 and 310
 spectrum = np.median(spectrum2D[300:310], axis=0)[::-1]
@@ -100,7 +102,9 @@ c.plot_arc(
     pixels,
     display=False,
     save_fig="png",
-    filename="output/gemini-gmosls-auto-atlas-arc-spectrum",
+    filename=os.path.join(
+        base_dir, "output", "gemini-gmosls-auto-atlas-arc-spectrum"
+    ),
 )
 c.set_hough_properties(
     num_slopes=5000,
@@ -149,12 +153,17 @@ c.plot_fit(
     tolerance=5.0,
     display=False,
     save_fig="png",
-    filename="output/gemini-gmosls-auto-atlas-wavelength-calibration",
+    filename=os.path.join(
+        base_dir, "output", "gemini-gmosls-auto-atlas-wavelength-calibration"
+    ),
 )
 
 # Show the parameter space for searching possible solution
 c.plot_search_space(
-    save_fig="png", filename="output/gemini-gmosls-auto-atlas-search-space"
+    save_fig="png",
+    filename=os.path.join(
+        base_dir, "output", "gemini-gmosls-auto-atlas-search-space"
+    ),
 )
 
 print("Stdev error: {} A".format(residual.std()))

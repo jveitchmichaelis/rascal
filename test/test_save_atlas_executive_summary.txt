@@ -1,0 +1,5 @@
+Number of lines in Atlas: 82.
+--> Number of Hg lines: 28.
+--> Number of Kr lines: 22.
+--> Number of Xe lines: 20.
+--> Number of Ar lines: 12.

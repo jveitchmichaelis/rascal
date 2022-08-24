@@ -24,7 +24,9 @@ plt.imshow(np.log10(spectrum2D), aspect="auto", origin="lower")
 plt.xlabel("Spectral Direction / Pix")
 plt.ylabel("Spatial Direction / Pix")
 plt.tight_layout()
-plt.savefig("output/lt-sprat-auto-atlas-arc-image.png")
+plt.savefig(
+    os.path.join(base_dir, "output", "lt-sprat-auto-atlas-arc-image.png")
+)
 
 
 temperature = fits_file.header["REFTEMP"]
@@ -43,7 +45,9 @@ c = Calibrator(peaks, spectrum=spectrum)
 c.plot_arc(
     display=False,
     save_fig="png",
-    filename="output/lt-sprat-auto-atlas-arc-spectrum",
+    filename=os.path.join(
+        base_dir, "output", "lt-sprat-auto-atlas-arc-spectrum"
+    ),
 )
 
 c.set_hough_properties(
@@ -93,12 +97,17 @@ c.plot_fit(
     log_spectrum=False,
     tolerance=5.0,
     save_fig="png",
-    filename="output/lt-sprat-auto-atlas-wavelength-calibration",
+    filename=os.path.join(
+        base_dir, "output", "lt-sprat-auto-atlas-wavelength-calibration"
+    ),
 )
 
 # Show the parameter space for searching possible solution
 c.plot_search_space(
-    save_fig="png", filename="output/lt-sprat-auto-atlas-search-space"
+    save_fig="png",
+    filename=os.path.join(
+        base_dir, "output", "lt-sprat-auto-atlas-search-space"
+    ),
 )
 
 print("Stdev error: {} A".format(residual.std()))

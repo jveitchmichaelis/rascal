@@ -367,7 +367,6 @@ class Atlas:
 
         n_lines = len(self.atlas_lines)
         output = "Number of lines in Atlas: {}.{}".format(n_lines, os.linesep)
-        output_line_width = len(output) - len(os.linesep)
 
         lines = np.array(self.get_lines())
         elements = np.array(self.get_elements())
@@ -399,9 +398,10 @@ class Atlas:
             output2_max_width = 0
             for e, l, i, s in zip(elements, lines, intensities, sources):
 
-                output2_temp = "Element: {} at {} Angstrom with intensity {}. Added from: {}.{}".format(
-                    e, l, i, s, os.linesep
-                )
+                output2_temp = (
+                    "Element: {} at {} Angstrom with intensity {}. "
+                    "Added from: {}.{}"
+                ).format(e, l, i, s, os.linesep)
                 if len(output2_temp) > output2_max_width:
                     output2_max_width = len(output2_temp)
                 output2 += output2_temp
@@ -430,7 +430,7 @@ class Atlas:
 
         """
 
-        if filename == None:
+        if filename is None:
 
             filename = "atlas_{}_summary_{}.txt".format(
                 mode, time.strftime("%Y%m%d_%H%M%S", time.gmtime())

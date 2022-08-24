@@ -93,7 +93,9 @@ c.do_hough_transform()
 c.plot_arc(
     save_fig="png",
     display=False,
-    filename="output/gtc-osiris-manual-atlas-arc-spectrum",
+    filename=os.path.join(
+        base_dir, "output", "gtc-osiris-manual-atlas-arc-spectrum"
+    ),
 )
 
 c.do_hough_transform()
@@ -117,7 +119,9 @@ c.plot_fit(
     tolerance=5.0,
     display=False,
     save_fig="png",
-    filename="output/gtc-osiris-manual-atlas-wavelength-calibration",
+    filename=os.path.join(
+        base_dir, "output", "gtc-osiris-manual-atlas-wavelength-calibration"
+    ),
 )
 
 # Show the parameter space for searching possible solution
@@ -127,5 +131,8 @@ print("Peaks utilisation rate: {}%".format(peak_utilisation * 100))
 print("Atlas utilisation rate: {}%".format(atlas_utilisation * 100))
 
 c.plot_search_space(
-    save_fig="png", filename="output/gtc-osiris-manual-atlas-search-space"
+    save_fig="png",
+    filename=os.path.join(
+        base_dir, "output", "gtc-osiris-manual-atlas-search-space"
+    ),
 )

@@ -45,7 +45,9 @@ c = Calibrator(peaks, spectrum=spectrum)
 c.plot_arc(
     save_fig="png",
     display=False,
-    filename="output/int-ids-auto-atlas-arc-spectrum",
+    filename=os.path.join(
+        base_dir, "output", "int-ids-auto-atlas-arc-spectrum"
+    ),
 )
 c.set_hough_properties(
     num_slopes=2000,
@@ -89,12 +91,17 @@ c.plot_fit(
     tolerance=5.0,
     display=False,
     save_fig="png",
-    filename="output/int-ids-auto-atlas-wavelength-calibration",
+    filename=os.path.join(
+        base_dir, "output", "int-ids-auto-atlas-wavelength-calibration"
+    ),
 )
 
 # Show the parameter space for searching possible solution
 c.plot_search_space(
-    save_fig="png", filename="output/int-ids-auto-atlas-search-space"
+    save_fig="png",
+    filename=os.path.join(
+        base_dir, "output", "int-ids-auto-atlas-search-space"
+    ),
 )
 
 print("Stdev error: {} A".format(residual.std()))

@@ -2,7 +2,6 @@ import os
 
 import numpy as np
 from astropy.io import fits
-from matplotlib import pyplot as plt
 from scipy.signal import find_peaks
 from scipy import interpolate
 
@@ -80,7 +79,7 @@ def create_pixel_array(binning):
 
 def test_gmos_fit():
 
-    pixels = create_pixel_array("north", 2)
+    pixels = create_pixel_array(2)
     rawpix_to_pix_itp = interpolate.interp1d(np.arange(len(pixels)), pixels)
 
     spectrum2D = fits.open(

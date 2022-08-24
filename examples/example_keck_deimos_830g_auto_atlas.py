@@ -28,7 +28,9 @@ c = Calibrator(peaks, spectrum=spectrum)
 c.plot_arc(
     display=False,
     save_fig="png",
-    filename="output/keck-deimos-auto-atlas-arc-spectrum",
+    filename=os.path.join(
+        base_dir, "output", "keck-deimos-auto-atlas-arc-spectrum"
+    ),
 )
 c.set_hough_properties(
     num_slopes=5000.0,
@@ -83,7 +85,9 @@ c.plot_fit(
     log_spectrum=False,
     tolerance=5.0,
     save_fig="png",
-    filename="output/keck-deimos-auto-atlas-wavelength-calibration",
+    filename=os.path.join(
+        base_dir, "output", "keck-deimos-auto-atlas-wavelength-calibration"
+    ),
 )
 
 # Show the parameter space for searching possible solution
@@ -93,5 +97,8 @@ print("Peaks utilisation rate: {}%".format(peak_utilisation * 100))
 print("Atlas utilisation rate: {}%".format(atlas_utilisation * 100))
 
 c.plot_search_space(
-    save_fig="png", filename="output/keck-deimos-auto-atlas-search-space"
+    save_fig="png",
+    filename=os.path.join(
+        base_dir, "output", "keck-deimos-auto-atlas-search-space"
+    ),
 )
