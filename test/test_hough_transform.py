@@ -72,6 +72,25 @@ def test_load_json():
     assert ht_loaded.max_intercept == ht.max_intercept
 
 
+def test_load_json_without_extension():
+    ht_loaded = HoughTransform()
+    ht_loaded.load(
+        filename=os.path.join(
+            HERE, "test_output", "test_hough_transform_json"
+        ),
+        filetype="json",
+    )
+
+    assert (ht_loaded.hough_points == ht.hough_points).all
+    assert (ht_loaded.hist == ht.hist).all
+    assert (ht_loaded.xedges == ht.xedges).all
+    assert (ht_loaded.yedges == ht.yedges).all
+    assert ht_loaded.min_slope == ht.min_slope
+    assert ht_loaded.max_slope == ht.max_slope
+    assert ht_loaded.min_intercept == ht.min_intercept
+    assert ht_loaded.max_intercept == ht.max_intercept
+
+
 @pytest.mark.xfail()
 def test_load_fail():
     ht_fail = HoughTransform()
@@ -99,8 +118,14 @@ def test_ht_not_saved_to_disk():
         fileformat="npy+json",
         to_disk=False,
     )
+    e = ht.save(
+        filename=os.path.join(HERE, "test_output", "test_hough_transform_npy"),
+        fileformat="blabla",
+        to_disk=False,
+    )
     assert a == c
     assert b == d
+    assert e is None
 
 
 def test_extending_ht():
@@ -129,7 +154,7 @@ def test_extending_ht():
 @pytest.mark.xfail()
 def test_extending_ht_expect_fail():
 
-    ht.add_hough_points(np.ones(100))
+    ht.add_hough_points("hello")
 
 
 def test_loading_ht_into_calibrator():
@@ -140,3 +165,20 @@ def test_loading_ht_into_calibrator():
     c.save_hough_transform(
         os.path.join(HERE, "test_output", "test_hough_transform_npy_2")
     )
+
+
+# Test brute force here, check total number of pairs
+def test_brute_force_all_hough_pairs():
+    ht = HoughTransform()
+    ht.set_constraints(
+        min_slope=-1e100,
+        max_slope=1e100,
+        min_intercept=-1e100,
+        max_intercept=1e100,
+    )
+    ht.generate_hough_points_brute_force(
+        x=(np.random.random(1000) * 3 + 1),
+        y=(np.random.random(1000) * 2000 + 3000),
+    )
+    ht.bin_hough_points(xbins=100, ybins=100)
+    assert len(ht.hough_points) == 499500, "Missing pairs from brute froce."

@@ -23,7 +23,9 @@ plt.imshow(np.log10(spectrum2D), aspect="auto", origin="lower")
 plt.xlabel("Spectral Direction / Pix")
 plt.ylabel("Spatial Direction / Pix")
 plt.tight_layout()
-plt.savefig("output/lt-sprat-manual-atlas-arc-image.png")
+plt.savefig(
+    os.path.join(base_dir, "output", "lt-sprat-manual-atlas-arc-image.png")
+)
 
 # Collapse into 1D spectrum between row 110 and 120
 spectrum = np.median(spectrum2D[110:120], axis=0)
@@ -36,7 +38,7 @@ relative_humidity = fits_file.header["REFHUMID"]
 peaks, _ = find_peaks(
     spectrum, height=300, prominence=150, distance=5, threshold=None
 )
-peaks = util.refine_peaks(spectrum, peaks, window_width=5)
+peaks = util.refine_peaks(spectrum, peaks, window_width=3)
 
 # Initialise the calibrator
 c = Calibrator(peaks, spectrum=spectrum)
@@ -48,7 +50,7 @@ c.set_hough_properties(
     min_wavelength=3600.0,
     max_wavelength=8000.0,
 )
-c.set_ransac_properties(sample_size=5, top_n_candidate=5, filter_close=True)
+c.set_ransac_properties(sample_size=5, top_n_candidate=10, filter_close=True)
 # blend: 4829.71, 4844.33
 # blend: 5566.62, 5581.88
 # blend: 6261.212, 6265.302
@@ -101,10 +103,10 @@ atlas.add_user_atlas(
     temperature=temperature,
     relative_humidity=relative_humidity,
 )
-c.set_atlas(atlas, candidate_tolerance=3.0)
+c.set_atlas(atlas)
 
 
-c.do_hough_transform()
+c.do_hough_transform(brute_force=True)
 
 # Run the wavelength calibration
 (
@@ -115,7 +117,7 @@ c.do_hough_transform()
     residual,
     peak_utilisation,
     atlas_utilisation,
-) = c.fit(max_tries=2000)
+) = c.fit(max_tries=1000, candidate_tolerance=5.0)
 
 print("Stdev error: {} A".format(residual.std()))
 print("Peaks utilisation rate: {}%".format(peak_utilisation * 100))
@@ -125,7 +127,9 @@ print("Atlas utilisation rate: {}%".format(atlas_utilisation * 100))
 c.plot_arc(
     display=False,
     save_fig="png",
-    filename="output/lt-sprat-manual-atlas-arc-spectrum",
+    filename=os.path.join(
+        base_dir, "output", "lt-sprat-manual-atlas-arc-spectrum"
+    ),
 )
 
 # Plot the solution
@@ -137,10 +141,17 @@ c.plot_fit(
     log_spectrum=False,
     tolerance=5.0,
     save_fig="png",
-    filename="output/lt-sprat-manual-atlas-wavelength-calibration",
+    filename=os.path.join(
+        base_dir, "output", "lt-sprat-manual-atlas-wavelength-calibration"
+    ),
 )
 
 # Show the parameter space for searching possible solution
 c.plot_search_space(
-    save_fig="png", filename="output/lt-sprat-manual-atlas-search-space"
+    save_fig="png",
+    filename=os.path.join(
+        base_dir, "output", "lt-sprat-manual-atlas-search-space"
+    ),
 )
+
+print(c.fit_coeff)
