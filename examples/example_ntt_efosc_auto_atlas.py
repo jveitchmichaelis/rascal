@@ -73,7 +73,6 @@ c.plot_fit(
     best_p,
     plot_atlas=True,
     log_spectrum=False,
-    tolerance=5.0,
     display=False,
     save_fig="png",
     filename=os.path.join(

@@ -1,4 +1,3 @@
-from fileinput import filename
 import os
 
 import numpy as np
@@ -155,7 +154,6 @@ def test_sprat_manual_atlas():
         display=False,
         save_fig=True,
         fig_type="png+html",
-        tolerance=5.0,
         filename=os.path.join(HERE, "test_output", "test_lt_sprat_fit_plotly"),
     )
 
@@ -178,7 +176,6 @@ def test_sprat_manual_atlas():
         fig_type="png+html",
         save_fig=True,
         filename=os.path.join(HERE, "test_output", "test_lt_sprat_fit_plotly"),
-        tolerance=5.0,
     )
 
     # Show the parameter space for searching possible solution
@@ -221,7 +218,6 @@ def test_sprat_manual_atlas():
         spectrum,
         plot_atlas=True,
         log_spectrum=False,
-        tolerance=5.0,
         display=False,
         save_fig=True,
         fig_type="png+html",
@@ -236,7 +232,6 @@ def test_sprat_manual_atlas():
         spectrum,
         plot_atlas=True,
         log_spectrum=False,
-        tolerance=5.0,
         display=False,
         save_fig=True,
         fig_type="png+html",
@@ -277,7 +272,6 @@ def test_sprat_manual_atlas():
         spectrum,
         plot_atlas=True,
         log_spectrum=True,
-        tolerance=5.0,
         save_fig=True,
         fig_type="png+html",
         display=False,
@@ -292,7 +286,6 @@ def test_sprat_manual_atlas():
         spectrum,
         plot_atlas=True,
         log_spectrum=True,
-        tolerance=5.0,
         save_fig=True,
         fig_type="png+html",
         display=False,

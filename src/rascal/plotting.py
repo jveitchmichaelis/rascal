@@ -623,7 +623,6 @@ def plot_fit(
 
         fitted_peaks = []
         fitted_diff = []
-        all_diff = []
 
         first_one = True
         for p in calibrator.peaks:
@@ -788,7 +787,6 @@ def plot_fit(
         fitted_peaks = []
         fitted_peaks_adu = []
         fitted_diff = []
-        all_diff = []
 
         for p in calibrator.peaks:
 

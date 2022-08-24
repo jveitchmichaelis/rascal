@@ -90,7 +90,6 @@ c.plot_fit(
     display=False,
     plot_atlas=True,
     log_spectrum=False,
-    tolerance=5.0,
     save_fig="png",
     filename=os.path.join(
         base_dir, "output", "wht-isis-auto-atlas-wavelength-calibration"

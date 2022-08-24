@@ -116,7 +116,6 @@ c.plot_fit(
     fit_coeff,
     plot_atlas=True,
     log_spectrum=False,
-    tolerance=5.0,
     display=False,
     save_fig="png",
     filename=os.path.join(
