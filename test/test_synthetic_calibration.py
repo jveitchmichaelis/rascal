@@ -63,7 +63,7 @@ def test_default():
     assert rms < 5.0
 
 
-def test_get_candidate_points_poly():
+def test_fitting_with_initial_polynomial():
 
     # Create a test spectrum with a simple linear relationship
     # between pixels/wavelengths. The intercept is set to
@@ -102,7 +102,7 @@ def test_get_candidate_points_poly():
 
     # And let's try and fit...
     best_p, x, y, rms, residual, peak_utilisation, atlas_utilisation = c.fit(
-        max_tries=500, fit_coeff=best_p
+        max_tries=500, fit_coeff=best_p, use_msac=True
     )
 
     (

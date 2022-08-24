@@ -404,7 +404,6 @@ class Calibrator:
         candidate_tolerance,
         brute_force,
         progress,
-        use_msac=False,
     ):
         """
         Use RANSAC to sample the parameter space and give best guess
@@ -426,8 +425,6 @@ class Calibrator:
             Solve all pixel-wavelength combinations with set to True.
         progress: boolean
             Show the progress bar with tdqm if set to True.
-        use_msac: boolean
-            Use M-SAC cost instead of inlier count
 
 
         Returns
@@ -671,7 +668,7 @@ class Calibrator:
 
                     weight = 1.0
 
-                if use_msac:
+                if self.use_msac:
                     # M-SAC Estimator (Torr and Zisserman, 1996)
                     err[err > self.ransac_tolerance] = self.ransac_tolerance
 
@@ -757,7 +754,7 @@ class Calibrator:
                         continue
 
                     if (
-                        not use_msac
+                        not self.use_msac
                         and n_inliers == best_inliers
                         and rms_residual > best_err
                     ):
@@ -1740,6 +1737,7 @@ class Calibrator:
         candidate_tolerance=2.0,
         brute_force=False,
         progress=True,
+        use_msac=False,
     ):
         """
         Solve for the wavelength calibration polynomial by getting the most
@@ -1767,6 +1765,8 @@ class Calibrator:
         progress: boolean (default: True)
             True to show progress with tdqm. It is overrid if tdqm cannot be
             imported.
+        use_msac: boolean
+            Use M-SAC cost instead of inlier count
 
         Returns
         -------
@@ -1795,6 +1795,7 @@ class Calibrator:
         self.fit_type = fit_type
         self.brute_force = brute_force
         self.progress = progress
+        self.use_msac = use_msac
 
         if self.fit_type == "poly":
 
