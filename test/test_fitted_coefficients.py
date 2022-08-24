@@ -47,33 +47,21 @@ hamamatsu_width = 2048
 
 # chip gaps
 hamamatsu_n_gap = 67
-hamamatsu_s_gap = 61
 
 
-def create_pixel_array(northsouth, binning):
+def create_pixel_array(binning):
     """
     The GMOS longslit spectrum spreads over three CCDs. This function creates
     the pixel list corresponding the binned pixels adjusted for the chip gaps,
     which can lead to a non-integer shift in the number of pixels.
-    Parameters
-    ----------
-    northsout: str
-        Indicate whether the Gemini north or south, because the chip gaps are
-        different.
-    binning : numeric
-        The binning factor
+
     Returns
     -------
     pixels: numpy.array
         The pixel values adjusted for chip gaps for the corresponding pixel.
     """
     binned_width = hamamatsu_width / binning
-    if northsouth == "north":
-        gap_binned_width = hamamatsu_n_gap / binning
-    elif northsouth == "south":
-        gap_binned_width = hamamatsu_s_gap / binning
-    else:
-        raise ValueError('Please choose from "north" or "south".')
+    gap_binned_width = hamamatsu_n_gap / binning
     pixels = np.concatenate(
         (
             np.arange(binned_width),

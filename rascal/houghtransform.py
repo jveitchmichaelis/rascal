@@ -182,8 +182,10 @@ class HoughTransform:
 
         """
 
-        assert self.hough_points is not None, "Please load an hough_points or "
-        "create an hough_points with hough_points() first."
+        assert self.hough_points is not None, (
+            "Please load an hough_points or create an hough_points with "
+            "hough_points() first."
+        )
 
         self.hist, self.xedges, self.yedges = np.histogram2d(
             self.hough_points[:, 0],
