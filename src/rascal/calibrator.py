@@ -653,9 +653,6 @@ class Calibrator:
                 if len(matched_x) == 0:
                     continue
 
-                # M-SAC Estimator (Torr and Zisserman, 1996)
-                err[err > self.ransac_tolerance] = self.ransac_tolerance
-
                 # use the Hough space density as weights for the cost function
                 wave = self.polyval(self.pixel_list, fit_coeffs)
                 gradient = self.polyval(
@@ -675,6 +672,9 @@ class Calibrator:
                     weight = 1.0
 
                 if use_msac:
+                    # M-SAC Estimator (Torr and Zisserman, 1996)
+                    err[err > self.ransac_tolerance] = self.ransac_tolerance
+
                     cost = (
                         sum(err)
                         / (len(err) - len(fit_coeffs) + 1)
