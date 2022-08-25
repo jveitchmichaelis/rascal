@@ -1,0 +1,72 @@
+# calibrator_properties
+logger: ~
+log_level: 'info'
+
+peaks: ~
+spectrum: ~
+plot_with_matplotlib: true
+plot_with_plotly: false
+
+num_pix: ~
+pixel_list: ~
+plotting_library: 'matplotlib'
+constrain_poly: false
+
+# If None, will use the atlas properties below
+# If a path is provided, it will read from the atlas.yaml
+# properties to generate am Atlas object
+atlas:
+  config: ~
+  # ignored if config file is given
+  nist_lines:
+    elements: ~
+    linelist: "nist"
+    min_atlas_wavelength: 3000.0
+    max_atlas_wavelength: 5000.0
+    range_tolerance: 500
+    min_intensity: 10.0
+    min_distance: 10.0
+    brightest_n_lines: None
+    vacuum: false
+    pressure: 101325.0
+    temperature: 273.15
+    relative_humidity: 0.0
+  # user_lines supercedes nist_lines
+  user_lines:
+    elements: ~
+    wavelengths: ~
+    intensities: ~
+    vacuum: false
+    pressure: 101325.0
+    temperature: 273.15
+    relative_humidity: 0.0
+
+# properties to generate a hough_transform object
+hough_transform:
+  config: ~
+  # ignore the rest if config file is given
+  num_slopes: 2000
+  xbins: 100
+  ybins: 100
+  min_wavelength: 3000.0
+  max_wavelength: 9000.0
+  range_tolerance: 500
+  linearity_tolerance: 100
+
+# ransac_properties
+sample_size: 5
+top_n_candidate: 5
+linear: true
+filter_close: false
+ransac_tolerance: 5
+candidate_weighted: true
+hough_weight: 1.0
+minimum_matches: 3
+minimum_peak_utilisation: 0.0
+minimum_fit_error: 1e-4
+
+# results
+matched_peaks: []
+matched_atlas: []
+fit_coeff: ~
+

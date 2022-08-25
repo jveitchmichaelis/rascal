@@ -1087,7 +1087,7 @@ class Calibrator:
         """
         parameters
         ----------
-        num_slopes: int (default: 1000)
+        num_slopes: int (default: 2000)
             Number of slopes to consider during Hough transform
         xbins: int (default: 50)
             Number of bins for Hough accumulation
@@ -1265,7 +1265,7 @@ class Calibrator:
             known polynomial.
         filter_close: boolean (default: False)
             Remove the pairs that are out of bounds in the hough space.
-        ransac_tolerance: float (default: 1)
+        ransac_tolerance: float (default: 5)
             The distance criteria  (Angstroms) to be considered an inlier to a
             fit. This should be close to the size of the expected residuals on
             the final fit (e.g. 1A is typical)
@@ -1275,7 +1275,7 @@ class Calibrator:
             Set to use the hough space to weigh the fit. The theoretical
             optimal weighting is unclear. The larger the value, the heavily it
             relies on the overdensity in the hough space for a good fit.
-        minimum_matches: int or None (default: 0)
+        minimum_matches: int or None (default: 3)
             Set to only accept fit solutions with a minimum number of
             matches. Setting this will prevent the fitting function from
             accepting spurious low-error fits.
@@ -1390,7 +1390,7 @@ class Calibrator:
 
         elif self.minimum_matches is None:
 
-            self.minimum_matches = 0
+            self.minimum_matches = 3
 
         else:
 
@@ -1965,7 +1965,6 @@ class Calibrator:
             new_candidates = []
             # i is an int
             # candidates is a list of list
-
             for i in range(len(candidates)):
 
                 # c is a list
@@ -1984,8 +1983,9 @@ class Calibrator:
 
                         for j in np.argwhere(rep):
 
-                            new_c = c + [match[j]]
-                            new_candidates.append(new_c)
+                            new_c = c + [match[int(j)]]
+
+                        new_candidates.append(new_c)
 
                 # Only add if new_candidates is not an empty list
                 if new_candidates != []:
@@ -2014,7 +2014,8 @@ class Calibrator:
         for candidate in candidates:
 
             matched_atlas = np.array(candidate)
-
+            print(matched_peaks)
+            print(matched_atlas)
             fit_coeff = self.polyfit(matched_peaks, matched_atlas, fit_deg)
 
             x = self.polyval(matched_peaks, fit_coeff)

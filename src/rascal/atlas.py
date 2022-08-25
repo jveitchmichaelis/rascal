@@ -3,6 +3,7 @@ import os
 import time
 
 import numpy as np
+import yaml
 
 from .util import load_calibration_lines
 from .util import vacuum_to_air_wavelength
@@ -83,13 +84,21 @@ class Atlas:
         """
 
         self.atlas_lines = []
+        self.elements = elements
+        self.linelist = linelist
         self.min_atlas_wavelength = min_atlas_wavelength
         self.max_atlas_wavelength = max_atlas_wavelength
         self.min_intensity = min_intensity
         self.min_distance = min_distance
         self.range_tolerance = range_tolerance
+        self.brightest_n_lines = brightest_n_lines
+        self.vacuum = vacuum
+        self.pressure = pressure
+        self.temperature = temperature
+        self.relative_humidity = relative_humidity
 
         if elements is not None:
+            self.elements = elements
             self.add(
                 elements=elements,
                 linelist=linelist,
@@ -104,6 +113,101 @@ class Atlas:
                 relative_humidity=relative_humidity,
             )
 
+    def load_config(self, yaml_config, y_type="filepath"):
+        """
+        Load a yaml configuration file to populate an Atlas object.
+
+        Parameters
+        ----------
+        yaml_config : str or pyyaml object
+            Filepath or a pyyaml object
+        y_type: str
+            Specify 'yaml' for loading from file or 'object' to take a pyyaml
+            object.
+
+        """
+
+        # Load from file
+        if y_type == "filepath":
+
+            with open(yaml_config, "r") as stream:
+
+                config = yaml.safe_load(stream)
+
+        # Load from a pyyaml object
+        elif y_type == "object":
+
+            config = yaml_config
+
+        else:
+
+            raise ValueError(
+                "Unknown y_type: {}. Please choose from "
+                "'filepath' or 'stream'".format(y_type)
+            )
+
+        # This loads the Atlas setting to get lines by using
+        # util.load_calibration_lines
+        if config["linelist"] == "nist":
+
+            self.add(
+                elements=config["elements"],
+                linelist=config["linelist"],
+                min_atlas_wavelength=config["min_atlas_wavelength"],
+                max_atlas_wavelength=config["max_atlas_wavelength"],
+                min_intensity=config["min_intensity"],
+                min_distance=config["min_distance"],
+                brightest_n_lines=config["brightest_n_lines"],
+                vacuum=config["vacuum"],
+                pressure=config["pressure"],
+                temperature=config["temperature"],
+                relative_humidity=config["relative_humidity"],
+            )
+
+        # This loads the lines directly
+        elif config["linelist"] == "user":
+
+            self.add_user_atlas(
+                elements=config["element_list"],
+                wavelengths=config["wavelength_list"],
+                intensities=config["intensity_list"],
+                vacuum=config["vacuum"],
+                pressure=config["pressure"],
+                temperature=config["temperature"],
+                relative_humidity=config["relative_humidity"],
+            )
+
+        # Unknown mode
+        else:
+
+            raise ValueError(
+                "Unknown linelist type: {}. Please choose from "
+                "'nist' or 'user'.".format(config["linelist"])
+            )
+
+    def save_config(self, filename):
+
+        output_data = {
+            "linelist": str(self.linelist),
+            "vacuum": bool(self.vacuum),
+            "pressure": float(self.pressure),
+            "temperature": float(self.temperature),
+            "relative_humidity": float(self.relative_humidity),
+            "elements": list(self.elements),
+            "min_atlas_wavelength": float(self.min_atlas_wavelength),
+            "max_atlas_wavelength": float(self.max_atlas_wavelength),
+            "min_intensity": float(self.min_intensity),
+            "min_distance": float(self.min_distance),
+            "brightest_n_lines": int(self.brightest_n_lines),
+            "element_list": list(self.get_elements()),
+            "wavelength_list": list(self.get_lines()),
+            "intensity_list": list(self.get_intensities()),
+        }
+
+        with open(filename, "w+") as f:
+
+            yaml.dump(output_data, f, default_flow_style=False)
+
     def add(
         self,
         elements=None,
@@ -112,7 +216,7 @@ class Atlas:
         max_atlas_wavelength=None,
         min_intensity=10.0,
         min_distance=10.0,
-        brightest_n_lines=None,
+        brightest_n_lines=1000,
         vacuum=False,
         pressure=101325.0,
         temperature=273.15,
@@ -192,6 +296,18 @@ class Atlas:
 
             elements = [elements]
 
+        self.elements = elements
+        self.linelist = linelist
+        self.min_atlas_wavelength = min_atlas_wavelength
+        self.max_atlas_wavelength = max_atlas_wavelength
+        self.min_intensity = min_intensity
+        self.min_distance = min_distance
+        self.brightest_n_lines = brightest_n_lines
+        self.vacuum = vacuum
+        self.pressure = pressure
+        self.temperature = temperature
+        self.relative_humidity = relative_humidity
+
         if elements is not None:
 
             for element in elements:
@@ -218,7 +334,7 @@ class Atlas:
                     zip(atlas_elements_tmp, atlas_tmp, atlas_intensities_tmp)
                 ):
                     self.atlas_lines.append(
-                        AtlasLine(line, element, intensity, "Auto")
+                        AtlasLine(line, element, intensity, "NIST")
                     )
 
     def add_user_atlas(

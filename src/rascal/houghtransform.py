@@ -195,7 +195,7 @@ class HoughTransform:
 
         # Get the line fit_coeffients from the promising bins in the
         # histogram
-        self.hist_sorted_arg = np.dstack(
+        hist_sorted_arg = np.dstack(
             np.unravel_index(
                 np.argsort(self.hist.ravel())[::-1], self.hist.shape
             )
@@ -206,7 +206,7 @@ class HoughTransform:
 
         lines = []
 
-        for b in self.hist_sorted_arg:
+        for b in hist_sorted_arg:
 
             lines.append(
                 (
