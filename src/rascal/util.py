@@ -281,6 +281,8 @@ def get_calibration_lines(
     ----------
     elements: list
         List of short element names, e.g. He as per NIST
+    linelist: str
+        Either 'nist' to use the default lines or path to a linelist file.
     min_atlas_wavelength: int
         Minimum wavelength to search, Angstrom
     max_atlas_wavelength: int
@@ -402,6 +404,8 @@ def print_calibration_lines(
     ----------
     elements: list
         List of short element names, e.g. He as per NIST
+    linelist: str
+        Either 'nist' to use the default lines or path to a linelist file.
     min_atlas_wavelength: int
         Minimum wavelength to search, Angstrom
     max_atlas_wavelength: int
@@ -470,6 +474,8 @@ def plot_calibration_lines(
     ----------
     elements: list
         List of short element names, e.g. He as per NIST
+    linelist: str
+        Either 'nist' to use the default lines or path to a linelist file.
     min_atlas_wavelength: int
         Minimum wavelength to search, Angstrom
     max_atlas_wavelength: int
@@ -585,6 +591,8 @@ def load_calibration_lines(
     ----------
     elements: list
         List of short element names, e.g. He as per NIST
+    linelist: str
+        Either 'nist' to use the default lines or path to a linelist file.
     min_atlas_wavelength: int
         Minimum wavelength to search, Angstrom
     max_atlas_wavelength: int

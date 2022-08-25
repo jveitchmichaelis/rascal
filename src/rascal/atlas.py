@@ -20,6 +20,7 @@ class Atlas:
     def __init__(
         self,
         elements=None,
+        linelist="nist",
         min_atlas_wavelength=3000.0,
         max_atlas_wavelength=5000.0,
         range_tolerance=500,
@@ -52,6 +53,8 @@ class Atlas:
         ----------
         elements: string or list of strings
             Chemical symbol, case insensitive
+        linelist: str
+            Either 'nist' to use the default lines or path to a linelist file.
         min_atlas_wavelength: float (default: None)
             Minimum wavelength of the arc lines.
         max_atlas_wavelength: float (default: None)
@@ -89,6 +92,7 @@ class Atlas:
         if elements is not None:
             self.add(
                 elements=elements,
+                linelist=linelist,
                 min_atlas_wavelength=min_atlas_wavelength,
                 max_atlas_wavelength=max_atlas_wavelength,
                 min_intensity=min_intensity,
@@ -103,6 +107,7 @@ class Atlas:
     def add(
         self,
         elements=None,
+        linelist="nist",
         min_atlas_wavelength=None,
         max_atlas_wavelength=None,
         min_intensity=10.0,
@@ -197,6 +202,7 @@ class Atlas:
                     atlas_intensities_tmp,
                 ) = load_calibration_lines(
                     elements=element,
+                    linelist=linelist,
                     min_atlas_wavelength=min_atlas_wavelength,
                     max_atlas_wavelength=max_atlas_wavelength,
                     min_intensity=min_intensity,

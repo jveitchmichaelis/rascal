@@ -1427,52 +1427,6 @@ class Calibrator:
 
             pass
 
-    def add_atlas(
-        self,
-        elements,
-        min_atlas_wavelength=None,
-        max_atlas_wavelength=None,
-        min_intensity=10.0,
-        min_distance=10.0,
-        candidate_tolerance=10.0,
-        constrain_poly=False,
-        vacuum=False,
-        pressure=101325.0,
-        temperature=273.15,
-        relative_humidity=0.0,
-    ):
-
-        self.logger.warning(
-            "Using add_atlas is now deprecated. "
-            "Please use the new Atlas class."
-        )
-
-        if min_atlas_wavelength is None:
-
-            min_atlas_wavelength = self.min_wavelength - self.range_tolerance
-
-        if max_atlas_wavelength is None:
-
-            max_atlas_wavelength = self.max_wavelength + self.range_tolerance
-
-        new_atlas = Atlas(
-            elements,
-            min_atlas_wavelength=min_atlas_wavelength,
-            max_atlas_wavelength=max_atlas_wavelength,
-            min_intensity=min_intensity,
-            min_distance=min_distance,
-            range_tolerance=self.range_tolerance,
-            vacuum=vacuum,
-            pressure=pressure,
-            temperature=temperature,
-            relative_humidity=relative_humidity,
-        )
-        self.atlas = new_atlas
-        self.candidate_tolerance = candidate_tolerance
-        self.constrain_poly = constrain_poly
-
-        self._generate_pairs()
-
     def remove_atlas_lines_range(self, wavelength, tolerance=10):
         """
         Remove arc lines within a certain wavelength range.
@@ -1493,43 +1447,6 @@ class Calibrator:
         """
 
         self.atlas.clear()
-
-    def add_user_atlas(
-        self,
-        elements,
-        wavelengths,
-        intensities=None,
-        vacuum=False,
-        pressure=101325.0,
-        temperature=273.15,
-        relative_humidity=0.0,
-        candidate_tolerance=10,
-        constrain_poly=False,
-    ):
-
-        self.logger.warning(
-            "Using add_user_atlas is now deprecated. "
-            "Please use the new Atlas class."
-        )
-
-        if self.atlas is None:
-
-            self.atlas = Atlas()
-
-        self.atlas.add_user_atlas(
-            elements,
-            wavelengths,
-            intensities,
-            vacuum,
-            pressure,
-            temperature,
-            relative_humidity,
-        )
-
-        self.candidate_tolerance = candidate_tolerance
-        self.constrain_poly = constrain_poly
-
-        self._generate_pairs()
 
     def set_atlas(self, atlas, candidate_tolerance=10.0, constrain_poly=False):
         """
