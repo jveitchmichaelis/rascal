@@ -701,18 +701,23 @@ class Calibrator:
                         continue
 
                     # Now we do a robust fit
-                    try:
+                    if self.fit_type == "poly":
+                        try:
 
-                        coeffs = models.robust_polyfit(
+                            coeffs = models.robust_polyfit(
+                                matched_peaks, matched_atlas, self.fit_deg
+                            )
+
+                        except np.linalg.LinAlgError:
+
+                            self.logger.warning(
+                                "Linear algebra error in robust fit"
+                            )
+                            continue
+                    else:
+                        coeffs = self.polyfit(
                             matched_peaks, matched_atlas, self.fit_deg
                         )
-
-                    except np.linalg.LinAlgError:
-
-                        self.logger.warning(
-                            "Linear algebra error in robust fit"
-                        )
-                        continue
 
                     # Check ends of fit:
                     if self.min_wavelength is not None:

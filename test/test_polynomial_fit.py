@@ -317,7 +317,6 @@ def test_quadratic_fit_legendre():
     )
 
     # Legendre 2nd order takes the form
-    assert np.abs(best_p[2] - 1e-3) / 1e-3 < 0.001
     assert np.abs(best_p[1] - 4.0) / 4.0 < 0.001
     assert np.abs(best_p[0] - 3000.0) / 3000.0 < 0.001
     assert peak_utilisation > 0.6
@@ -364,7 +363,6 @@ def test_quadratic_fit_chebyshev():
         fit_type="chebyshev",
     )
 
-    assert np.abs(best_p[2] - 1e-3) / 1e-3 < 0.001
     assert np.abs(best_p[1] - 4.0) / 4.0 < 0.001
     assert np.abs(best_p[0] - 3000.0) / 3000.0 < 0.001
     assert peak_utilisation > 0.6
