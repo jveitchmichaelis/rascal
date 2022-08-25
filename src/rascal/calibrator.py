@@ -724,7 +724,13 @@ class Calibrator:
                             continue
 
                     if self.max_wavelength is not None:
-                        if self.polyval(len(self.spectrum), coeffs) > (
+
+                        if self.spectrum is not None:
+                            fit_max_wavelength = len(self.spectrum)
+                        else:
+                            fit_max_wavelength = self.num_pix
+
+                        if self.polyval(fit_max_wavelength, coeffs) > (
                             self.max_wavelength + self.range_tolerance
                         ):
                             self.logger.debug(
