@@ -736,7 +736,7 @@ class Calibrator:
                             self.logger.debug(
                                 "Upper wavelength of fit too large, "
                                 "{:1.2f}.".format(
-                                    self.polyval(len(self.spectrum), coeffs)
+                                    self.polyval(fit_max_wavelength, coeffs)
                                 )
                             )
 
