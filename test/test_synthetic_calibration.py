@@ -36,7 +36,7 @@ def test_default():
 
     # Add our fake lines as the atlas
     a.add_user_atlas(elements=["Test"] * len(waves), wavelengths=waves)
-    c.set_ransac_properties(minimum_fit_error=1e-12)
+    c.set_ransac_properties(minimum_fit_error=1e-18)
     c.set_atlas(a)
     assert len(c.atlas.atlas_lines) > 0
 
@@ -93,7 +93,7 @@ def test_fitting_with_initial_polynomial():
         range_tolerance=100.0, min_wavelength=100.0, max_wavelength=1500.0
     )
 
-    c.set_ransac_properties(linear=False, minimum_fit_error=1e-12)
+    c.set_ransac_properties(linear=False, minimum_fit_error=1e-18)
 
     # Add our fake lines as the atlas
     a.add_user_atlas(elements=["Test"] * len(waves), wavelengths=waves)
