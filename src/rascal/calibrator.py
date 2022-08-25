@@ -2002,6 +2002,11 @@ class Calibrator:
                 assert candidate_peaks is not None
                 assert residuals is not None
 
+                print(len(candidate_atlas))
+                print(candidate_atlas)
+                print(len(candidate_peaks))
+                print(candidate_peaks)
+
                 self.matched_atlas = candidate_atlas
                 self.matched_peaks = candidate_peaks
                 self.residuals = residuals

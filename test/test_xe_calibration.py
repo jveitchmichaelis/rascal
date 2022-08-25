@@ -68,7 +68,9 @@ def run_sprat_calibration(fit_deg):
     spectrum = np.median(spectrum2D[110:120], axis=0)
 
     # Identify the peaks
-    peaks, _ = find_peaks(spectrum, height=500, distance=5, threshold=None)
+    peaks, _ = find_peaks(
+        spectrum, height=300, prominence=150, distance=5, threshold=None
+    )
     peaks = util.refine_peaks(spectrum, peaks, window_width=5)
 
     # Initialise the calibrator
@@ -77,11 +79,11 @@ def run_sprat_calibration(fit_deg):
 
     c.set_calibrator_properties(num_pix=1024)
     c.set_hough_properties(
-        num_slopes=1000,
-        range_tolerance=500.0,
+        num_slopes=2000,
+        range_tolerance=200.0,
         xbins=100,
         ybins=100,
-        min_wavelength=3500.0,
+        min_wavelength=3600.0,
         max_wavelength=8000.0,
     )
     a.add_user_atlas(elements=elements, wavelengths=wavelengths)
@@ -96,7 +98,7 @@ def run_sprat_calibration(fit_deg):
 
     # Run the wavelength calibration
     best_p, x, y, rms, residual, peak_utilisation, atlas_utilisation = c.fit(
-        max_tries=200, fit_deg=fit_deg
+        max_tries=500, fit_deg=fit_deg, candidate_tolerance=5.0, use_msac=True
     )
 
     # Refine solution
@@ -114,6 +116,49 @@ def run_sprat_calibration(fit_deg):
     rms = np.sqrt(np.sum(fit_diff**2 / len(x_fit)))
 
     return best_p, residual, peak_utilisation, atlas_utilisation, rms
+
+
+def test_run_sprat_calibration_with_manual_linelist_file():
+
+    # Load the LT SPRAT data
+    base_dir = os.path.dirname(__file__)
+    spectrum2D = fits.open(
+        os.path.join(
+            base_dir, "..", "examples/data_lt_sprat/v_a_20190516_57_1_0_1.fits"
+        )
+    )[0].data
+
+    # Collapse into 1D spectrum between row 110 and 120
+    spectrum = np.median(spectrum2D[110:120], axis=0)
+
+    # Identify the peaks
+    peaks, _ = find_peaks(spectrum, height=500, distance=5, threshold=None)
+    peaks = util.refine_peaks(spectrum, peaks, window_width=5)
+
+    # Initialise the calibrator
+    c = Calibrator(peaks)
+    a = Atlas()
+    a.add(
+        elements=["Xe"],
+        linelist=pkg_resources.resource_filename(
+            "rascal", "arc_lines/nist_clean.csv"
+        ),
+    )
+    c.set_atlas(a)
+    c.set_calibrator_properties(num_pix=1024)
+    c.set_hough_properties(
+        num_slopes=1000,
+        range_tolerance=500.0,
+        xbins=100,
+        ybins=100,
+        min_wavelength=3500.0,
+        max_wavelength=8000.0,
+    )
+
+    # Run the wavelength calibration
+    best_p, x, y, rms, residual, peak_utilisation, atlas_utilisation = c.fit(
+        max_tries=500, fit_deg=4
+    )
 
 
 def test_sprat_calibration():
@@ -161,46 +206,3 @@ def test_sprat_calibration_multirun():
     assert np.std(peak_utilisation) < 10.0
     assert np.std(atlas_utilisation) < 10.0
     assert np.std(rms) < 5.0
-
-
-def run_sprat_calibration_with_manual_linelist_file(fit_deg):
-
-    # Load the LT SPRAT data
-    base_dir = os.path.dirname(__file__)
-    spectrum2D = fits.open(
-        os.path.join(
-            base_dir, "..", "examples/data_lt_sprat/v_a_20190516_57_1_0_1.fits"
-        )
-    )[0].data
-
-    # Collapse into 1D spectrum between row 110 and 120
-    spectrum = np.median(spectrum2D[110:120], axis=0)
-
-    # Identify the peaks
-    peaks, _ = find_peaks(spectrum, height=500, distance=5, threshold=None)
-    peaks = util.refine_peaks(spectrum, peaks, window_width=5)
-
-    # Initialise the calibrator
-    c = Calibrator(peaks)
-    a = Atlas()
-    a.load_calibration_lines(
-        elements=["He"],
-        linelist=pkg_resources.resource_filename(
-            "rascal", "arc_lines/nist_clean.csv"
-        ),
-    )
-
-    c.set_calibrator_properties(num_pix=1024)
-    c.set_hough_properties(
-        num_slopes=1000,
-        range_tolerance=500.0,
-        xbins=100,
-        ybins=100,
-        min_wavelength=3500.0,
-        max_wavelength=8000.0,
-    )
-
-    # Run the wavelength calibration
-    best_p, x, y, rms, residual, peak_utilisation, atlas_utilisation = c.fit(
-        max_tries=200, fit_deg=fit_deg
-    )
