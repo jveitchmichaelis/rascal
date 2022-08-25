@@ -83,16 +83,24 @@ def test_vacuum_to_air_wavelength():
 
 def test_get_calibration_lines():
     assert (
-        len(util.get_calibration_lines(elements=["He"], min_intensity=10)[0])
-        == 20
+        len(util.get_calibration_lines(elements=["He"], min_intensity=5)[0])
+        == 12
     )
     assert (
         len(util.get_calibration_lines(elements=["He"], min_intensity=0)[0])
-        == 33
+        == 21
     )
     assert (
         len(util.get_calibration_lines(elements=["He"], min_distance=0)[0])
-        == 25
+        == 62
+    )
+    assert (
+        len(
+            util.get_calibration_lines(
+                elements=["He"], min_intensity=0, min_distance=0
+            )[0]
+        )
+        == 112
     )
 
 

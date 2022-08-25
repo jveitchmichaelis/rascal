@@ -239,7 +239,7 @@ def filter_intensity(lines, min_intensity=0):
 
     out = []
     for line in lines:
-        _, _, intensity = line
+        intensity = line[2]
         if float(intensity) >= min_intensity:
             out.append(True)
         else:
@@ -250,10 +250,11 @@ def filter_intensity(lines, min_intensity=0):
 
 def get_calibration_lines(
     elements=[],
+    linelist="nist",
     min_atlas_wavelength=3000.0,
     max_atlas_wavelength=15000.0,
-    min_intensity=10.0,
-    min_distance=10.0,
+    min_intensity=5.0,
+    min_distance=5.0,
     brightest_n_lines=None,
     vacuum=False,
     pressure=101325.0,
@@ -310,11 +311,22 @@ def get_calibration_lines(
         elements = [elements]
 
     # Element, wavelength, intensity
-    file_path = pkg_resources.resource_filename(
-        "rascal", "arc_lines/nist_clean.csv"
-    )
-
-    lines = np.loadtxt(file_path, delimiter=",", dtype=">U12")
+    if isinstance(linelist, str):
+        if linelist.lower() == "nist":
+            file_path = pkg_resources.resource_filename(
+                "rascal", "arc_lines/nist_clean.csv"
+            )
+            lines = np.loadtxt(file_path, delimiter=",", dtype=">U12")
+        elif os.path.exist(linelist):
+            lines = np.loadtxt(file_path, delimiter=",", dtype=">U12")
+        else:
+            raise ValueError(
+                "Unknown string is provided as linelist: {}.".format(linelist)
+            )
+    elif isinstance(linelist, np.ndarray.array):
+        lines = np.load(file_path)
+    else:
+        raise ValueError("Please provide a valid format of line list.")
 
     # Mask elements
     mask = [(li[0] in elements) for li in lines]
@@ -362,10 +374,11 @@ def get_calibration_lines(
 
 def print_calibration_lines(
     elements=[],
+    linelist="nist",
     min_atlas_wavelength=3000.0,
     max_atlas_wavelength=15000.0,
-    min_intensity=10.0,
-    min_distance=10.0,
+    min_intensity=5.0,
+    min_distance=5.0,
     brightest_n_lines=None,
     vacuum=False,
     pressure=101325.0,
@@ -415,6 +428,7 @@ def print_calibration_lines(
 
     elements, lines, intensities = get_calibration_lines(
         elements=elements,
+        linelist=linelist,
         min_atlas_wavelength=min_atlas_wavelength,
         max_atlas_wavelength=max_atlas_wavelength,
         min_intensity=min_intensity,
@@ -438,10 +452,11 @@ def print_calibration_lines(
 
 def plot_calibration_lines(
     elements=[],
+    linelist="nist",
     min_atlas_wavelength=3000.0,
     max_atlas_wavelength=15000.0,
-    min_intensity=10.0,
-    min_distance=10.0,
+    min_intensity=5.0,
+    min_distance=5.0,
     brightest_n_lines=None,
     pixel_scale=2.0,
     vacuum=False,
@@ -486,6 +501,7 @@ def plot_calibration_lines(
     """
     elements, wavelengths, intensities = get_calibration_lines(
         elements=elements,
+        linelist=linelist,
         min_atlas_wavelength=min_atlas_wavelength,
         max_atlas_wavelength=max_atlas_wavelength,
         min_intensity=min_intensity,
@@ -540,10 +556,11 @@ def plot_calibration_lines(
 
 def load_calibration_lines(
     elements=[],
+    linelist="nist",
     min_atlas_wavelength=3000.0,
     max_atlas_wavelength=15000.0,
-    min_intensity=10.0,
-    min_distance=10.0,
+    min_intensity=5.0,
+    min_distance=5.0,
     brightest_n_lines=None,
     vacuum=False,
     pressure=101325.0,
@@ -603,6 +620,7 @@ def load_calibration_lines(
 
     elements, wavelengths, intensities = get_calibration_lines(
         elements=elements,
+        linelist=linelist,
         min_atlas_wavelength=min_atlas_wavelength,
         max_atlas_wavelength=max_atlas_wavelength,
         min_intensity=min_intensity,
