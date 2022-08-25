@@ -1690,7 +1690,7 @@ class Calibrator:
         fit_coeff=None,
         fit_tolerance=5.0,
         fit_type="poly",
-        candidate_tolerance=2.0,
+        candidate_tolerance=4.0,
         brute_force=False,
         progress=True,
         use_msac=False,

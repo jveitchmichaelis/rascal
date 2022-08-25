@@ -90,7 +90,7 @@ def test_fitting_with_initial_polynomial():
 
     # Setup the Hough transform parameters
     c.set_hough_properties(
-        range_tolerance=100.0, min_wavelength=100.0, max_wavelength=1500.0
+        range_tolerance=100.0, min_wavelength=100.0, max_wavelength=1300.0
     )
 
     c.set_ransac_properties(linear=False, minimum_fit_error=1e-18)
@@ -102,7 +102,7 @@ def test_fitting_with_initial_polynomial():
 
     # And let's try and fit...
     best_p, x, y, rms, residual, peak_utilisation, atlas_utilisation = c.fit(
-        max_tries=500, fit_coeff=best_p, use_msac=True
+        max_tries=500, fit_coeff=best_p, candidate_tolerance=5.0
     )
 
     (
