@@ -712,27 +712,29 @@ class Calibrator:
                         continue
 
                     # Check ends of fit:
-                    if self.polyval(0, coeffs) < (
-                        self.min_wavelength - self.range_tolerance
-                    ):
-                        self.logger.debug(
-                            "Lower wavelength of fit too small, "
-                            "{:1.2f}.".format(self.polyval(0, coeffs))
-                        )
-
-                        continue
-
-                    if self.polyval(len(self.spectrum), coeffs) > (
-                        self.max_wavelength + self.range_tolerance
-                    ):
-                        self.logger.debug(
-                            "Upper wavelength of fit too large, "
-                            "{:1.2f}.".format(
-                                self.polyval(len(self.spectrum), coeffs)
+                    if self.min_wavelength is not None:
+                        if self.polyval(0, coeffs) < (
+                            self.min_wavelength - self.range_tolerance
+                        ):
+                            self.logger.debug(
+                                "Lower wavelength of fit too small, "
+                                "{:1.2f}.".format(self.polyval(0, coeffs))
                             )
-                        )
 
-                        continue
+                            continue
+
+                    if self.max_wavelength is not None:
+                        if self.polyval(len(self.spectrum), coeffs) > (
+                            self.max_wavelength + self.range_tolerance
+                        ):
+                            self.logger.debug(
+                                "Upper wavelength of fit too large, "
+                                "{:1.2f}.".format(
+                                    self.polyval(len(self.spectrum), coeffs)
+                                )
+                            )
+
+                            continue
 
                     # Get the residual of the fit
                     residual = (
