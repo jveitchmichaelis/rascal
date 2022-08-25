@@ -764,3 +764,129 @@ def _derivative(p):
     for i in range(1, len(p)):
         derv.append(i * p[i])
     return derv
+
+
+from collections import defaultdict
+
+
+def get_duplicate_indices(x):
+    """
+    Return the duplicate indices of the input list, x
+
+    Parameters
+    ----------
+    x: list
+
+    Returns
+    -------
+    duplicates: list(int)
+        Indices of duplicate elements
+    """
+    # NB iteration_utilities is much faster, but doesn't return indices
+
+    dic = defaultdict(list)
+
+    for idx, el in enumerate(x):
+        dic[tuple(el)].append(idx)
+
+    indices = []
+    for key in dic:
+        if len(dic[key]) > 1:
+            indices.extend(dic[key])
+
+    return indices
+
+
+def _clean_matches(x, user_lines=[]):
+    """
+    Clean a list of atlas match groups given the following
+    constraints:
+
+    1. If there are duplicate match lists, None will be appended to
+    provide for the case when neither match is appropriate.
+    2. If user lines are provided then we check to see if there
+    are any match groups that contain that line. If only one does
+    then the other lines in that group are removed.
+    3. All match groups should have only unique values
+
+    Parameters
+    ----------
+    x: list of list(float)
+
+    Returns
+    -------
+    cleaned: list(set(float))
+        A list of sets of matched atlas lines, cleaned as per the documentation above.
+    """
+
+    out = []
+
+    # If we enforce values that must appear
+    # and they only appear in a single
+    # match.
+    for value in user_lines:
+        val_idx = -1
+        count = 0
+        for idx, el in enumerate(x):
+            if value in el:
+                if count > 0:
+                    count = 0
+                    break
+                else:
+                    val_idx = idx
+                    count = 1
+
+        if count == 1:
+            x[val_idx] = [value]
+
+    # Add None to duplicates
+    for idx in get_duplicate_indices(x):
+        if len(x[idx]) > 0:
+            x[idx].append(None)
+
+    return [set(i) for i in x]
+
+
+def _make_unique_permutation(x, empty_val=-1):
+    """
+    Return all permutations of the list of inputs, subject
+    to the constraint that all permutations only contain
+    unique values. It is guaranteed that the output
+    permutations have the same length as the input x.
+
+    Parameters
+    ----------
+    x: list of list(float)
+        Input list of values to permute. Each value must be a list or iterable.
+    empty_val: Any
+        Special placeholder to use if the input list has an empty element
+
+    Returns
+    -------
+    permutations: list(list(float))
+        A list of sets of matched atlas lines, cleaned as per the documentation above.
+    """
+
+    permutations = [[]]
+
+    for input_list in x:
+
+        new_permutations = []
+
+        for permutation in permutations:
+
+            if len(input_list) == 0:
+                permutation.append(empty_val)
+            else:
+                for element in input_list:
+
+                    if element not in permutation or element is None:
+                        new_permutation = list(permutation)
+                        new_permutation.append(element)
+
+                        new_permutations.append(new_permutation)
+
+        if len(new_permutations) > 0:
+            permutations = new_permutations
+
+    return permutations

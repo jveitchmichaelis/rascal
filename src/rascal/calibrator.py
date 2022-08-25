@@ -10,7 +10,7 @@ from scipy.optimize import minimize
 from scipy import interpolate
 from tqdm.autonotebook import tqdm
 
-from .util import _derivative
+from .util import _derivative, _make_unique_permutation, _clean_matches
 from .util import gauss
 from . import plotting
 from . import models
@@ -1950,61 +1950,17 @@ class Calibrator:
                 matched_atlas.append(list(np.asarray(atlas_lines)[diff_abs]))
                 residuals.append(diff_abs)
 
-        # Create permutations:
-        candidates = [[]]
+        assert len(matched_peaks) == len(matched_atlas)
 
-        # match is a list
-        for match in matched_atlas:
+        matched_peaks = np.array(matched_peaks)
 
-            if len(match) == 0:
-
-                continue
-
-            self.logger.info("matched: {}".format(match))
-
-            new_candidates = []
-            # i is an int
-            # candidates is a list of list
-            for i in range(len(candidates)):
-
-                # c is a list
-                c = candidates[i]
-
-                if len(match) == 1:
-
-                    c.extend(match)
-
-                else:
-
-                    # rep is a list of tuple
-                    rep = ~np.in1d(match, c)
-
-                    if rep.any():
-
-                        for j in np.argwhere(rep):
-
-                            new_c = c + [match[int(j)]]
-
-                        new_candidates.append(new_c)
-
-                # Only add if new_candidates is not an empty list
-                if new_candidates != []:
-
-                    if candidates[0] == []:
-
-                        candidates[0] = new_candidates
-
-                    else:
-
-                        candidates.append(new_candidates)
+        candidates = _make_unique_permutation(_clean_matches(matched_atlas))
 
         if len(candidates) > 1:
 
             self.logger.info(
                 "More than one match solution found, checking permutations."
             )
-
-        self.matched_peaks = np.array(copy.deepcopy(matched_peaks))
 
         # Check all candidates
         best_err = 1e9
@@ -2013,18 +1969,22 @@ class Calibrator:
 
         for candidate in candidates:
 
-            matched_atlas = np.array(candidate)
-            print(matched_peaks)
-            print(matched_atlas)
-            fit_coeff = self.polyfit(matched_peaks, matched_atlas, fit_deg)
+            candidate_atlas = np.array(candidate)
 
-            x = self.polyval(matched_peaks, fit_coeff)
-            residuals = np.abs(matched_atlas - x)
+            valid_mask = candidate_atlas > 0
+            candidate_peaks = matched_peaks[valid_mask]
+            candidate_atlas = candidate_atlas[valid_mask]
+
+            fit_coeff = self.polyfit(candidate_peaks, candidate_atlas, fit_deg)
+
+            x = self.polyval(candidate_peaks, fit_coeff)
+            residuals = np.abs(candidate_atlas - x)
             err = np.sum(residuals)
 
             if err < best_err:
 
-                self.matched_atlas = matched_atlas
+                self.matched_atlas = candidate_atlas
+                self.matched_peaks = candidate_peaks
                 self.residuals = residuals
 
                 best_err = err
