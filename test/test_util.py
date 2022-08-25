@@ -1,3 +1,5 @@
+import pkg_resources
+import pytest
 from unittest.mock import patch
 
 import numpy as np
@@ -137,6 +139,37 @@ def test_get_calibration_lines_vacuum_vs_air():
         elements=["He"], min_intensity=10, vacuum=True
     )[1]
     assert (np.array(wave_air) < np.array(wave_vacuum)).all()
+
+
+def test_get_calibration_lines_from_file():
+    lines_manual = util.get_calibration_lines(
+        elements=["He"],
+        linelist=pkg_resources.resource_filename(
+            "rascal", "arc_lines/nist_clean.csv"
+        ),
+    )
+    lines = util.get_calibration_lines(elements=["He"])
+    assert (lines[1] == lines_manual[1]).all()
+
+
+@pytest.mark.xfail()
+def test_get_calibration_lines_from_unknown_file():
+    lines_manual = util.get_calibration_lines(
+        elements=["He"],
+        linelist="blabla",
+    )
+    lines = util.get_calibration_lines(elements=["He"])
+    assert (lines[1] == lines_manual[1]).all()
+
+
+@pytest.mark.xfail()
+def test_get_calibration_lines_from_unknown_type():
+    lines_manual = util.get_calibration_lines(
+        elements=["He"],
+        linelist=np.ones(10),
+    )
+    lines = util.get_calibration_lines(elements=["He"])
+    assert (lines[1] == lines_manual[1]).all()
 
 
 def test_print_calibration_lines(capfd):

@@ -317,14 +317,12 @@ def get_calibration_lines(
                 "rascal", "arc_lines/nist_clean.csv"
             )
             lines = np.loadtxt(file_path, delimiter=",", dtype=">U12")
-        elif os.path.exist(linelist):
-            lines = np.loadtxt(file_path, delimiter=",", dtype=">U12")
+        elif os.path.exists(linelist):
+            lines = np.loadtxt(linelist, delimiter=",", dtype=">U12")
         else:
             raise ValueError(
                 "Unknown string is provided as linelist: {}.".format(linelist)
             )
-    elif isinstance(linelist, np.ndarray.array):
-        lines = np.load(file_path)
     else:
         raise ValueError("Please provide a valid format of line list.")
 
