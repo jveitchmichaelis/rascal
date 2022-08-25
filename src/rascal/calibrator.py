@@ -1829,6 +1829,7 @@ class Calibrator:
         convergence=1e-6,
         min_frac=0.5,
         robust_refit=True,
+        best_err=1e9,
         fit_deg=None,
     ):
         """
@@ -1843,10 +1844,10 @@ class Calibrator:
         Set refine to True to improve on the polynomial solution.
 
         Set robust_refit to True to fit all the detected peaks with the
-        given polynomial solution for a fit using maximal information, with
+        given polynomial solution for a fit using a robust polyfit, with
         the degree of polynomial = fit_deg.
 
-        Set both refine and robust_refit to False will return the list of
+        Set refine to False will return the list of
         arc lines are well fitted by the current solution within the
         tolerance limit provided.
 
@@ -1867,8 +1868,9 @@ class Calibrator:
         min_frac: float (default: 0.5)
             Minimum fractionof peaks to be refitted.
         robust_refit: boolean (default: True)
-            Set to True to fit all the detected peaks with the given polynomial
-            solution.
+            Set to True to use a robust estimator instead of polyfit
+        best_err:
+            Provide the best current fit error (e.g. from calibrator.fit)
         fit_deg: int (default: length of the input fit_coefficients)
             Order of polynomial fit with all the detected peaks.
 
@@ -1930,6 +1932,8 @@ class Calibrator:
                     "Input solution is returned."
                 )
                 return fit_coeff, None, None, None, None
+            else:
+                fit_coeff = fit_coeff_new
 
         matched_peaks = []
         matched_atlas = []
@@ -1962,20 +1966,31 @@ class Calibrator:
                 "More than one match solution found, checking permutations."
             )
 
-        # Check all candidates
-        best_err = 1e9
-        self.matched_atlas = None
-        self.residuals = None
+        if len(candidates) == 0:
+            self.logger.warning("No candidates found.")
 
         for candidate in candidates:
 
             candidate_atlas = np.array(candidate)
+            valid_mask = candidate_atlas != None
 
-            valid_mask = candidate_atlas > 0
-            candidate_peaks = matched_peaks[valid_mask]
-            candidate_atlas = candidate_atlas[valid_mask]
+            candidate_peaks = matched_peaks[valid_mask].astype(float)
+            candidate_atlas = candidate_atlas[valid_mask].astype(float)
 
-            fit_coeff = self.polyfit(candidate_peaks, candidate_atlas, fit_deg)
+            if len(candidate_peaks) < fit_deg:
+                self.logger.debug("Not enough candidate points for this fit.")
+                continue
+
+            if robust_refit:
+                fit_coeff = models.robust_polyfit(
+                    candidate_peaks,
+                    candidate_atlas,
+                    fit_deg,
+                )
+            else:
+                fit_coeff = self.polyfit(
+                    candidate_peaks, candidate_atlas, fit_deg
+                )
 
             x = self.polyval(candidate_peaks, fit_coeff)
             residuals = np.abs(candidate_atlas - x)
@@ -1983,14 +1998,16 @@ class Calibrator:
 
             if err < best_err:
 
+                assert candidate_atlas is not None
+                assert candidate_peaks is not None
+                assert residuals is not None
+
                 self.matched_atlas = candidate_atlas
                 self.matched_peaks = candidate_peaks
                 self.residuals = residuals
+                self.fit_coeff = fit_coeff
 
                 best_err = err
-
-        assert self.matched_atlas is not None
-        assert self.residuals is not None
 
         self.rms = np.sqrt(
             np.nansum(self.residuals**2.0) / len(self.residuals)
@@ -1998,43 +2015,6 @@ class Calibrator:
 
         self.peak_utilisation = len(self.matched_peaks) / len(self.peaks)
         self.atlas_utilisation = len(self.matched_atlas) / len(self.atlas)
-
-        if robust_refit:
-
-            self.fit_coeff = models.robust_polyfit(
-                np.asarray(self.matched_peaks),
-                np.asarray(self.matched_atlas),
-                fit_deg,
-            )
-            self.residuals = self.matched_atlas - self.polyval(
-                self.matched_peaks, self.fit_coeff
-            )
-
-            if np.any(np.isnan(self.fit_coeff)):
-
-                self.logger.warning(
-                    "robust_polyfit() returns None. "
-                    "Input solution is returned."
-                )
-                return (
-                    fit_coeff,
-                    self.matched_peaks,
-                    self.matched_atlas,
-                    self.rms,
-                    self.residuals,
-                    self.peak_utilisation,
-                    self.atlas_utilisation,
-                )
-
-            else:
-
-                self.rms = np.sqrt(
-                    np.nansum(self.residuals**2.0) / len(self.residuals)
-                )
-
-        else:
-
-            self.fit_coeff = fit_coeff_new
 
         return (
             self.fit_coeff,

@@ -101,7 +101,7 @@ def robust_polyfit(x, y, degree=3, x0=None):
         for i in range(0, degree):
             p_init[i] *= x.std() ** i
 
-        p_init /= y.std()
+        p_init /= y.std() + 1e-9
     else:
         p_init = np.ones(degree + 1)
 

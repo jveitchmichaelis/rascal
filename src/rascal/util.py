@@ -842,7 +842,7 @@ def _clean_matches(x, user_lines=[]):
     # Add None to duplicates
     for idx in get_duplicate_indices(x):
         if len(x[idx]) > 0:
-            x[idx].append(None)
+            x[idx].append(-1)
 
     return [set(i) for i in x]
 
@@ -880,7 +880,7 @@ def _make_unique_permutation(x, empty_val=-1):
             else:
                 for element in input_list:
 
-                    if element not in permutation or element is None:
+                    if element not in permutation or element is empty_val:
                         new_permutation = list(permutation)
                         new_permutation.append(element)
 
