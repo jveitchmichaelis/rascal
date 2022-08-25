@@ -295,7 +295,7 @@ def test_quadratic_fit_legendre():
     )
     c.set_atlas(a)
     c.set_ransac_properties(
-        sample_size=8, minimum_matches=18, minimum_fit_error=1e-8
+        sample_size=8, minimum_matches=18, minimum_fit_error=1e-18
     )
     c.do_hough_transform(brute_force=False)
 
@@ -342,7 +342,7 @@ def test_quadratic_fit_chebyshev():
     )
     c.set_atlas(a)
     c.set_ransac_properties(
-        sample_size=8, minimum_matches=18, minimum_fit_error=1e-8
+        sample_size=8, minimum_matches=18, minimum_fit_error=1e-18
     )
     c.do_hough_transform(brute_force=False)
 
