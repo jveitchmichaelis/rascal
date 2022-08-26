@@ -9,16 +9,24 @@ from scipy.spatial import Delaunay
 from scipy.optimize import minimize
 from scipy import interpolate
 from tqdm.autonotebook import tqdm
+import yaml
 
 from .util import _derivative, _make_unique_permutation, _clean_matches
 from .util import gauss
 from . import plotting
 from . import models
+from . import atlas
 from .houghtransform import HoughTransform
 
 
 class Calibrator:
-    def __init__(self, peaks, spectrum=None):
+    def __init__(
+        self,
+        peaks=None,
+        spectrum=None,
+        logger_name="Calibrator",
+        log_level="warning",
+    ):
         """
         Initialise the calibrator object.
 
@@ -31,20 +39,20 @@ class Calibrator:
 
         """
 
-        self.logger = None
-        self.log_level = None
+        self.logger = logger_name
+        self.log_level = log_level
 
-        self.peaks = copy.deepcopy(peaks)
-        self.spectrum = copy.deepcopy(spectrum)
         self.matplotlib_imported = False
         self.plotly_imported = False
         self.plot_with_matplotlib = False
         self.plot_with_plotly = False
         self.atlas = None
+        self.pix_to_rawpix = None
         self.pix_known = None
         self.wave_known = None
         self.hough_lines = None
         self.hough_points = None
+        self.pairs = None
         self.ht = HoughTransform()
 
         # calibrator_properties
@@ -83,9 +91,49 @@ class Calibrator:
         self.peak_utilisation = 0.0
         self.atlas_utilisation = 0.0
 
+        self.set_logger(logger_name, log_level)
+        self.add_data(peaks, spectrum)
         self.set_calibrator_properties()
         self.set_hough_properties()
         self.set_ransac_properties()
+
+    def add_data(self, peaks, spectrum):
+        """
+        Add the peaks to be solved for wavelength solution. The arc spectrum
+        is optional but it would be a useful for visualisation/diagnostics.
+
+        peaks: list
+            List of identified arc line pixel values.
+        spectrum: list
+            The spectral intensity as a function of pixel.
+
+        """
+        self.peaks = copy.deepcopy(peaks)
+        self.spectrum = copy.deepcopy(spectrum)
+
+        if self.num_pix is None:
+
+            self.set_num_pix(None)
+
+    def set_logger(self, logger_name, log_level):
+
+        # initialise the logger
+        self.logger = logging.getLogger(logger_name)
+        self.logger.propagate = False
+        level = logging.getLevelName(log_level.upper())
+        self.logger.setLevel(level)
+        self.log_level = level
+
+        formatter = logging.Formatter(
+            "[%(asctime)s] %(levelname)s [%(filename)s:%(lineno)d] "
+            "%(message)s",
+            datefmt="%a, %d %b %Y %H:%M:%S",
+        )
+
+        if len(self.logger.handlers) == 0:
+            handler = logging.StreamHandler()
+            handler.setFormatter(formatter)
+            self.logger.addHandler(handler)
 
     def _generate_pairs(self):
         """
@@ -942,6 +990,270 @@ class Calibrator:
 
         return lsq
 
+    def load_config(self, yaml_config, y_type="filepath"):
+        """
+        Load a yaml configuration file to populate a Calibrator object
+        and optionally an Atlas object.
+
+        Parameters
+        ----------
+        yaml_config : str or pyyaml object
+            Filepath or a pyyaml object
+        y_type: str
+            Specify 'yaml' for loading from file or 'object' to take a pyyaml
+            object.
+
+        """
+
+        # Load from file
+        if y_type == "filepath":
+
+            with open(yaml_config, "r") as stream:
+
+                config = yaml.safe_load(stream)
+
+        # Load from a pyyaml object
+        elif y_type == "object":
+
+            config = yaml_config
+
+        else:
+
+            raise ValueError(
+                "Unknown y_type: {}. Please choose from "
+                "'filepath' or 'stream'".format(y_type)
+            )
+
+        # Add data to the calibrator
+        self.peaks = config["peaks"]
+        self.spectrum = config["spectrum"]
+        self.add_data(self.peaks, self.spectrum)
+
+        # Calibrator Properties
+        self.num_pix = config["num_pix"]
+        self.pixel_list = config["pixel_list"]
+        self.plotting_library = config["plotting_library"]
+        self.seed = config["seed"]
+        self.logger = config["logger"]
+        self.log_level = config["log_level"]
+        self.hide_progress = config["hide_progress"]
+        self.set_calibrator_properties(
+            num_pix=self.num_pix,
+            pixel_list=self.pixel_list,
+            plotting_library=self.plotting_library,
+            seed=self.seed,
+            logger=self.logger,
+            log_level=self.log_level,
+            hide_progress=self.hide_progress,
+        )
+
+        self.candidate_tolerance = config["candidate_tolerance"]
+        self.constrain_poly = config["constrain_poly"]
+
+        # Atlas Properties
+        # config["atlas"]:
+        #   False - skip this step
+        #   True - read from that rascal config
+        #   string - treated as a path to an Atlas config file
+        self.atlas_config = config["atlas"]
+        if not self.atlas_config["config"]:
+
+            self.logger.info("Atlas is not generated from the rascal yaml.")
+
+        elif self.atlas_config["config"]:
+
+            if self.atlas_config["linelist"] == "nist":
+
+                a = atlas.Atlas()
+                a.add(
+                    elements=self.atlas_config["elements"],
+                    linelist=self.atlas_config["linelist"],
+                    min_atlas_wavelength=self.atlas_config[
+                        "min_atlas_wavelength"
+                    ],
+                    max_atlas_wavelength=self.atlas_config[
+                        "max_atlas_wavelength"
+                    ],
+                    min_intensity=self.atlas_config["min_intensity"],
+                    min_distance=self.atlas_config["min_distance"],
+                    brightest_n_lines=self.atlas_config["brightest_n_lines"],
+                    vacuum=self.atlas_config["vacuum"],
+                    pressure=self.atlas_config["pressure"],
+                    temperature=self.atlas_config["temperature"],
+                    relative_humidity=self.atlas_config["relative_humidity"],
+                )
+                self.logger.info(
+                    "Atlas is generated from the rascal yaml using Nist lines."
+                )
+
+            # This loads the lines directly
+            elif self.atlas_config["linelist"] == "user":
+
+                a = atlas.Atlas()
+                a.add_user_atlas(
+                    elements=self.atlas_config["element_list"],
+                    wavelengths=self.atlas_config["wavelength_list"],
+                    intensities=self.atlas_config["intensity_list"],
+                    vacuum=self.atlas_config["vacuum"],
+                    pressure=self.atlas_config["pressure"],
+                    temperature=self.atlas_config["temperature"],
+                    relative_humidity=self.atlas_config["relative_humidity"],
+                )
+                self.logger.info(
+                    "Atlas is generated from the rascal yaml using user lines."
+                )
+
+            # Unknown mode
+            else:
+
+                raise ValueError(
+                    "Unknown linelist type: {}. Please choose from "
+                    "'nist' or 'user'.".format(self.atlas_config["linelist"])
+                )
+
+        elif isinstance(self.atlas_config["config"], str):
+
+            a = atlas.Atlas()
+            a.load_config(self.atlas_config["config"], y_type="filepath")
+
+        else:
+
+            raise ValueError(
+                "Unknown atlas config type: {}. Please choose from 'true', "
+                "'false' or a valid path to an Atlas config.".format(
+                    self.atlas_config["config"]
+                )
+            )
+
+        # Only add the atlas to the Calibrator if it were set to True
+        if self.atlas_config["config"]:
+
+            self.set_atlas(a, self.candidate_tolerance, self.constrain_poly)
+
+        # Hough transform properties
+        hough_config = config["hough_transform"]
+
+        self.num_slopes = hough_config["num_slopes"]
+        self.xbins = hough_config["xbins"]
+        self.ybins = hough_config["ybins"]
+        self.min_wavelength = hough_config["min_wavelength"]
+        self.max_wavelength = hough_config["max_wavelength"]
+        self.range_tolerance = hough_config["range_tolerance"]
+        self.linearity_tolerance = hough_config["linearity_tolerance"]
+
+        self.set_hough_properties(
+            num_slopes=self.num_slopes,
+            xbins=self.xbins,
+            ybins=self.ybins,
+            min_wavelength=self.min_wavelength,
+            max_wavelength=self.max_wavelength,
+            range_tolerance=self.range_tolerance,
+            linearity_tolerance=self.linearity_tolerance,
+        )
+
+        # RANSAC properties
+        ransac_config = config["ransac"]
+
+        self.sample_size = ransac_config["sample_size"]
+        self.top_n_candidate = ransac_config["top_n_candidate"]
+        self.linear = ransac_config["linear"]
+        self.filter_close = ransac_config["filter_close"]
+        self.ransac_tolerance = ransac_config["ransac_tolerance"]
+        self.candidate_weighted = ransac_config["candidate_weighted"]
+        self.hough_weight = ransac_config["hough_weight"]
+        self.minimum_matches = ransac_config["minimum_matches"]
+        self.minimum_peak_utilisation = ransac_config[
+            "minimum_peak_utilisation"
+        ]
+        self.minimum_fit_error = ransac_config["minimum_fit_error"]
+
+        self.set_ransac_properties(
+            sample_size=self.sample_size,
+            top_n_candidate=self.top_n_candidate,
+            linear=self.linear,
+            filter_close=self.filter_close,
+            ransac_tolerance=self.ransac_tolerance,
+            candidate_weighted=self.candidate_weighted,
+            hough_weight=self.hough_weight,
+            minimum_matches=self.minimum_matches,
+            minimum_peak_utilisation=self.minimum_peak_utilisation,
+            minimum_fit_error=self.minimum_fit_error,
+        )
+
+        # Results
+        result_config = config["results"]
+
+        self.matched_peaks = result_config["matched_peaks"]
+        self.matched_atlas = result_config["matched_atlas"]
+        self.fit_coeff = result_config["fit_coeff"]
+
+    def save_config(self, filename):
+
+        output_data = {
+            "peaks": self.peaks,
+            "spectrum": self.spectrum,
+            "num_pix": self.num_pix,
+            "pixel_list": self.pixel_list,
+            "plotting_library": self.plotting_library,
+            "seed": self.seed,
+            "logger": self.logger,
+            "log_level": self.log_level,
+            "hide_progress": self.hide_progress,
+            "candidate_tolerance": self.candidate_tolerance,
+            "constrain_poly": self.constrain_poly,
+            "atlas": {
+                "config": self.atlas_config,
+                "linelist": self.atlas_config["linelist"],
+                "vacuum": self.atlas_config["vacuum"],
+                "pressure": self.atlas_config["pressure"],
+                "temperature": self.atlas_config["temperature"],
+                "relative_humidity": self.atlas_config["relative_humidity"],
+                "elements": self.atlas_config["elements"],
+                "min_atlas_wavelength": self.atlas_config[
+                    "min_atlas_wavelength"
+                ],
+                "max_atlas_wavelength": self.atlas_config[
+                    "max_atlas_wavelength"
+                ],
+                "min_intensity": self.atlas_config["min_intensity"],
+                "min_distance": self.atlas_config["min_distance"],
+                "brightest_n_lines": self.atlas_config["brightest_n_lines"],
+                "element_list": self.atlas_config["element_list"],
+                "wavelength_list": self.atlas_config["wavelength_list"],
+                "intensity_list": self.atlas_config["intensity_list"],
+            },
+            "hough_transform": {
+                "num_slopes": self.num_slopes,
+                "xbins": self.xbins,
+                "ybins": self.ybins,
+                "min_wavelength": self.min_wavelength,
+                "max_wavelength": self.max_wavelength,
+                "range_tolerance": self.range_tolerance,
+                "linearity_tolerance": self.linearity_tolerance,
+            },
+            "ransac": {
+                "sample_size": self.sample_size,
+                "top_n_candidate": self.top_n_candidate,
+                "linear": self.linear,
+                "filter_close": self.filter_close,
+                "ransac_tolerance": self.ransac_tolerance,
+                "candidate_weighted": self.candidate_weighted,
+                "hough_weight": self.hough_weight,
+                "minimum_matches": self.minimum_matches,
+                "minimum_peak_utilisation": self.minimum_peak_utilisation,
+                "minimum_fit_error": self.minimum_fit_error,
+            },
+            "results": {
+                "matched_peaks": self.matched_peaks,
+                "matched_atlas": self.matched_atlas,
+                "fit_coeff": self.fit_coeff,
+            },
+        }
+
+        with open(filename, "w+") as f:
+
+            yaml.dump(output_data, f, default_flow_style=False)
+
     def which_plotting_library(self):
         """
         Call to show if the Calibrator is using matplotlib or plotly library
@@ -988,7 +1300,7 @@ class Calibrator:
         pixel_list=None,
         plotting_library=None,
         seed=None,
-        logger_name="Calibrator",
+        logger=None,
         log_level="warning",
         hide_progress=False,
     ):
@@ -1013,64 +1325,31 @@ class Calibrator:
             matching name is provided.
         log_level: string (default: 'info')
             Choose {critical, error, warning, info, debug, notset}.
+        hide_progress: bool (default: False)
+            Set to hide tdqm progress bar.
 
         """
 
-        # initialise the logger
-        self.logger = logging.getLogger(logger_name)
-        self.logger.propagate = False
-        level = logging.getLevelName(log_level.upper())
-        self.logger.setLevel(level)
-        self.log_level = level
-
-        formatter = logging.Formatter(
-            "[%(asctime)s] %(levelname)s [%(filename)s:%(lineno)d] "
-            "%(message)s",
-            datefmt="%a, %d %b %Y %H:%M:%S",
+        self.set_logger(
+            logger,
+            log_level,
         )
-
-        if len(self.logger.handlers) == 0:
-            handler = logging.StreamHandler()
-            handler.setFormatter(formatter)
-            self.logger.addHandler(handler)
 
         self.hide_progress = hide_progress
 
         # set the num_pix
-        if num_pix is not None:
-
-            self.num_pix = num_pix
-
-        elif self.num_pix is None:
-
-            try:
-
-                self.num_pix = len(self.spectrum)
-
-            except Exception as e:
-
-                self.logger.warning(e)
-                self.logger.warning(
-                    "Neither num_pix nor spectrum is given, "
-                    "it uses 1.1 times max(peaks) as the "
-                    "maximum pixel value."
-                )
-                self.num_pix = 1.1 * max(self.peaks)
-
-        else:
-
-            pass
-
-        self.logger.info("num_pix is set to {}.".format(num_pix))
+        self.set_num_pix(num_pix)
 
         # set the pixel_list
         if pixel_list is not None:
 
             self.pixel_list = np.asarray(pixel_list)
+            self.set_pix_to_rawpix(self.pixel_list)
 
-        elif self.pixel_list is None:
+        elif self.pixel_list is None and self.num_pix is not None:
 
             self.pixel_list = np.arange(self.num_pix)
+            self.set_pix_to_rawpix(self.pixel_list)
 
         else:
 
@@ -1078,15 +1357,9 @@ class Calibrator:
 
         self.logger.info("pixel_list is set to {}.".format(pixel_list))
 
-        # map the list position to the pixel value
-        self.pix_to_rawpix = interpolate.interp1d(
-            self.pixel_list,
-            np.arange(len(self.pixel_list)),
-            fill_value="extrapolate",
-        )
-
         if seed is not None:
             np.random.seed(seed)
+            self.seed = seed
 
         # if the plotting library is supplied
         if plotting_library is not None:
@@ -1123,6 +1396,65 @@ class Calibrator:
                 "matplotlib or plotly. Execute use_matplotlib() or "
                 "use_plotly() to manually select the library."
             )
+
+    def set_num_pix(self, num_pix):
+
+        if num_pix is not None:
+
+            self.num_pix = num_pix
+            self.pixel_list = np.arange(self.num_pix)
+            self.set_pix_to_rawpix(self.pixel_list)
+
+        elif self.num_pix is None:
+
+            try:
+
+                self.num_pix = len(self.spectrum)
+                self.pixel_list = np.arange(self.num_pix)
+                self.set_pix_to_rawpix(self.pixel_list)
+
+            except Exception as e:
+
+                self.logger.warning(e)
+                self.logger.warning(
+                    "Neither num_pix nor spectrum is given, "
+                    "it uses 1.1 times max(peaks) as the "
+                    "maximum pixel value."
+                )
+                try:
+
+                    self.num_pix = 1.1 * max(self.peaks)
+                    self.pixel_list = np.arange(self.num_pix)
+                    self.set_pix_to_rawpix(self.pixel_list)
+
+                except Exception as e2:
+
+                    self.logger.warning(e)
+                    self.logger.warning(
+                        "num_pix cannot be set, please provide a num_pix, "
+                        "or the peaks, so that we can guess the num_pix."
+                    )
+
+        else:
+
+            pass
+
+        self.logger.info("num_pix is set to {}.".format(num_pix))
+
+    def set_pix_to_rawpix(self, pixel_list):
+
+        if pixel_list is not None:
+
+            # map the list position to the pixel value
+            self.pix_to_rawpix = interpolate.interp1d(
+                self.pixel_list,
+                np.arange(len(self.pixel_list)),
+                fill_value="extrapolate",
+            )
+
+        else:
+
+            self.pix_to_rawpix = None
 
     def set_hough_properties(
         self,
@@ -1253,33 +1585,35 @@ class Calibrator:
         self.min_intercept = self.min_wavelength - self.range_tolerance
         self.max_intercept = self.min_wavelength + self.range_tolerance
 
-        self.min_slope = (
-            (
-                self.max_wavelength
-                - self.range_tolerance
-                - self.linearity_tolerance
-            )
-            - (
-                self.min_intercept
-                + self.range_tolerance
-                + self.linearity_tolerance
-            )
-        ) / self.pixel_list.max()
+        if self.pixel_list is not None:
 
-        self.max_slope = (
-            (
-                self.max_wavelength
-                + self.range_tolerance
-                + self.linearity_tolerance
-            )
-            - (
-                self.min_intercept
-                - self.range_tolerance
-                - self.linearity_tolerance
-            )
-        ) / self.pixel_list.max()
+            self.min_slope = (
+                (
+                    self.max_wavelength
+                    - self.range_tolerance
+                    - self.linearity_tolerance
+                )
+                - (
+                    self.min_intercept
+                    + self.range_tolerance
+                    + self.linearity_tolerance
+                )
+            ) / self.pixel_list.max()
 
-        if self.atlas is not None:
+            self.max_slope = (
+                (
+                    self.max_wavelength
+                    + self.range_tolerance
+                    + self.linearity_tolerance
+                )
+                - (
+                    self.min_intercept
+                    - self.range_tolerance
+                    - self.linearity_tolerance
+                )
+            ) / self.pixel_list.max()
+
+        if self.atlas is not None and self.pairs is not None:
 
             self._generate_pairs()
 
@@ -1522,7 +1856,9 @@ class Calibrator:
 
         # Create a list of all possible pairs of detected peaks and lines
         # from atlas
-        self._generate_pairs()
+        if self.peaks is not None:
+
+            self._generate_pairs()
 
     def atlas_summary(self, mode="executive", return_string=False):
         """

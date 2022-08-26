@@ -1,7 +1,6 @@
 from itertools import combinations
 import logging
 import os
-from unittest.mock import mock_open, patch
 
 import numpy as np
 import pytest
@@ -15,8 +14,7 @@ logger = logging.getLogger()
 HERE = os.path.dirname(os.path.realpath(__file__))
 
 
-@pytest.mark.xfail()
-def test_loading_empty_calibrator_expect_fail():
+def test_loading_empty_calibrator():
     logger.info("Testing load without peaks.")
     Calibrator()
 
