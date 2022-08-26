@@ -38,30 +38,14 @@ def test_linear_fit():
     c.do_hough_transform(brute_force=False)
 
     # Run the wavelength calibration
-    (
-        best_p,
-        matched_peaks,
-        matched_atlas,
-        rms,
-        residual,
-        peak_utilisation,
-        atlas_utilisation,
-    ) = c.fit(max_tries=500, fit_deg=1)
+    res = c.fit(max_tries=500, fit_deg=1)
     # Refine solution
-    (
-        best_p,
-        matched_peaks,
-        matched_atlas,
-        rms,
-        residual,
-        peak_utilisation,
-        atlas_utilisation,
-    ) = c.match_peaks(best_p, refine=False, robust_refit=True)
+    res = c.match_peaks(res["fit_coeff"], refine=False, robust_refit=True)
 
-    assert np.abs(best_p[1] - 5.0) / 5.0 < 0.001
-    assert np.abs(best_p[0] - 3000.0) / 3000.0 < 0.001
-    assert peak_utilisation > 0.8
-    assert atlas_utilisation > 0.0
+    assert np.abs(res["fit_coeff"][1] - 5.0) / 5.0 < 0.001
+    assert np.abs(res["fit_coeff"][0] - 3000.0) / 3000.0 < 0.001
+    assert res["peak_utilisation"] > 0.8
+    assert res["atlas_utilisation"] > 0.0
 
     assert len(c.get_pix_wave_pairs()) == len(peaks)
 
@@ -86,36 +70,13 @@ def test_manual_refit():
     c.do_hough_transform(brute_force=False)
 
     # Run the wavelength calibration
-    (
-        best_p,
-        matched_peaks,
-        matched_atlas,
-        rms,
-        residual,
-        peak_utilisation,
-        atlas_utilisation,
-    ) = c.fit(max_tries=500, fit_deg=1)
+    res = c.fit(max_tries=500, fit_deg=1)
 
     # Refine solution
-    (
-        best_p_robust,
-        matched_peaks,
-        matched_atlas,
-        rms,
-        residual,
-        peak_utilisation,
-        atlas_utilisation,
-    ) = c.match_peaks(best_p, refine=False, robust_refit=True)
+    res = c.match_peaks(res["fit_coeff"], refine=False, robust_refit=True)
+    res_manual = c.manual_refit(res["matched_peaks"], res["matched_atlas"])
 
-    (
-        best_p_manual,
-        matched_peaks,
-        matched_atlas,
-        rms,
-        residuals,
-    ) = c.manual_refit(matched_peaks, matched_atlas)
-
-    assert np.allclose(best_p_manual, best_p)
+    assert np.allclose(res_manual["fit_coeff"], res["fit_coeff"])
 
 
 def test_manual_refit_remove_points():
@@ -138,38 +99,16 @@ def test_manual_refit_remove_points():
     c.do_hough_transform(brute_force=False)
 
     # Run the wavelength calibration
-    (
-        best_p,
-        atched_peaks,
-        matched_atlas,
-        rms,
-        residual,
-        peak_utilisation,
-        atlas_utilisation,
-    ) = c.fit(max_tries=500, fit_deg=1)
+    res = c.fit(max_tries=500, fit_deg=1)
 
     # Refine solution
-    (
-        best_p,
-        matched_peaks,
-        matched_atlas,
-        rms,
-        residual,
-        peak_utilisation,
-        atlas_utilisation,
-    ) = c.match_peaks(best_p, refine=False, robust_refit=True)
+    res = c.match_peaks(res["fit_coeff"], refine=False, robust_refit=True)
 
     c.remove_pix_wave_pair(5)
 
-    (
-        best_p_manual,
-        matched_peaks,
-        matched_atlas,
-        rms,
-        residuals,
-    ) = c.manual_refit(matched_peaks, matched_atlas)
+    res_manual = c.manual_refit(res["matched_peaks"], res["matched_atlas"])
 
-    assert np.allclose(best_p_manual, best_p)
+    assert np.allclose(res_manual["fit_coeff"], res["fit_coeff"])
 
 
 def test_manual_refit_add_points():
@@ -192,37 +131,15 @@ def test_manual_refit_add_points():
     c.do_hough_transform(brute_force=False)
 
     # Run the wavelength calibration
-    (
-        best_p,
-        atched_peaks,
-        matched_atlas,
-        rms,
-        residual,
-        peak_utilisation,
-        atlas_utilisation,
-    ) = c.fit(max_tries=500, fit_deg=1)
+    res = c.fit(max_tries=500, fit_deg=1)
 
     # Refine solution
-    (
-        best_p,
-        matched_peaks,
-        matched_atlas,
-        rms,
-        residual,
-        peak_utilisation,
-        atlas_utilisation,
-    ) = c.match_peaks(best_p, refine=False, robust_refit=True)
+    res = c.match_peaks(res["fit_coeff"], refine=False, robust_refit=True)
 
     c.add_pix_wave_pair(2000.0, 3000.0 + 4 * 2000.0 + 1.0e-3 * 2000.0**2.0)
-    (
-        best_p_manual,
-        matched_peaks,
-        matched_atlas,
-        rms,
-        residuals,
-    ) = c.manual_refit(matched_peaks, matched_atlas)
+    res_manual = c.manual_refit(res["matched_peaks"], res["matched_atlas"])
 
-    assert np.allclose(best_p_manual, best_p)
+    assert np.allclose(res_manual["fit_coeff"], res["fit_coeff"])
 
 
 def test_quadratic_fit():
@@ -247,33 +164,19 @@ def test_quadratic_fit():
     c.do_hough_transform(brute_force=False)
 
     # Run the wavelength calibration
-    (
-        best_p,
-        matched_peaks,
-        matched_atlas,
-        rms,
-        residual,
-        peak_utilisation,
-        atlas_utilisation,
-    ) = c.fit(
+    res = c.fit(
         max_tries=2000, fit_tolerance=5.0, candidate_tolerance=2.0, fit_deg=2
     )
     # Refine solution
-    (
-        best_p_robust,
-        matched_peaks,
-        matched_atlas,
-        rms,
-        residual,
-        peak_utilisation,
-        atlas_utilisation,
-    ) = c.match_peaks(best_p, refine=False, robust_refit=True)
+    res_robust = c.match_peaks(
+        res["fit_coeff"], refine=False, robust_refit=True
+    )
 
-    assert np.abs(best_p_robust[2] - 1e-3) / 1e-3 < 0.001
-    assert np.abs(best_p_robust[1] - 4.0) / 4.0 < 0.001
-    assert np.abs(best_p_robust[0] - 3000.0) / 3000.0 < 0.001
-    assert peak_utilisation > 0.7
-    assert atlas_utilisation > 0.5
+    assert np.abs(res_robust["fit_coeff"][2] - 1e-3) / 1e-3 < 0.001
+    assert np.abs(res_robust["fit_coeff"][1] - 4.0) / 4.0 < 0.001
+    assert np.abs(res_robust["fit_coeff"][0] - 3000.0) / 3000.0 < 0.001
+    assert res_robust["peak_utilisation"] > 0.7
+    assert res_robust["atlas_utilisation"] > 0.5
 
 
 def test_quadratic_fit_legendre():
@@ -300,15 +203,7 @@ def test_quadratic_fit_legendre():
     c.do_hough_transform(brute_force=False)
 
     # Run the wavelength calibration
-    (
-        best_p,
-        matched_peaks,
-        matched_atlas,
-        rms,
-        residual,
-        peak_utilisation,
-        atlas_utilisation,
-    ) = c.fit(
+    res = c.fit(
         max_tries=2000,
         fit_tolerance=5.0,
         candidate_tolerance=2.0,
@@ -317,10 +212,10 @@ def test_quadratic_fit_legendre():
     )
 
     # Legendre 2nd order takes the form
-    assert np.abs(best_p[1] - 4.0) / 4.0 < 0.001
-    assert np.abs(best_p[0] - 3000.0) / 3000.0 < 0.001
-    assert peak_utilisation > 0.6
-    assert atlas_utilisation > 0.5
+    assert np.abs(res["fit_coeff"][1] - 4.0) / 4.0 < 0.001
+    assert np.abs(res["fit_coeff"][0] - 3000.0) / 3000.0 < 0.001
+    assert res["peak_utilisation"] > 0.6
+    assert res["atlas_utilisation"] > 0.5
 
 
 def test_quadratic_fit_chebyshev():
@@ -347,15 +242,7 @@ def test_quadratic_fit_chebyshev():
     c.do_hough_transform(brute_force=False)
 
     # Run the wavelength calibration
-    (
-        best_p,
-        matched_peaks,
-        matched_atlas,
-        rms,
-        residual,
-        peak_utilisation,
-        atlas_utilisation,
-    ) = c.fit(
+    res = c.fit(
         max_tries=2000,
         fit_tolerance=5.0,
         candidate_tolerance=2.0,
@@ -363,7 +250,7 @@ def test_quadratic_fit_chebyshev():
         fit_type="chebyshev",
     )
 
-    assert np.abs(best_p[1] - 4.0) / 4.0 < 0.001
-    assert np.abs(best_p[0] - 3000.0) / 3000.0 < 0.001
-    assert peak_utilisation > 0.6
-    assert atlas_utilisation > 0.5
+    assert np.abs(res["fit_coeff"][1] - 4.0) / 4.0 < 0.001
+    assert np.abs(res["fit_coeff"][0] - 3000.0) / 3000.0 < 0.001
+    assert res["peak_utilisation"] > 0.6
+    assert res["atlas_utilisation"] > 0.5

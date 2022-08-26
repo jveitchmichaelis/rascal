@@ -97,25 +97,14 @@ def run_sprat_calibration(fit_deg):
     c.atlas.list()
 
     # Run the wavelength calibration
-    best_p, x, y, rms, residual, peak_utilisation, atlas_utilisation = c.fit(
+    res = c.fit(
         max_tries=500, fit_deg=fit_deg, candidate_tolerance=5.0, use_msac=True
     )
 
     # Refine solution
-    (
-        best_p,
-        x_fit,
-        y_fit,
-        rms,
-        residual,
-        peak_utilisation,
-        atlas_utilisation,
-    ) = c.match_peaks(best_p, refine=False, robust_refit=True)
+    res = c.match_peaks(res["fit_coeff"], refine=False, robust_refit=True)
 
-    fit_diff = c.polyval(x_fit, best_p) - y_fit
-    rms = np.sqrt(np.sum(fit_diff**2 / len(x_fit)))
-
-    return best_p, residual, peak_utilisation, atlas_utilisation, rms
+    return res
 
 
 def test_run_sprat_calibration_with_manual_linelist_file():
@@ -156,9 +145,7 @@ def test_run_sprat_calibration_with_manual_linelist_file():
     )
 
     # Run the wavelength calibration
-    best_p, x, y, rms, residual, peak_utilisation, atlas_utilisation = c.fit(
-        max_tries=500, fit_deg=4
-    )
+    c.fit(max_tries=500, fit_deg=4)
 
 
 def test_sprat_calibration():
@@ -169,8 +156,8 @@ def test_sprat_calibration():
     )
 
     for i in range(3, 6):
-        best_p, _, _, _, _ = run_sprat_calibration(fit_deg=i)
-        assert len(best_p) == (i + 1)
+        res = run_sprat_calibration(fit_deg=i)
+        assert len(res["fit_coeff"]) == (i + 1)
 
 
 def test_sprat_calibration_multirun():
@@ -189,14 +176,11 @@ def test_sprat_calibration_multirun():
     rms = np.zeros(n)
 
     for i in range(n):
-        (
-            best_p,
-            _,
-            peak_utilisation[i],
-            atlas_utilisation[i],
-            rms[i],
-        ) = run_sprat_calibration(4)
-        c0[i], c1[i], c2[i], c3[i], c4[i] = best_p
+        res = run_sprat_calibration(4)
+        c0[i], c1[i], c2[i], c3[i], c4[i] = res["fit_coeff"]
+        peak_utilisation[i] = res["peak_utilisation"]
+        atlas_utilisation[i] = res["atlas_utilisation"]
+        rms[i] = res["rms"]
 
     assert np.std(c0) < 500.0
     assert np.std(c1) < 10

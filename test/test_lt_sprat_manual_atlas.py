@@ -141,13 +141,11 @@ def test_sprat_manual_atlas():
     c.do_hough_transform(brute_force=True)
 
     # Run the wavelength calibration
-    best_p, x, y, rms, residual, peak_utilisation, atlas_utilisation = c.fit(
-        max_tries=1000, candidate_tolerance=5.0
-    )
+    res = c.fit(max_tries=1000, candidate_tolerance=5.0)
 
     # Plot the solution
     c.plot_fit(
-        best_p,
+        res["fit_coeff"],
         spectrum,
         plot_atlas=True,
         log_spectrum=False,
@@ -157,18 +155,10 @@ def test_sprat_manual_atlas():
         filename=os.path.join(HERE, "test_output", "test_lt_sprat_fit_plotly"),
     )
 
-    (
-        fit_coeff_new,
-        peak_matched,
-        atlas_matched,
-        rms,
-        residual,
-        peak_utilisation,
-        atlas_utilisation,
-    ) = c.match_peaks(best_p)
+    res = c.match_peaks(res["fit_coeff"])
 
     c.plot_fit(
-        fit_coeff_new,
+        res["fit_coeff"],
         spectrum,
         plot_atlas=True,
         log_spectrum=False,
@@ -188,9 +178,9 @@ def test_sprat_manual_atlas():
         ),
     )
 
-    print("Stdev error: {} A".format(residual.std()))
-    print("Peaks utilisation rate: {}%".format(peak_utilisation * 100))
-    print("Atlas utilisation rate: {}%".format(atlas_utilisation * 100))
+    print("Stdev error: {} A".format(res["residual"].std()))
+    print("Peaks utilisation rate: {}%".format(res["peak_utilisation"] * 100))
+    print("Atlas utilisation rate: {}%".format(res["atlas_utilisation"] * 100))
 
     c.use_matplotlib()
     assert c.which_plotting_library() == "matplotlib"
@@ -214,7 +204,7 @@ def test_sprat_manual_atlas():
 
     # Plot the solution
     c.plot_fit(
-        best_p,
+        res["fit_coeff"],
         spectrum,
         plot_atlas=True,
         log_spectrum=False,
@@ -228,7 +218,7 @@ def test_sprat_manual_atlas():
 
     # Plot the solution
     c.plot_fit(
-        best_p,
+        res["fit_coeff"],
         spectrum,
         plot_atlas=True,
         log_spectrum=False,
@@ -268,7 +258,7 @@ def test_sprat_manual_atlas():
 
     # Plot the solution
     c.plot_fit(
-        best_p,
+        res["fit_coeff"],
         spectrum,
         plot_atlas=True,
         log_spectrum=True,
@@ -282,7 +272,7 @@ def test_sprat_manual_atlas():
     )
     # Plot the solution
     c.plot_fit(
-        best_p,
+        res["fit_coeff"],
         spectrum,
         plot_atlas=True,
         log_spectrum=True,

@@ -90,122 +90,59 @@ assert len(c.atlas.atlas_lines) == len(wavelengths) - 1
 c.atlas.list()
 
 # Run the wavelength calibration
-best_p, x, y, rms, residual, peak_utilisation, atlas_utilisation = c.fit(
-    max_tries=500, fit_deg=4, candidate_tolerance=5.0, use_msac=True
-)
-
-fit_diff = c.polyval(x, best_p) - y
-rms = np.sqrt(np.sum(fit_diff**2 / len(x)))
+res = c.fit(max_tries=500, fit_deg=4, candidate_tolerance=5.0)
+rms = res["rms"]
 n_peaks = len(c.matched_peaks)
 n_atlas = len(c.matched_atlas)
+fit_coeff = res["fit_coeff"]
 
 
 def test_match_peaks_robust_refit():
-    global best_p
-    global rms
-    global c
 
     # repeat 10 times
     for i in range(10):
         # Refine solution
-        (
-            best_p,
-            x_fit,
-            y_fit,
-            rms,
-            _,
-            _,
-            _,
-        ) = c.match_peaks(best_p, refine=False, robust_refit=True)
+        res = c.match_peaks(fit_coeff, refine=True, robust_refit=True)
 
-        fit_diff_after_matched_peaks = c.polyval(x_fit, best_p) - y_fit
-        rms_after_matched_peaks = np.sqrt(
-            np.sum(fit_diff_after_matched_peaks**2 / len(x_fit))
-        )
-
-        assert rms_after_matched_peaks < rms or np.isclose(
-            rms_after_matched_peaks, rms
-        )
         assert len(c.matched_peaks) >= n_peaks
         assert len(c.matched_atlas) >= n_atlas
 
 
 def test_match_peaks_NOT_robust_refit():
-    global best_p
-    global rms
-    global c
 
     # repeat 10 times
     for i in range(10):
         # Refine solution
-        (
-            best_p,
-            x_fit,
-            y_fit,
-            rms,
-            _,
-            _,
-            _,
-        ) = c.match_peaks(best_p, refine=False, robust_refit=False)
+        res = c.match_peaks(fit_coeff, refine=True, robust_refit=False)
 
-        fit_diff_after_matched_peaks = c.polyval(x_fit, best_p) - y_fit
-        rms_after_matched_peaks = np.sqrt(
-            np.sum(fit_diff_after_matched_peaks**2 / len(x_fit))
-        )
-
-        assert rms_after_matched_peaks < rms or np.isclose(
-            rms_after_matched_peaks, rms
-        )
         assert len(c.matched_peaks) >= n_peaks
         assert len(c.matched_atlas) >= n_atlas
 
 
 def test_match_peaks_robust_refit_powell():
-    global best_p
-    global rms
-    global c
 
     # repeat 10 times
     for i in range(10):
         # Refine solution
-        (best_p, x_fit, y_fit, rms, _, _, _,) = c.match_peaks(
-            best_p, refine=False, robust_refit=True, method="powell"
+        res = c.match_peaks(
+            fit_coeff, refine=True, robust_refit=True, method="powell"
         )
 
-        fit_diff_after_matched_peaks = c.polyval(x_fit, best_p) - y_fit
-        rms_after_matched_peaks = np.sqrt(
-            np.sum(fit_diff_after_matched_peaks**2 / len(x_fit))
-        )
-
-        assert rms_after_matched_peaks < rms or np.isclose(
-            rms_after_matched_peaks, rms
-        )
         assert len(c.matched_peaks) >= n_peaks
         assert len(c.matched_atlas) >= n_atlas
 
 
-def test_match_peaks_robust_refit_differen_fit_deg():
-    global best_p
-    global rms
-    global c
+def test_match_peaks_robust_refit_different_fit_deg():
 
     # repeat 10 times
     for i in range(10):
         # Refine solution
-        (best_p, x_fit, y_fit, rms, _, _, _,) = c.match_peaks(
-            best_p,
-            refine=False,
+        res = c.match_peaks(
+            fit_coeff,
+            refine=True,
             robust_refit=True,
             fit_deg=5,
         )
 
-        fit_diff_after_matched_peaks = c.polyval(x_fit, best_p) - y_fit
-        rms_after_matched_peaks = np.sqrt(
-            np.sum(fit_diff_after_matched_peaks**2 / len(x_fit))
-        )
-
-        assert rms_after_matched_peaks < rms or np.isclose(
-            rms_after_matched_peaks, rms
-        )
         assert len(c.matched_peaks) >= n_peaks
         assert len(c.matched_atlas) >= n_atlas

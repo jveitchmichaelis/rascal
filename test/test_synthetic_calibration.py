@@ -43,26 +43,13 @@ def test_default():
     c.do_hough_transform(brute_force=False)
 
     # And let's try and fit...
-    best_p, x, y, rms, residual, peak_utilisation, atlas_utilisation = c.fit(
-        max_tries=500
-    )
+    res = c.fit(max_tries=500)
 
-    (
-        best_p,
-        x_fit,
-        y_fit,
-        rms,
-        residual,
-        peak_utilisation,
-        atlas_utilisation,
-    ) = c.match_peaks(best_p, refine=False, robust_refit=True)
+    res = c.match_peaks(res["fit_coeff"], refine=False, robust_refit=True)
 
-    fit_diff = c.polyval(x_fit, best_p) - y_fit
-    rms = np.sqrt(np.sum(fit_diff**2 / len(x_fit)))
-
-    assert peak_utilisation > 0.7
-    assert atlas_utilisation > 0.0
-    assert rms < 5.0
+    assert res["peak_utilisation"] > 0.7
+    assert res["atlas_utilisation"] > 0.0
+    assert res["rms"] < 5.0
 
 
 # def test_fitting_with_initial_polynomial():
@@ -91,24 +78,10 @@ def test_default():
 #     c.do_hough_transform(brute_force=False)
 
 #     # And let's try and fit...
-#     best_p, x, y, rms, residual, peak_utilisation, atlas_utilisation = c.fit(
-#         max_tries=5000, fit_coeff=best_p, candidate_tolerance=5.0
-#     )
+#     res = c.fit(max_tries=500)
 
+#     res = c.match_peaks(res['fit_coeff'], refine=False, robust_refit=True)
 
-#     (
-#         best_p,
-#         x_fit,
-#         y_fit,
-#         rms,
-#         residual,
-#         peak_utilisation,
-#         atlas_utilisation,
-#     ) = c.match_peaks(best_p, refine=True, robust_refit=True)
-
-#     fit_diff = c.polyval(x_fit, best_p) - y_fit
-#     rms = np.sqrt(np.sum(fit_diff**2 / len(x_fit)))
-
-#     assert peak_utilisation > 0.7
-#     assert atlas_utilisation > 0.0
-#     assert rms < 5.0
+#     assert res['peak_utilisation'] > 0.7
+#     assert res['atlas_utilisation'] > 0.0
+#     assert res['rms'] < 5.0

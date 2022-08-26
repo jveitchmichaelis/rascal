@@ -2165,9 +2165,6 @@ class Calibrator:
             )
             self.minimum_matches = len(self.peaks)
 
-        # TODO also check whether minimum peak utilisation is greater than
-        # minimum matches.
-
         (
             fit_coeff,
             rms,
@@ -2196,7 +2193,13 @@ class Calibrator:
                 "RMS too large {} > {}".format(rms, self.fit_tolerance)
             )
 
-        assert fit_coeff is not None, "Couldn't fit"
+        if fit_coeff is None:
+
+            self.success = False
+
+        else:
+
+            self.success = True
 
         self.fit_coeff = fit_coeff
         self.rms = rms
@@ -2204,15 +2207,18 @@ class Calibrator:
         self.peak_utilisation = peak_utilisation
         self.atlas_utilisation = atlas_utilisation
 
-        return (
-            self.fit_coeff,
-            self.matched_peaks,
-            self.matched_atlas,
-            self.rms,
-            self.residuals,
-            self.peak_utilisation,
-            self.atlas_utilisation,
-        )
+        self.res = {
+            "fit_coeff": self.fit_coeff,
+            "matched_peaks": self.matched_peaks,
+            "matched_atlas": self.matched_atlas,
+            "rms": self.rms,
+            "residual": self.residuals,
+            "peak_utilisation": self.peak_utilisation,
+            "atlas_utilisation": self.atlas_utilisation,
+            "success": self.success,
+        }
+
+        return self.res
 
     def match_peaks(
         self,
@@ -2326,7 +2332,19 @@ class Calibrator:
                     "_adjust_polyfit() returns None. "
                     "Input solution is returned."
                 )
-                return fit_coeff, None, None, None, None
+                self.res = {
+                    "fit_coeff": self.fit_coeff,
+                    "matched_peaks": self.matched_peaks,
+                    "matched_atlas": self.matched_atlas,
+                    "rms": self.rms,
+                    "residual": self.residuals,
+                    "peak_utilisation": self.peak_utilisation,
+                    "atlas_utilisation": self.atlas_utilisation,
+                    "success": self.success,
+                }
+
+                return self.res
+
             else:
                 fit_coeff = fit_coeff_new
 
@@ -2412,15 +2430,18 @@ class Calibrator:
         self.peak_utilisation = len(self.matched_peaks) / len(self.peaks)
         self.atlas_utilisation = len(self.matched_atlas) / len(self.atlas)
 
-        return (
-            self.fit_coeff,
-            self.matched_peaks,
-            self.matched_atlas,
-            self.rms,
-            self.residuals,
-            self.peak_utilisation,
-            self.atlas_utilisation,
-        )
+        self.res = {
+            "fit_coeff": self.fit_coeff,
+            "matched_peaks": self.matched_peaks,
+            "matched_atlas": self.matched_atlas,
+            "rms": self.rms,
+            "residual": self.residuals,
+            "peak_utilisation": self.peak_utilisation,
+            "atlas_utilisation": self.atlas_utilisation,
+            "success": self.success,
+        }
+
+        return self.res
 
     def summary(self, return_string=False):
         """
@@ -2692,13 +2713,22 @@ class Calibrator:
             np.nansum(self.residuals**2.0) / len(self.residuals)
         )
 
-        return (
-            self.fit_coeff,
-            self.matched_peaks,
-            self.matched_atlas,
-            self.rms,
-            self.residuals,
-        )
+        self.peak_utilisation = len(self.matched_peaks) / len(self.peaks)
+        self.atlas_utilisation = len(self.matched_atlas) / len(self.atlas)
+        self.success = True
+
+        self.res = {
+            "fit_coeff": self.fit_coeff,
+            "matched_peaks": self.matched_peaks,
+            "matched_atlas": self.matched_atlas,
+            "rms": self.rms,
+            "residual": self.residuals,
+            "peak_utilisation": self.peak_utilisation,
+            "atlas_utilisation": self.atlas_utilisation,
+            "success": self.success,
+        }
+
+        return self.res
 
     def plot_arc(
         self,
