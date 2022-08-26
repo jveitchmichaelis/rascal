@@ -515,7 +515,7 @@ class Calibrator:
 
         if progress:
 
-            sampler_list = tqdm(sampler)
+            sampler_list = tqdm(sampler, disable=self.hide_progress)
 
         else:
 
@@ -990,6 +990,7 @@ class Calibrator:
         seed=None,
         logger_name="Calibrator",
         log_level="warning",
+        hide_progress=False,
     ):
         """
         Initialise the calibrator object.
@@ -1032,6 +1033,8 @@ class Calibrator:
             handler = logging.StreamHandler()
             handler.setFormatter(formatter)
             self.logger.addHandler(handler)
+
+        self.hide_progress = hide_progress
 
         # set the num_pix
         if num_pix is not None:
