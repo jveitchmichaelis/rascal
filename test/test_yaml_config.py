@@ -6,7 +6,6 @@ import pytest
 import yaml
 
 from rascal.atlas import Atlas
-from rascal.calibrator import Calibrator
 
 
 base_dir = os.path.dirname(__file__)

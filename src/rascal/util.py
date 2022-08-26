@@ -1,3 +1,4 @@
+from collections import defaultdict
 import os
 import pkg_resources
 
@@ -766,9 +767,6 @@ def _derivative(p):
     return derv
 
 
-from collections import defaultdict
-
-
 def get_duplicate_indices(x):
     """
     Return the duplicate indices of the input list, x
@@ -816,10 +814,10 @@ def _clean_matches(x, user_lines=[]):
     Returns
     -------
     cleaned: list(set(float))
-        A list of sets of matched atlas lines, cleaned as per the documentation above.
-    """
+        A list of sets of matched atlas lines, cleaned as per the
+        documentation above.
 
-    out = []
+    """
 
     # If we enforce values that must appear
     # and they only appear in a single
@@ -857,14 +855,16 @@ def _make_unique_permutation(x, empty_val=-1):
     Parameters
     ----------
     x: list of list(float)
-        Input list of values to permute. Each value must be a list or iterable.
+        Input list of values to permute. Each value must be a list or
+        iterable.
     empty_val: Any
         Special placeholder to use if the input list has an empty element
 
     Returns
     -------
     permutations: list(list(float))
-        A list of sets of matched atlas lines, cleaned as per the documentation above.
+        A list of sets of matched atlas lines, cleaned as per the
+        documentation above.
     """
 
     permutations = [[]]

@@ -15,7 +15,6 @@ from .util import gauss
 from . import plotting
 from . import models
 from .houghtransform import HoughTransform
-from .atlas import Atlas
 
 
 class Calibrator:
@@ -807,7 +806,8 @@ class Calibrator:
                     ):
                         self.logger.info(
                             "Match has same number of inliers, "
-                            "but fit error is worse ({:1.2f} > {:1.2f}) %.".format(
+                            "but fit error is worse "
+                            "({:1.2f} > {:1.2f}) %.".format(
                                 rms_residual, best_err
                             )
                         )
@@ -2019,6 +2019,7 @@ class Calibrator:
         for candidate in candidates:
 
             candidate_atlas = np.array(candidate)
+            # element-wise None comparison
             valid_mask = candidate_atlas != None
 
             candidate_peaks = matched_peaks[valid_mask].astype(float)
