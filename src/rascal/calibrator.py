@@ -79,6 +79,10 @@ class Calibrator:
         self.matched_peaks = []
         self.matched_atlas = []
         self.fit_coeff = None
+        self.rms = 1e30
+        self.residuals = []
+        self.peak_utilisation = 0.0
+        self.atlas_utilisation = 0.0
 
         self.set_calibrator_properties()
         self.set_hough_properties()
@@ -275,62 +279,62 @@ class Calibrator:
                 (self.pairs[:, 0][mask], actual[mask], weight)
             )
 
-    def _get_candidate_points_poly(self, candidate_tolerance):
-        """
-        **EXPERIMENTAL**
+    # def _get_candidate_points_poly(self, candidate_tolerance):
+    #     """
+    #     **EXPERIMENTAL**
 
-        Returns a list of peak/wavelengths pairs which agree with the fit
+    #     Returns a list of peak/wavelengths pairs which agree with the fit
 
-        (wavelength - gradient * x + intercept) < tolerance
+    #     (wavelength - gradient * x + intercept) < tolerance
 
-        Note: depending on the toleranceold set, one peak may match with
-        multiple wavelengths.
+    #     Note: depending on the toleranceold set, one peak may match with
+    #     multiple wavelengths.
 
-        Parameters
-        ----------
-        candidate_tolerance: float (default: 10)
-            toleranceold  (Angstroms) for considering a point to be an inlier
-            during candidate peak/line selection. This should be reasonable
-            small as we want to search for candidate points which are
-            *locally* linear.
+    #     Parameters
+    #     ----------
+    #     candidate_tolerance: float (default: 10)
+    #         toleranceold  (Angstroms) for considering a point to be an inlier
+    #         during candidate peak/line selection. This should be reasonable
+    #         small as we want to search for candidate points which are
+    #         *locally* linear.
 
-        """
+    #     """
 
-        if self.fit_coeff is None:
+    #     if self.fit_coeff is None:
 
-            raise ValueError(
-                "A guess solution for a polynomial fit has to "
-                "be provided as fit_coeff in fit() in order to generate "
-                "candidates for RANSAC sampling."
-            )
+    #         raise ValueError(
+    #             "A guess solution for a polynomial fit has to "
+    #             "be provided as fit_coeff in fit() in order to generate "
+    #             "candidates for RANSAC sampling."
+    #         )
 
-        x_match = []
-        y_match = []
-        w_match = []
-        self.candidates = []
+    #     x_match = []
+    #     y_match = []
+    #     w_match = []
+    #     self.candidates = []
 
-        atlas_lines = self.atlas.get_lines()
+    #     atlas_lines = self.atlas.get_lines()
 
-        for p in self.peaks:
+    #     for p in self.peaks:
 
-            x0 = self.polyval(p, self.fit_coeff)
-            diff = np.abs(atlas_lines - x0)
+    #         x0 = self.polyval(p, self.fit_coeff)
+    #         diff = np.abs(atlas_lines - x0)
 
-            x = np.array(atlas_lines)[diff < candidate_tolerance]
+    #         x = np.array(atlas_lines)[diff < candidate_tolerance]
 
-            weight = gauss(x, 1.0, x0, self.range_tolerance)
+    #         weight = gauss(x, 1.0, x0, self.range_tolerance)
 
-            for y, w in zip(x, weight):
+    #         for y, w in zip(x, weight):
 
-                x_match.append(p)
-                y_match.append(y)
-                w_match.append(w)
+    #             x_match.append(p)
+    #             y_match.append(y)
+    #             w_match.append(w)
 
-        x_match = np.array(x_match)
-        y_match = np.array(y_match)
-        w_match = np.array(w_match)
+    #     x_match = np.array(x_match)
+    #     y_match = np.array(y_match)
+    #     w_match = np.array(w_match)
 
-        self.candidates.append((x_match, y_match, w_match))
+    #     self.candidates.append((x_match, y_match, w_match))
 
     def _match_bijective(self, candidates, peaks, fit_coeff):
         """
@@ -450,6 +454,10 @@ class Calibrator:
 
         else:
 
+            raise NotImplementedError(
+                "Not currently accepting non-linear"
+                "matching of candidate points."
+            )
             self._get_candidate_points_poly(candidate_tolerance)
 
         (
