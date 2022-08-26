@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from pkg_resources import get_distribution, DistributionNotFound
+import pkg_resources
+import warnings
 
 try:
-    __version__ = get_distribution(__name__).version
-except DistributionNotFound:
-    pass  # package is not installed
+    __version__ = pkg_resources.get_distribution(__name__).version
+except pkg_resources.DistributionNotFound:
+    raise ImportError(
+        "rascal is not setup or installed properly. Unable to get version."
+    )
 
 from . import calibrator
 from . import models
