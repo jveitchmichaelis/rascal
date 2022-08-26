@@ -728,12 +728,17 @@ class Calibrator:
 
                     # Check ends of fit:
                     if self.min_wavelength is not None:
-                        if self.polyval(0, coeffs) < (
+
+                        min_wavelength_px = self.polyval(0, coeffs)
+
+                        if min_wavelength_px < (
                             self.min_wavelength - self.range_tolerance
+                        ) or min_wavelength_px > (
+                            self.min_wavelength + self.range_tolerance
                         ):
                             self.logger.debug(
                                 "Lower wavelength of fit too small, "
-                                "{:1.2f}.".format(self.polyval(0, coeffs))
+                                "{:1.2f}.".format(min_wavelength_px)
                             )
 
                             continue
@@ -745,14 +750,18 @@ class Calibrator:
                         else:
                             fit_max_wavelength = self.num_pix
 
-                        if self.polyval(fit_max_wavelength, coeffs) > (
+                        max_wavelength_px = self.polyval(
+                            fit_max_wavelength, coeffs
+                        )
+
+                        if max_wavelength_px > (
                             self.max_wavelength + self.range_tolerance
+                        ) or max_wavelength_px < (
+                            self.max_wavelength - self.range_tolerance
                         ):
                             self.logger.debug(
                                 "Upper wavelength of fit too large, "
-                                "{:1.2f}.".format(
-                                    self.polyval(fit_max_wavelength, coeffs)
-                                )
+                                "{:1.2f}.".format(max_wavelength_px)
                             )
 
                             continue
