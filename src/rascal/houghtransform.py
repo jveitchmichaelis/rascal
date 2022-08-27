@@ -120,7 +120,7 @@ class HoughTransform:
         # (X, Y) with positive gradients
         for i in range(len(x) - 1):
 
-            gradient_tmp = (y[i + 1 :] - y[i]) / (x[i + 1 :] - x[i])
+            gradient_tmp = (y[i + 1 :] - y[i]) / (x[i + 1 :] - x[i] + 1e-9)
             intercept_tmp = y[i + 1 :] - gradient_tmp * x[i + 1 :]
 
             gradients.append(gradient_tmp)
