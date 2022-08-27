@@ -8,7 +8,7 @@ from rascal.calibrator import Calibrator
 from rascal.atlas import Atlas
 from rascal.util import refine_peaks
 
-# Load the LT SPRAT data
+# Load the INT/IDS data
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
 spectrum2D = fits.open(

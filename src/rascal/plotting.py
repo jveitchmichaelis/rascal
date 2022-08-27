@@ -1044,7 +1044,6 @@ def plot_arc(
     renderer: string (default: 'default')
         Indicate the Plotly renderer. Nothing gets displayed if
         return_jsonstring is set to True.
-
     display: boolean (Default: False)
         Set to True to display disgnostic plot.
 

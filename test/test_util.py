@@ -1,11 +1,13 @@
+import os
 import pkg_resources
-import pytest
 from unittest.mock import patch
 
 import numpy as np
+import pytest
 
 from rascal import util
 
+base_dir = os.path.dirname(os.path.abspath(__file__))
 
 pressure = np.array([9, 10, 12, 10, 10, 10, 10, 10]) * 1e4
 temperature = np.array([20, 20, 20, 10, 30, 20, 20, 20])
@@ -83,33 +85,33 @@ def test_vacuum_to_air_wavelength():
     ).all()
 
 
-def test_get_calibration_lines():
+def test_load_calibration_lines():
     assert (
-        len(util.get_calibration_lines(elements=["He"], min_intensity=5)[0])
-        == 12
+        len(util.load_calibration_lines(elements=["He"], min_intensity=5)[0])
+        == 28
     )
     assert (
-        len(util.get_calibration_lines(elements=["He"], min_intensity=0)[0])
-        == 21
+        len(util.load_calibration_lines(elements=["He"], min_intensity=0)[0])
+        == 49
     )
     assert (
-        len(util.get_calibration_lines(elements=["He"], min_distance=0)[0])
-        == 62
+        len(util.load_calibration_lines(elements=["He"], min_distance=0)[0])
+        == 28
     )
     assert (
         len(
-            util.get_calibration_lines(
+            util.load_calibration_lines(
                 elements=["He"], min_intensity=0, min_distance=0
             )[0]
         )
-        == 112
+        == 49
     )
 
 
-def test_get_calibration_lines_top_10_only():
+def test_load_calibration_lines_top_10_only():
     assert (
         len(
-            util.get_calibration_lines(
+            util.load_calibration_lines(
                 elements=["He"], min_intensity=10, brightest_n_lines=10
             )[0]
         )
@@ -117,7 +119,7 @@ def test_get_calibration_lines_top_10_only():
     )
     assert (
         len(
-            util.get_calibration_lines(
+            util.load_calibration_lines(
                 elements=["He"], min_intensity=0, brightest_n_lines=10
             )[0]
         )
@@ -125,7 +127,7 @@ def test_get_calibration_lines_top_10_only():
     )
     assert (
         len(
-            util.get_calibration_lines(
+            util.load_calibration_lines(
                 elements=["He"], min_distance=0, brightest_n_lines=10
             )[0]
         )
@@ -133,42 +135,44 @@ def test_get_calibration_lines_top_10_only():
     )
 
 
-def test_get_calibration_lines_vacuum_vs_air():
-    wave_air = util.get_calibration_lines(elements=["He"], min_intensity=10)[1]
-    wave_vacuum = util.get_calibration_lines(
+def test_load_calibration_lines_vacuum_vs_air():
+    wave_air = util.load_calibration_lines(elements=["He"], min_intensity=10)[
+        1
+    ]
+    wave_vacuum = util.load_calibration_lines(
         elements=["He"], min_intensity=10, vacuum=True
     )[1]
     assert (np.array(wave_air) < np.array(wave_vacuum)).all()
 
 
-def test_get_calibration_lines_from_file():
-    lines_manual = util.get_calibration_lines(
+def test_load_calibration_lines_from_file():
+    lines_manual = util.load_calibration_lines(
         elements=["He"],
         linelist=pkg_resources.resource_filename(
             "rascal", "arc_lines/nist_clean.csv"
         ),
     )
-    lines = util.get_calibration_lines(elements=["He"])
+    lines = util.load_calibration_lines(elements=["He"])
     assert (lines[1] == lines_manual[1]).all()
 
 
 @pytest.mark.xfail()
-def test_get_calibration_lines_from_unknown_file():
-    lines_manual = util.get_calibration_lines(
+def test_load_calibration_lines_from_unknown_file():
+    lines_manual = util.load_calibration_lines(
         elements=["He"],
         linelist="blabla",
     )
-    lines = util.get_calibration_lines(elements=["He"])
+    lines = util.load_calibration_lines(elements=["He"])
     assert (lines[1] == lines_manual[1]).all()
 
 
 @pytest.mark.xfail()
-def test_get_calibration_lines_from_unknown_type():
-    lines_manual = util.get_calibration_lines(
+def test_load_calibration_lines_from_unknown_type():
+    lines_manual = util.load_calibration_lines(
         elements=["He"],
         linelist=np.ones(10),
     )
-    lines = util.get_calibration_lines(elements=["He"])
+    lines = util.load_calibration_lines(elements=["He"])
     assert (lines[1] == lines_manual[1]).all()
 
 
@@ -178,23 +182,18 @@ def test_print_calibration_lines(capfd):
     assert type(out) == str
 
 
-@patch("matplotlib.pyplot.show")
-def test_plot_calibration_lines(mock_show):
-    util.plot_calibration_lines(elements=["He"])
-
-
 def test_derivative():
     assert util._derivative([2, 3, 4, 5]) == [3, 8, 15]
 
 
 def test_filter_multiple_element_linelist_number_min_intensity():
-    util.get_calibration_lines(
+    util.load_calibration_lines(
         elements=["He", "Xe", "Cu", "Ar"], min_intensity=0
     )
 
 
 def test_filter_multiple_element_linelist_list_min_intensity():
-    util.get_calibration_lines(
+    util.load_calibration_lines(
         elements=["He", "Xe", "Cu", "Ar"],
         min_intensity=[10.0, 50.0, 100.0, 500.0],
     )
@@ -202,13 +201,68 @@ def test_filter_multiple_element_linelist_list_min_intensity():
 
 @pytest.mark.xfail()
 def test_filter_multiple_element_linelist_list_min_intensity_expect_fail():
-    util.get_calibration_lines(
+    util.load_calibration_lines(
         elements=["He", "Xe", "Cu", "Ar"], min_intensity=[10.0, 50.0, 100.0]
     )
 
 
-@pytest.mark.xfail()
-def test_filter_multiple_element_linelist_wrong_dtype_expect_fail():
-    util.get_calibration_lines(
+def test_filter_multiple_element_linelist_wrong_min_intensity_dtype():
+    util.load_calibration_lines(
         elements=["He", "Xe", "Cu", "Ar"], min_intensity="[10.0, 50.0, 100.0]"
+    )
+
+
+@patch("matplotlib.pyplot.show")
+def test_plot_calibration_lines(mock_show):
+    util.plot_calibration_lines(elements=["He"])
+
+
+@patch("matplotlib.pyplot.show")
+def test_display_plot_calibration_lines_1_element(mock_show):
+
+    util.plot_calibration_lines(
+        elements=["He"],
+        min_atlas_wavelength=2900,
+        max_atlas_wavelength=4500,
+        pixel_scale=0.25,
+        min_intensity=100.0,
+        label=True,
+        display=True,
+        save_fig=False,
+    )
+
+
+def test_save_plot_calibration_lines_1_element():
+
+    util.plot_calibration_lines(
+        elements=["He"],
+        min_atlas_wavelength=2900,
+        max_atlas_wavelength=4500,
+        pixel_scale=0.25,
+        min_intensity=100.0,
+        label=True,
+        display=False,
+        save_fig=True,
+        filename=os.path.join(
+            base_dir, "test_output", "example_CuNeAr_calibration_lines"
+        ),
+        fig_kwarg={"figsize": (30, 8)},
+    )
+
+
+def test_save_plot_calibration_lines_3_elements():
+
+    util.plot_calibration_lines(
+        elements=["Cu", "Ne", "Ar"],
+        min_atlas_wavelength=2900,
+        max_atlas_wavelength=4500,
+        pixel_scale=0.25,
+        min_intensity=100.0,
+        label=False,
+        display=False,
+        save_fig=True,
+        filename=os.path.join(
+            base_dir, "test_output", "example_CuNeAr_calibration_lines"
+        ),
+        fig_kwarg={"figsize": (30, 8)},
     )

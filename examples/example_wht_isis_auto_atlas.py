@@ -9,7 +9,7 @@ from rascal.calibrator import Calibrator
 from rascal.atlas import Atlas
 from rascal import util
 
-# Load the LT SPRAT data
+# Load the WHT/ISIS data
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
 spectrum2D = fits.open(
