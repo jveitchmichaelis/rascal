@@ -380,6 +380,10 @@ class Atlas:
 
         """
 
+        if isinstance(elements, str):
+
+            elements = [elements] * len(wavelengths)
+
         if not isinstance(elements, list):
 
             elements = list(elements)
