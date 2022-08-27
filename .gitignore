@@ -136,3 +136,5 @@ test/*.npy
 test/*.png
 
 test/test_output/*
+
+examples/output
