@@ -217,31 +217,74 @@ def filter_separation(wavelengths, min_separation=0):
     return distance_mask
 
 
-def filter_intensity(lines, min_intensity=0):
+def filter_intensity(elements, lines, min_intensity=None):
     """
     Filters a line list by an intensity threshold
 
     Parameters
     ----------
-
     lines: list[tuple (str, float, float)]
-        A list of input lines where the 2nd parameter
-        is intensity
-    min_intensity: int
+        A list of input lines where 1st parameter is the name of the element
+        the 2nd parameter is the wavelength, the 3rd is the intensities
+    min_intensity: float
         Intensity threshold
 
     Returns
     -------
-
     lines: list
         Filtered line list
 
     """
 
+    if min_intensity is None:
+
+        min_intensity_dict = {}
+
+        for i, e in enumerate(elements):
+
+            min_intensity_dict[e] = 0.0
+
+    elif isinstance(min_intensity, (int, float)):
+
+        min_intensity_dict = {}
+
+        for i, e in enumerate(elements):
+
+            min_intensity_dict[e] = float(min_intensity)
+
+    elif isinstance(min_intensity, (list, np.ndarray)):
+
+        if len(min_intensity) == len(elements):
+
+            min_intensity_dict = {}
+
+            for i, e in enumerate(elements):
+
+                min_intensity_dict[e] = min_intensity[i]
+
+        else:
+
+            raise ValueError(
+                "min_intensity has to be in, float of list/array "
+                "the same size as the elements. min_intensity is {}"
+                "and elements is {}.".format(min_intensity, elements)
+            )
+
+    else:
+
+        raise ValueError(
+            "min_intensity has to be in, float of list/array "
+            "the same size as the elements. min_intensity is {}"
+            "and elements is {}.".format(min_intensity, elements)
+        )
+
     out = []
+
     for line in lines:
-        intensity = line[2]
-        if float(intensity) >= min_intensity:
+        element = line[0]
+        intensity = float(line[2])
+
+        if intensity >= min_intensity_dict[element]:
             out.append(True)
         else:
             out.append(False)
@@ -339,8 +382,8 @@ def get_calibration_lines(
     )
 
     # Filter intensities
-    if min_intensity > 0:
-        intensity_mask = filter_intensity(lines, min_intensity)
+    if isinstance(min_intensity, (float, int, list, np.ndarray)):
+        intensity_mask = filter_intensity(elements, lines, min_intensity)
     else:
         intensity_mask = np.ones_like(lines[:, 0]).astype(bool)
 

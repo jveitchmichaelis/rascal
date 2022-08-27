@@ -185,3 +185,30 @@ def test_plot_calibration_lines(mock_show):
 
 def test_derivative():
     assert util._derivative([2, 3, 4, 5]) == [3, 8, 15]
+
+
+def test_filter_multiple_element_linelist_number_min_intensity():
+    util.get_calibration_lines(
+        elements=["He", "Xe", "Cu", "Ar"], min_intensity=0
+    )
+
+
+def test_filter_multiple_element_linelist_list_min_intensity():
+    util.get_calibration_lines(
+        elements=["He", "Xe", "Cu", "Ar"],
+        min_intensity=[10.0, 50.0, 100.0, 500.0],
+    )
+
+
+@pytest.mark.xfail()
+def test_filter_multiple_element_linelist_list_min_intensity_expect_fail():
+    util.get_calibration_lines(
+        elements=["He", "Xe", "Cu", "Ar"], min_intensity=[10.0, 50.0, 100.0]
+    )
+
+
+@pytest.mark.xfail()
+def test_filter_multiple_element_linelist_wrong_dtype_expect_fail():
+    util.get_calibration_lines(
+        elements=["He", "Xe", "Cu", "Ar"], min_intensity="[10.0, 50.0, 100.0]"
+    )
