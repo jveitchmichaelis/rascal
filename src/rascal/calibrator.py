@@ -2251,6 +2251,33 @@ class Calibrator:
 
         return self.res
 
+    def save_matches(self, filename=None, format='csv'):
+        """
+        Export the matched peak-atlas pairs
+
+        parameters
+        ----------
+        filename: str (Default: None)
+            Export file name, if None, it will be saved as "matched_peaks"
+        format: str (Default: csv)
+            Export format, choose from csv and npy.
+
+        """
+
+        output = np.column_stack((self.matched_peaks, self.matched_atlas))
+
+        if filename is None:
+
+            filename = "matched_peaks"
+
+        if format.lower()=='csv':
+
+            np.savetxt(filename + '.csv', X=output, delimiter=',')
+
+        elif format.lower()=='npy':
+
+            np.save(file=filename + '.npy', arr=output)
+
     def plot_arc(
         self,
         pixel_list=None,

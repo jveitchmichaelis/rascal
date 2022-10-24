@@ -146,3 +146,13 @@ def test_match_peaks_robust_refit_different_fit_deg():
 
         assert len(c.matched_peaks) >= n_peaks
         assert len(c.matched_atlas) >= n_atlas
+
+
+
+def test_match_peaks_output():
+
+    # repeat 10 times
+    c.save_matches(filename=os.path.join(base_dir, 'test_output', 'matches'), format='csv')
+    assert os.path.exists(os.path.join(base_dir, 'test_output', 'matches.csv'))
+    c.save_matches(filename=os.path.join(base_dir, 'test_output', 'matches'), format='npy')
+    assert os.path.exists(os.path.join(base_dir, 'test_output', 'matches.npy'))
