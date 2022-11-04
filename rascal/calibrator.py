@@ -1197,7 +1197,7 @@ class Calibrator:
                 + self.range_tolerance
                 + self.linearity_tolerance
             )
-        ) / self.pixel_list.max()
+        ) / np.ptp(self.pixel_list)
 
         self.max_slope = (
             (
@@ -1210,7 +1210,7 @@ class Calibrator:
                 - self.range_tolerance
                 - self.linearity_tolerance
             )
-        ) / self.pixel_list.max()
+        ) / np.ptp(self.pixel_list)
 
         if self.atlas is not None:
 

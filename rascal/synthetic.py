@@ -122,8 +122,8 @@ class SyntheticSpectrum:
         # Linear function y = mx + c
         elif self.degree == 1:
             # x = (y - c) / m
-            pixels = (wavelengths - self.coefficients[0]) / self.coefficients[
-                1
+            pixels = (wavelengths - self.coefficients[1]) / self.coefficients[
+                0
             ]
         else:
             pixels = pynverse.inversefunc(self.model, wavelengths)
