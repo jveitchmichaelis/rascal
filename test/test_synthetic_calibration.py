@@ -12,7 +12,7 @@ def test_default():
     # 100 nm and the gradient is set to 2.
     intercept = 100
     gradient = 2.0
-    s = SyntheticSpectrum(coefficients=[gradient, intercept])
+    s = SyntheticSpectrum(coefficients=[intercept, gradient])
 
     # We add a bunch of wavelegnths between 200-1200 nm
     waves = np.linspace(200, 1200, num=20)
@@ -70,7 +70,7 @@ def test_get_candidate_points_poly():
     # 100 nm and the gradient is set to 2.
     intercept = 100
     gradient = 2.0
-    best_p = [gradient, intercept]
+    best_p = [intercept, gradient]
     s = SyntheticSpectrum(coefficients=best_p)
 
     # We add a bunch of wavelegnths between 200-1200 nm

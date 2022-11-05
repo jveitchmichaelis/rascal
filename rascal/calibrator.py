@@ -232,7 +232,7 @@ class Calibrator:
 
         (wavelength - gradient * x + intercept) < tolerance
 
-        Note: depending on the tolerance set, one peak may match with
+        Note: depending on the candidate_tolerance , one peak may match with
         multiple wavelengths.
 
         Parameters
@@ -279,8 +279,8 @@ class Calibrator:
 
         (wavelength - gradient * x + intercept) < tolerance
 
-        Note: depending on the toleranceold set, one peak may match with
-        multiple wavelengths.
+        Note: depending on the candidate_tolerance, one peak may
+        match with multiple wavelengths.
 
         Parameters
         ----------
@@ -300,33 +300,33 @@ class Calibrator:
                 "candidates for RANSAC sampling."
             )
 
-        x_match = []
-        y_match = []
-        w_match = []
         self.candidates = []
 
-        atlas_lines = self.atlas.get_lines()
+        # actual wavelengths
+        actual = np.array(self.atlas.get_lines())
 
-        for p in self.peaks:
+        n = len(self.hough_lines)
 
-            x0 = self.polyval(p, self.fit_coeff)
-            diff = np.abs(atlas_lines - x0)
+        delta = (
+            np.random.random(n) * self.range_tolerance * 2.0
+            - self.range_tolerance
+        )
 
-            x = np.array(atlas_lines)[diff < candidate_tolerance]
+        for d in delta:
 
-            weight = gauss(x, 1.0, x0, self.range_tolerance)
+            # predicted wavelength
+            predicted = self.polyval(self.peaks, self.fit_coeff) + d
+            diff = np.abs(actual - predicted)
+            mask = diff < candidate_tolerance
 
-            for y, w in zip(x, weight):
+            if np.sum(mask) > 0:
 
-                x_match.append(p)
-                y_match.append(y)
-                w_match.append(w)
-
-        x_match = np.array(x_match)
-        y_match = np.array(y_match)
-        w_match = np.array(w_match)
-
-        self.candidates.append((x_match, y_match, w_match))
+                weight = gauss(
+                    actual[mask], 1.0, predicted[mask], self.range_tolerance
+                )
+                self.candidates.append(
+                    [self.peaks[mask], actual[mask], weight]
+                )
 
     def _match_bijective(self, candidates, peaks, fit_coeff):
         """
@@ -1733,6 +1733,10 @@ class Calibrator:
         self.max_tries = max_tries
         self.fit_deg = fit_deg
         self.fit_coeff = fit_coeff
+        if fit_coeff is not None:
+
+            self.fit_deg = len(fit_coeff) - 1
+
         self.fit_tolerance = fit_tolerance
         self.fit_type = fit_type
         self.brute_force = brute_force

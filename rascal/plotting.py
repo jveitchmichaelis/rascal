@@ -630,59 +630,50 @@ def plot_fit(
         all_diff = []
 
         first_one = True
-        for p in calibrator.peaks:
+        for p, x in zip(calibrator.matched_peaks, calibrator.matched_atlas):
 
-            x = calibrator.polyval(p, fit_coeff)
             diff = calibrator.atlas.get_lines() - x
             idx = np.argmin(np.abs(diff))
             all_diff.append(diff[idx])
 
             calibrator.logger.info("Peak at: {} A".format(x))
 
-            if np.abs(diff[idx]) < tolerance:
+            fitted_peaks.append(p)
+            fitted_diff.append(diff[idx])
+            calibrator.logger.info(
+                "- matched to {} A".format(calibrator.atlas.get_lines()[idx])
+            )
 
-                fitted_peaks.append(p)
-                fitted_diff.append(diff[idx])
-                calibrator.logger.info(
-                    "- matched to {} A".format(
-                        calibrator.atlas.get_lines()[idx]
+            if spectrum is not None:
+
+                if first_one:
+                    ax1.vlines(
+                        calibrator.polyval(p, fit_coeff),
+                        spectrum[calibrator.pix_to_rawpix(p).astype("int")],
+                        vline_max,
+                        colors="C1",
+                        label="Fitted Peaks",
                     )
-                )
+                    first_one = False
 
-                if spectrum is not None:
+                else:
+                    ax1.vlines(
+                        calibrator.polyval(p, fit_coeff),
+                        spectrum[calibrator.pix_to_rawpix(p).astype("int")],
+                        vline_max,
+                        colors="C1",
+                    )
 
-                    if first_one:
-                        ax1.vlines(
-                            calibrator.polyval(p, fit_coeff),
-                            spectrum[
-                                calibrator.pix_to_rawpix(p).astype("int")
-                            ],
-                            vline_max,
-                            colors="C1",
-                            label="Fitted Peaks",
-                        )
-                        first_one = False
-
-                    else:
-                        ax1.vlines(
-                            calibrator.polyval(p, fit_coeff),
-                            spectrum[
-                                calibrator.pix_to_rawpix(p).astype("int")
-                            ],
-                            vline_max,
-                            colors="C1",
-                        )
-
-                ax1.text(
-                    x - 3,
-                    text_box_pos,
-                    s="{}:{:1.2f}".format(
-                        calibrator.atlas.get_elements()[idx],
-                        calibrator.atlas.get_lines()[idx],
-                    ),
-                    rotation=90,
-                    bbox=dict(facecolor="white", alpha=1),
-                )
+            ax1.text(
+                x - 3,
+                text_box_pos,
+                s="{}:{:1.2f}".format(
+                    calibrator.atlas.get_elements()[idx],
+                    calibrator.atlas.get_lines()[idx],
+                ),
+                rotation=90,
+                bbox=dict(facecolor="white", alpha=1),
+            )
 
         rms = np.sqrt(np.mean(np.array(fitted_diff) ** 2.0))
 
