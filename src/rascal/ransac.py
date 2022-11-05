@@ -58,10 +58,6 @@ def solve_candidate_ransac(
 
     else:
 
-        raise NotImplementedError(
-            "Not currently accepting non-linear"
-            "matching of candidate points."
-        )
         calibrator._get_candidate_points_poly(candidate_tolerance)
 
     (

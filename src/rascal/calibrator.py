@@ -327,62 +327,62 @@ class Calibrator:
                 (self.pairs[:, 0][mask], actual[mask], weight)
             )
 
-    # def _get_candidate_points_poly(self, candidate_tolerance):
-    #     """
-    #     **EXPERIMENTAL**
+    def _get_candidate_points_poly(self, candidate_tolerance):
+        """
+        **EXPERIMENTAL**
 
-    #     Returns a list of peak/wavelengths pairs which agree with the fit
+        Returns a list of peak/wavelengths pairs which agree with the fit
 
-    #     (wavelength - gradient * x + intercept) < tolerance
+        (wavelength - gradient * x + intercept) < tolerance
 
-    #     Note: depending on the toleranceold set, one peak may match with
-    #     multiple wavelengths.
+        Note: depending on the candidate_tolerance, one peak may
+        match with multiple wavelengths.
 
-    #     Parameters
-    #     ----------
-    #     candidate_tolerance: float (default: 10)
-    #         toleranceold  (Angstroms) for considering a point to be an inlier
-    #         during candidate peak/line selection. This should be reasonable
-    #         small as we want to search for candidate points which are
-    #         *locally* linear.
+        Parameters
+        ----------
+        candidate_tolerance: float (default: 10)
+            toleranceold  (Angstroms) for considering a point to be an inlier
+            during candidate peak/line selection. This should be reasonable
+            small as we want to search for candidate points which are
+            *locally* linear.
 
-    #     """
+        """
 
-    #     if self.fit_coeff is None:
+        if self.fit_coeff is None:
 
-    #         raise ValueError(
-    #             "A guess solution for a polynomial fit has to "
-    #             "be provided as fit_coeff in fit() in order to generate "
-    #             "candidates for RANSAC sampling."
-    #         )
+            raise ValueError(
+                "A guess solution for a polynomial fit has to "
+                "be provided as fit_coeff in fit() in order to generate "
+                "candidates for RANSAC sampling."
+            )
 
-    #     x_match = []
-    #     y_match = []
-    #     w_match = []
-    #     self.candidates = []
+        self.candidates = []
 
-    #     atlas_lines = self.atlas.get_lines()
+        # actual wavelengths
+        actual = np.array(self.atlas.get_lines())
 
-    #     for p in self.peaks:
+        n = len(self.hough_lines)
 
-    #         x0 = self.polyval(p, self.fit_coeff)
-    #         diff = np.abs(atlas_lines - x0)
+        delta = (
+            np.random.random(n) * self.range_tolerance * 2.0
+            - self.range_tolerance
+        )
 
-    #         x = np.array(atlas_lines)[diff < candidate_tolerance]
+        for d in delta:
 
-    #         weight = gauss(x, 1.0, x0, self.range_tolerance)
+            # predicted wavelength
+            predicted = self.polyval(self.peaks, self.fit_coeff) + d
+            diff = np.abs(actual - predicted)
+            mask = diff < candidate_tolerance
 
-    #         for y, w in zip(x, weight):
+            if np.sum(mask) > 0:
 
-    #             x_match.append(p)
-    #             y_match.append(y)
-    #             w_match.append(w)
-
-    #     x_match = np.array(x_match)
-    #     y_match = np.array(y_match)
-    #     w_match = np.array(w_match)
-
-    #     self.candidates.append((x_match, y_match, w_match))
+                weight = gauss(
+                    actual[mask], 1.0, predicted[mask], self.range_tolerance
+                )
+                self.candidates.append(
+                    [self.peaks[mask], actual[mask], weight]
+                )
 
     def _match_bijective(self, candidates, peaks, fit_coeff):
         """
@@ -1133,7 +1133,7 @@ class Calibrator:
                     + self.range_tolerance
                     + self.linearity_tolerance
                 )
-            ) / self.pixel_list.max()
+            ) / np.ptp(self.pixel_list)
 
             self.max_slope = (
                 (
@@ -1146,7 +1146,7 @@ class Calibrator:
                     - self.range_tolerance
                     - self.linearity_tolerance
                 )
-            ) / self.pixel_list.max()
+            ) / np.ptp(self.pixel_list)
 
         if self.atlas is not None and self.pairs is not None:
 
@@ -1629,6 +1629,10 @@ class Calibrator:
         self.max_tries = max_tries
         self.fit_deg = fit_deg
         self.fit_coeff = fit_coeff
+        if fit_coeff is not None:
+
+            self.fit_deg = len(fit_coeff) - 1
+
         self.fit_tolerance = fit_tolerance
         self.fit_type = fit_type
         self.brute_force = brute_force
@@ -1723,6 +1727,10 @@ class Calibrator:
             self.success = True
 
         self.fit_coeff = fit_coeff
+        if fit_coeff is not None:
+
+            self.fit_deg = len(fit_coeff) - 1
+
         self.rms = rms
         self.residuals = residual
         self.peak_utilisation = peak_utilisation
@@ -1819,7 +1827,7 @@ class Calibrator:
 
         if fit_coeff is None:
 
-            fit_coeff = self.fit_coeff.copy()
+            fit_coeff = copy.deepcopy(self.fit_coeff)
 
         if fit_deg is None:
 
@@ -2251,7 +2259,7 @@ class Calibrator:
 
         return self.res
 
-    def save_matches(self, filename=None, format='csv'):
+    def save_matches(self, filename=None, format="csv"):
         """
         Export the matched peak-atlas pairs
 
@@ -2270,13 +2278,13 @@ class Calibrator:
 
             filename = "matched_peaks"
 
-        if format.lower()=='csv':
+        if format.lower() == "csv":
 
-            np.savetxt(filename + '.csv', X=output, delimiter=',')
+            np.savetxt(filename + ".csv", X=output, delimiter=",")
 
-        elif format.lower()=='npy':
+        elif format.lower() == "npy":
 
-            np.save(file=filename + '.npy', arr=output)
+            np.save(file=filename + ".npy", arr=output)
 
     def plot_arc(
         self,

@@ -65,7 +65,7 @@ def test_default():
 
 #     # Setup the Hough transform parameters
 #     c.set_hough_properties(
-#         range_tolerance=100.0, min_wavelength=150.0, max_wavelength=1200.0
+#         range_tolerance=100.0, min_wavelength=100.0, max_wavelength=1500.0
 #     )
 
 #     c.set_ransac_properties(linear=False, minimum_fit_error=1e-12)
@@ -78,7 +78,7 @@ def test_default():
 #     c.do_hough_transform(brute_force=False)
 
 #     # And let's try and fit...
-#     res = c.fit(max_tries=500)
+#     res = c.fit(max_tries=500, fit_coeff=best_p)
 
 #     res = c.match_peaks(res['fit_coeff'], refine=False, robust_refit=True)
 
