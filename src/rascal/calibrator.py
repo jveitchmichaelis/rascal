@@ -48,7 +48,6 @@ class Calibrator:
         self.plot_with_matplotlib = False
         self.plot_with_plotly = False
         self.atlas = None
-        self.pix_to_rawpix = None
         self.pix_known = None
         self.wave_known = None
         self.hough_lines = None
@@ -58,7 +57,7 @@ class Calibrator:
 
         # calibrator_properties
         self.num_pix = None
-        self.pixel_list = None
+        self.effective_pixel = None
         self.plotting_library = None
         self.constrain_poly = None
 
@@ -166,13 +165,13 @@ class Calibrator:
                     (0, self.max_intercept + self.candidate_tolerance),
                     (0, self.min_intercept - self.candidate_tolerance),
                     (
-                        self.pixel_list.max(),
+                        self.effective_pixel.max(),
                         self.max_wavelength
                         - self.range_tolerance
                         - self.candidate_tolerance,
                     ),
                     (
-                        self.pixel_list.max(),
+                        self.effective_pixel.max(),
                         self.max_wavelength
                         + self.range_tolerance
                         + self.candidate_tolerance,
@@ -513,7 +512,7 @@ class Calibrator:
             return np.inf
 
         if not np.all(
-            np.diff(self.polyval(np.sort(self.pixel_list), fit_new)) > 0
+            np.diff(self.polyval(np.sort(self.effective_pixel), fit_new)) > 0
         ):
 
             self.logger.info("not monotonic")
@@ -566,7 +565,7 @@ class Calibrator:
 
         # Calibrator Properties
         self.num_pix = config["num_pix"]
-        self.pixel_list = config["pixel_list"]
+        self.effective_pixel = config["effective_pixel"]
         self.plotting_library = config["plotting_library"]
         self.seed = config["seed"]
         self.logger = config["logger"]
@@ -574,7 +573,7 @@ class Calibrator:
         self.hide_progress = config["hide_progress"]
         self.set_calibrator_properties(
             num_pix=self.num_pix,
-            pixel_list=self.pixel_list,
+            effective_pixel=self.effective_pixel,
             plotting_library=self.plotting_library,
             seed=self.seed,
             logger=self.logger,
@@ -728,7 +727,7 @@ class Calibrator:
             "peaks": self.peaks,
             "spectrum": self.spectrum,
             "num_pix": self.num_pix,
-            "pixel_list": self.pixel_list,
+            "effective_pixel": self.effective_pixel,
             "plotting_library": self.plotting_library,
             "seed": self.seed,
             "logger": self.logger,
@@ -832,7 +831,7 @@ class Calibrator:
     def set_calibrator_properties(
         self,
         num_pix=None,
-        pixel_list=None,
+        effective_pixel=None,
         plotting_library=None,
         seed=None,
         logger=None,
@@ -846,7 +845,7 @@ class Calibrator:
         ----------
         num_pix: int
             Number of pixels in the spectral axis.
-        pixel_list: list
+        effective_pixel: list
             pixel value of the of the spectrum, this is only needed if the
             spectrum spans multiple detector arrays.
         plotting_library: string (default: 'matplotlib')
@@ -875,22 +874,22 @@ class Calibrator:
         # set the num_pix
         self.set_num_pix(num_pix)
 
-        # set the pixel_list
-        if pixel_list is not None:
+        # set the effective_pixel
+        if effective_pixel is not None:
 
-            self.pixel_list = np.asarray(pixel_list)
-            self.set_pix_to_rawpix(self.pixel_list)
+            self.effective_pixel = np.asarray(effective_pixel)
 
-        elif self.pixel_list is None and self.num_pix is not None:
+        elif self.effective_pixel is None and self.num_pix is not None:
 
-            self.pixel_list = np.arange(self.num_pix)
-            self.set_pix_to_rawpix(self.pixel_list)
+            self.effective_pixel = np.arange(self.num_pix)
 
         else:
 
             pass
 
-        self.logger.info("pixel_list is set to {}.".format(pixel_list))
+        self.logger.info(
+            "effective_pixel is set to {}.".format(effective_pixel)
+        )
 
         if seed is not None:
             np.random.seed(seed)
@@ -937,16 +936,14 @@ class Calibrator:
         if num_pix is not None:
 
             self.num_pix = num_pix
-            self.pixel_list = np.arange(self.num_pix)
-            self.set_pix_to_rawpix(self.pixel_list)
+            self.effective_pixel = np.arange(self.num_pix)
 
         elif self.num_pix is None:
 
             try:
 
                 self.num_pix = len(self.spectrum)
-                self.pixel_list = np.arange(self.num_pix)
-                self.set_pix_to_rawpix(self.pixel_list)
+                self.effective_pixel = np.arange(self.num_pix)
 
             except Exception as e:
 
@@ -959,8 +956,7 @@ class Calibrator:
                 try:
 
                     self.num_pix = 1.1 * max(self.peaks)
-                    self.pixel_list = np.arange(self.num_pix)
-                    self.set_pix_to_rawpix(self.pixel_list)
+                    self.effective_pixel = np.arange(self.num_pix)
 
                 except Exception as e2:
 
@@ -975,21 +971,6 @@ class Calibrator:
             pass
 
         self.logger.info("num_pix is set to {}.".format(num_pix))
-
-    def set_pix_to_rawpix(self, pixel_list):
-
-        if pixel_list is not None:
-
-            # map the list position to the pixel value
-            self.pix_to_rawpix = interpolate.interp1d(
-                self.pixel_list,
-                np.arange(len(self.pixel_list)),
-                fill_value="extrapolate",
-            )
-
-        else:
-
-            self.pix_to_rawpix = None
 
     def set_hough_properties(
         self,
@@ -1120,7 +1101,7 @@ class Calibrator:
         self.min_intercept = self.min_wavelength - self.range_tolerance
         self.max_intercept = self.min_wavelength + self.range_tolerance
 
-        if self.pixel_list is not None:
+        if self.effective_pixel is not None:
 
             self.min_slope = (
                 (
@@ -1133,7 +1114,7 @@ class Calibrator:
                     + self.range_tolerance
                     + self.linearity_tolerance
                 )
-            ) / np.ptp(self.pixel_list)
+            ) / np.ptp(self.effective_pixel)
 
             self.max_slope = (
                 (
@@ -1146,7 +1127,7 @@ class Calibrator:
                     - self.range_tolerance
                     - self.linearity_tolerance
                 )
-            ) / np.ptp(self.pixel_list)
+            ) / np.ptp(self.effective_pixel)
 
         if self.atlas is not None and self.pairs is not None:
 
@@ -2288,7 +2269,7 @@ class Calibrator:
 
     def plot_arc(
         self,
-        pixel_list=None,
+        effective_pixel=None,
         log_spectrum=False,
         save_fig=False,
         fig_type="png",
@@ -2302,7 +2283,7 @@ class Calibrator:
 
         parameters
         ----------
-        pixel_list: array (default: None)
+        effective_pixel: array (default: None)
             pixel value of the of the spectrum, this is only needed if the
             spectrum spans multiple detector arrays.
         log_spectrum: boolean (default: False)
@@ -2336,7 +2317,7 @@ class Calibrator:
 
         return plotting.plot_arc(
             self,
-            pixel_list=pixel_list,
+            effective_pixel=effective_pixel,
             log_spectrum=log_spectrum,
             save_fig=save_fig,
             fig_type=fig_type,

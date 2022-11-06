@@ -236,13 +236,13 @@ def solve_candidate_ransac(
 
             # Check monotonicity.
             pix_min = peaks[0] - np.ptp(peaks) * 0.2
-            pix_max = peaks[-1] + np.ptp(peaks) * 0.2
-            calibrator.logger.debug((pix_min, pix_max))
+            num_pix = peaks[-1] + np.ptp(peaks) * 0.2
+            calibrator.logger.debug((pix_min, num_pix))
 
             if not np.all(
                 np.diff(
                     calibrator.polyval(
-                        np.arange(pix_min, pix_max, 1), fit_coeffs
+                        np.arange(pix_min, num_pix, 1), fit_coeffs
                     )
                 )
                 > 0
@@ -262,11 +262,11 @@ def solve_candidate_ransac(
                 continue
 
             # use the Hough space density as weights for the cost function
-            wave = calibrator.polyval(calibrator.pixel_list, fit_coeffs)
+            wave = calibrator.polyval(calibrator.effective_pixel, fit_coeffs)
             gradient = calibrator.polyval(
-                calibrator.pixel_list, _derivative(fit_coeffs)
+                calibrator.effective_pixel, _derivative(fit_coeffs)
             )
-            intercept = wave - gradient * calibrator.pixel_list
+            intercept = wave - gradient * calibrator.effective_pixel
 
             # modified cost function weighted by the Hough space density
             if (calibrator.hough_weight is not None) & (twoditp is not None):

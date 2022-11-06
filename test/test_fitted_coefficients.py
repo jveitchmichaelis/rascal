@@ -104,7 +104,7 @@ def test_gmos_fit():
 
     # Initialise the calibrator
     c = Calibrator(peaks_shifted, spectrum=spectrum)
-    c.set_calibrator_properties(pixel_list=pixels)
+    c.set_calibrator_properties(effective_pixel=pixels)
     c.set_hough_properties(
         num_slopes=5000,
         range_tolerance=500.0,

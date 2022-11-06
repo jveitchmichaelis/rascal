@@ -4,7 +4,7 @@ spectrum: ~
 
 # calibrator_properties
 num_pix: ~
-pixel_list: ~
+effective_pixel: ~
 plotting_library: 'matplotlib'
 seed: ~
 logger: ~
