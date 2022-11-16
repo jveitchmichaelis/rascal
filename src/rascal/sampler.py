@@ -33,6 +33,7 @@ class Sampler(ABC):
 
         self.y_for_x = {}
         self.unique_x = np.sort(np.unique(self.x))
+
         for p in self.unique_x:
             self.y_for_x[p] = self.y[self.x == p]
 
@@ -40,6 +41,12 @@ class Sampler(ABC):
         self._setup()
     
     def _generate_samples(self):
+        """Generate samples. This function will return samples that are unique
+        and montonically increasing in both x and y.
+
+        Yields:
+            tuple, tuple: sample of x and y values
+        """
         
         # All unqiue variations of x with desired sample size
         samples = itertools.combinations(self.unique_x, self.sample_size)
@@ -50,8 +57,15 @@ class Sampler(ABC):
             for y_sample in itertools.product(*[self.y_for_x[x] for x in sample]):
                 
                 # Filter duplicate y's
-                if len(np.unique(y_sample)) == len(y_sample):
-                    yield sample, y_sample
+                if len(np.unique(y_sample)) != len(y_sample):
+                    continue
+                
+                # Filter non-monotonic y, can happen when two peaks match
+                # to two close calibration lines
+                if not np.all(y_sample[1:] >= y_sample[:-1], axis=0):
+                    continue
+
+                yield sample, y_sample
 
     def _setup(self):
         """Internal setup function, should be defined by sub-classes
@@ -59,14 +73,20 @@ class Sampler(ABC):
         pass
 
     def __iter__(self):
+        """Obtain the next sample. For non-random samplers, this is a 
+        lazy function.
+
+        Yields:
+            tuple, tuple: sample of x and y values
+        """
 
         for sample in self.samples:
             yield sample
 
 class UniformRandomSampler(Sampler):
 
-    def _truncate_samples(self):
-        """Truncate samples to a maximum number by randomly shuffling the list
+    def _select_samples(self):
+        """Select samples by randomly shuffling the list
         and then taking the first N.
 
         """
@@ -88,15 +108,14 @@ class UniformRandomSampler(Sampler):
         elif self.n_samples > len(self.samples):
             self.logger.warning(f"Returning all samples as max tries ({self.n_samples})is greater than number of combinations ({len(self.samples)})")
         else:
-            self._truncate_samples()
+            self._select_samples()
 
 
 class WeightedRandomSampler(UniformRandomSampler):
 
-    def _truncate_samples(self, max_bins=10):
-        """Truncate samples to a maximum number by weighting each
-        based on Hough density and then randomly sampling with
-        this cost.
+    def _select_samples(self, max_bins=10):
+        """Select samples by weighting each based on Hough density
+        and then randomly sampling with this cost.
 
         Args:
             max_bins (int, optional): Number of bins to use for Hough histogram. Defaults to 10.
