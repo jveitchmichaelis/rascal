@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import numpy as np
 
 from rascal.atlas import Atlas
@@ -5,7 +7,8 @@ from rascal.calibrator import Calibrator
 from rascal.synthetic import SyntheticSpectrum
 
 
-def test_providing_effective_pixel_not_affecting_fit():
+@patch("matplotlib.pyplot.show")
+def test_providing_effective_pixel_not_affecting_fit(mock_show):
 
     # Create a test spectrum with a simple linear relationship
     # between pixels/wavelengths. The intercept is set to
