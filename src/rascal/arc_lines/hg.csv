@@ -1,0 +1,20 @@
+# Peak,Strength,Lamp
+#https://physics.nist.gov/cgi-bin/ASD/lines1.pl?spectra=Hg+I%3B+Hg+II&limits_type=0&low_w=300&upp_w=2500&unit=1&de=0&format=0&line_out=0&remove_js=on&en_unit=0&output=0&bibrefs=1&page_size=15&show_obs_wl=1&order_out=0&max_low_enrg=&show_av=3&max_upp_enrg=&tsb_value=0&min_str=&A_out=0&intens_out=on&max_str=&allowed_out=1&forbid_out=1&min_accur=C&min_intens=&conf_out=on&term_out=on&enrg_out=on&J_out=on&submit=Retrieve+Data
+# Only contain 3000-12000 A and have relative strength >= 10
+3022.3840,1200,HgI
+3024.351,300,HgI
+3028.371,60,HgI
+3126.5801,4000,HgI
+3342.4448,700,HgI
+3651.1980,9000,HgI
+3655.8833,3000,HgI
+3663.9303,500,HgI
+4047.7081,12000,HgI
+4078.9883,1000,HgI
+4340.4431,50,HgI
+4348.7166,150,HgI
+4359.5600,12000,HgI
+5027.0,3,HgI
+5462.2675,6000,HgI
+5771.2101,1000,HgI
+10142.53,1600,HgI

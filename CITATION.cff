@@ -1,0 +1,31 @@
+cff-version: 1.2.0
+title: rascal
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Josh
+    family-names: Veitch-Michaelis
+    email: j.veitchmichaelis@gmail.com
+    affiliation: ETH Zurich
+    orcid: 'https://orcid.org/0000-0003-2780-7843'
+  - given-names: Marco C
+    family-names: Lam
+    email: lam@mail.tau.ac.il
+    affiliation: Tel Aviv University
+    orcid: 'https://orcid.org/0000-0002-9347-2298'
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.4117514
+    description: Zenodo
+  - type: url
+    value: >-
+      http://aspbooks.org/custom/publications/paper/527-0627.html
+    description: >-
+      Article in the ASP Conference Series
+      Astronomical Data Analysis Software and Systems
+      XXIX
+repository-code: 'https://github.com/jveitchmichaelis/rascal'
+url: 'https://pypi.org/project/rascal/'
+license: BSD-3-Clause

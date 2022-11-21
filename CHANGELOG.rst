@@ -1,7 +1,16 @@
+Version 0.3.5
+-------------
+
+:Date: 22 Nov 2022
+
+* `@cylammarco <https://github.com/cylammarco>`__:
+
+  * Moved all script to the `src`` folder
+
 Version 0.3.4
 -------------
 
-:Date: 26 May 2022
+:Date: 1 Aug 2022
 
 * `@cylammarco <https://github.com/cylammarco>`__:
 
@@ -12,7 +21,7 @@ Version 0.3.4
 Version 0.3.3
 -------------
 
-:Date: 23 March 2022
+:Date: 26 May 2022
 
 * `@jveitchmichaelis <https://github.com/jveitchmichaelis>`__:
 
@@ -27,7 +36,7 @@ Version 0.3.3
 Version 0.3.2
 -------------
 
-:Date: 10 March 2022
+:Date: 23 March 2022
 
 This version adds quite a lot of small fixes, in particular some nasty bugs in RANSAC which would return duplicate atlas lines,
 or incorrect match lists. Error checking has been improved throughout with sanity checks to prevent obviously wrong fits from
