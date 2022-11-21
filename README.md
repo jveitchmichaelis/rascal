@@ -3,6 +3,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/jveitchmichaelis/rascal/badge.svg?branch=main)](https://coveralls.io/github/jveitchmichaelis/rascal?branch=main)
 [![Readthedocs Status](https://readthedocs.org/projects/rascal/badge/?version=latest&style=flat)](https://rascal.readthedocs.io/en/latest/)
 [![PyPI version](https://badge.fury.io/py/rascal.svg)](https://badge.fury.io/py/rascal)
+[![Downloads](https://pepy.tech/badge/rascal/month)](https://pepy.tech/project/rascal)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4117514.svg)](https://doi.org/10.5281/zenodo.4117514)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
