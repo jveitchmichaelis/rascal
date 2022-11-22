@@ -383,73 +383,6 @@ class Calibrator:
                     [self.peaks[mask], actual[mask], weight]
                 )
 
-    def _match_bijective(self, candidates, peaks, fit_coeff):
-        """
-
-        Internal function used to return a list of inliers with a
-        one-to-one relationship between peaks and wavelengths. This
-        is critical as often we have several potential candidate lines
-        for each peak. This function first iterates through each peak
-        and selects the wavelength with the smallest error. It then
-        iterates through this list and does the same for duplicate
-        wavelengths.
-
-        parameters
-        ----------
-        candidates: dict
-            match candidates, internal to ransac
-
-        peaks: list
-            list of peaks [px]
-
-        fit_coeff: list
-            polynomial fit coefficients
-
-        """
-
-        err = []
-        matched_x = []
-        matched_y = []
-
-        for peak in peaks:
-
-            fit = self.polyval(peak, fit_coeff)
-
-            # Get closest match for this peak
-            errs = np.abs(fit - candidates[peak])
-            idx = np.argmin(errs)
-
-            err.append(errs[idx])
-            matched_x.append(peak)
-            matched_y.append(candidates[peak][idx])
-
-        err = np.array(err)
-        matched_x = np.array(matched_x)
-        matched_y = np.array(matched_y)
-
-        # Now we also need to resolve duplicate y's
-        filtered_x = []
-        filtered_y = []
-        filtered_err = []
-
-        for wavelength in np.unique(matched_y):
-
-            mask = matched_y == wavelength
-            filtered_y.append(wavelength)
-
-            err_idx = np.argmin(err[mask])
-            filtered_x.append(matched_x[mask][err_idx])
-            filtered_err.append(err[mask][err_idx])
-
-        # overwrite
-        err = np.array(filtered_err)
-        matched_x = np.array(filtered_x)
-        matched_y = np.array(filtered_y)
-
-        assert len(np.unique(matched_x)) == len(np.unique(matched_y))
-
-        return err, matched_x, matched_y
-
     def _adjust_polyfit(self, delta, fit, tolerance, min_frac):
         """
         **EXPERIMENTAL**
@@ -1675,6 +1608,31 @@ class Calibrator:
                 "size = " + str(len(self.peaks)) + "."
             )
             self.minimum_matches = len(self.peaks)
+
+        if self.linear:
+
+            self._get_candidate_points_linear(candidate_tolerance)
+
+        else:
+
+            self._get_candidate_points_poly(candidate_tolerance)
+
+        (
+            self.candidate_peak,
+            self.candidate_arc,
+        ) = self._get_most_common_candidates(
+            self.candidates,
+            top_n_candidate=self.top_n_candidate,
+            weighted=self.candidate_weighted,
+        )
+
+        # Note that there may be multiple matches for
+        # each peak, that is len(x) > len(np.unique(x))
+        x = np.array(self.candidate_peak)
+        y = np.array(self.candidate_arc)
+
+        solver = RansacSolver(x, y, config["ransac"])
+        solver.solve()
 
         (fit_coeff, rms, residual, n_inliers, valid,) = solve_candidate_ransac(
             self,
