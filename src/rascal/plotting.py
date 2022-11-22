@@ -761,7 +761,7 @@ def plot_fit(
 
         if display:
 
-            fig.show()
+            plt.show()
 
         return fig
 
