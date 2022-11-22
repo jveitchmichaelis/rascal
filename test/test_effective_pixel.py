@@ -1,6 +1,7 @@
 from unittest.mock import patch
-
+import sys
 import numpy as np
+import pytest
 
 from rascal.atlas import Atlas
 from rascal.calibrator import Calibrator
@@ -8,6 +9,7 @@ from rascal.synthetic import SyntheticSpectrum
 
 
 @patch("matplotlib.pyplot.show")
+@pytest.mark.skipif(sys.platform == "darwin", reason="does not run on Mac")
 def test_providing_effective_pixel_not_affecting_fit(mock_show):
 
     # Create a test spectrum with a simple linear relationship
