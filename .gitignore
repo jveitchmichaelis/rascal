@@ -134,5 +134,8 @@ iframe_figures/
 test/*.json
 test/*.npy
 test/*.png
+*.png
 
 test/test_output/*
+
+.vscode/

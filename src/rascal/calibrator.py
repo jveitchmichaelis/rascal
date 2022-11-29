@@ -1957,7 +1957,7 @@ class Calibrator:
                     "_adjust_polyfit() returns None. "
                     "Input solution is returned."
                 )
-                return fit_coeff, None, None, None, None
+                return fit_coeff, None, None, None, None, None, None
 
         matched_peaks = []
         matched_atlas = []
