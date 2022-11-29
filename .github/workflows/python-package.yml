@@ -42,6 +42,7 @@ jobs:
       run: |
         coverage run -m pytest --disable-warnings -p no:warnings test
     - name: Generate Coveralls reports
+      if: startsWith(matrix.os, 'ubuntu')
       uses: AndreMiras/coveralls-python-action@develop
       with:
         parallel: true
