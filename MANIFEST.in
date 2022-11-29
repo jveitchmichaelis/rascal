@@ -1,1 +1,1 @@
-recursive-include arc_lines/*.csv
+recursive-include rascal/arc_lines *

@@ -1,3 +1,22 @@
+Version 0.3.8
+-------------
+
+:Date: 29 Nov 2022
+
+* `@cylammarco <https://github.com/cylammarco>`__:
+
+  * Fix wrong MANIFEST path
+
+Version 0.3.7
+-------------
+
+:Date: 29 Nov 2022
+
+* `@cylammarco <https://github.com/cylammarco>`__:
+
+  * Fixed failed PyPI auto-upload
+  * Failed coverall report upload
+
 Version 0.3.6
 -------------
 
