@@ -1,6 +1,8 @@
 import logging
 import numpy as np
 
+from .util import load_calibration_lines, gauss
+
 logger = logging.getLogger("plotting")
 
 
@@ -56,6 +58,201 @@ def _import_plotly():
     except ImportError:
 
         logger.error("plotly package not available.")
+
+
+def plot_calibration_lines(
+    elements=[],
+    linelist="nist",
+    min_atlas_wavelength=3000.0,
+    max_atlas_wavelength=15000.0,
+    min_intensity=5.0,
+    min_distance=0.0,
+    brightest_n_lines=None,
+    pixel_scale=1.0,
+    vacuum=False,
+    pressure=101325.0,
+    temperature=273.15,
+    relative_humidity=0.0,
+    label=False,
+    log=False,
+    save_fig=False,
+    fig_type="png",
+    filename=None,
+    display=True,
+    fig_kwarg={"figsize": (12, 8)},
+):
+    """
+    Plot the expected arc spectrum.
+    Parameters
+    ----------
+    elements: list
+        List of short element names, e.g. He as per NIST
+    linelist: str
+        Either 'nist' to use the default lines or path to a linelist file.
+    min_atlas_wavelength: int
+        Minimum wavelength to search, Angstrom
+    max_atlas_wavelength: int
+        Maximum wavelength to search, Angstrom
+    min_intensity: int
+        Minimum intensity to search, per NIST
+    min_distance: int
+        All ines within this distance from other lines are treated
+        as unresolved, all of them get removed from the list.
+    brightest_n_lines: int
+        Only return the n brightest lines
+    vacuum: bool
+        Return vacuum wavelengths
+    pressure: float
+        Atmospheric pressure, Pascal
+    temperature: float
+        Temperature in Kelvin, default room temp
+    relative_humidity: float
+        Relative humidity, percent
+    log: bool
+        Plot intensities in log scale
+    save_fig: boolean (default: False)
+        Save an image if set to True. matplotlib uses the pyplot.save_fig()
+        while the plotly uses the pio.write_html() or pio.write_image().
+        The support format types should be provided in fig_type.
+    fig_type: string (default: 'png')
+        Image type to be saved, choose from:
+        jpg, png, svg, pdf and iframe. Delimiter is '+'.
+    filename: string (default: None)
+        Provide a filename or full path. If the extension is not provided
+        it is defaulted to png.
+    display: boolean (Default: False)
+        Set to True to display disgnostic plot.
+    Returns
+    -------
+    fig: matplotlib figure object
+    """
+
+    # the min_intensity and min_distance are set to 0.0 because the
+    # simulated spectrum would contain them. These arguments only
+    # affect the labelling.
+    element_list, wavelength_list, intensity_list = load_calibration_lines(
+        elements=elements,
+        linelist=linelist,
+        min_atlas_wavelength=min_atlas_wavelength,
+        max_atlas_wavelength=max_atlas_wavelength,
+        min_intensity=0.0,
+        min_distance=0.0,
+        brightest_n_lines=brightest_n_lines,
+        vacuum=vacuum,
+        pressure=pressure,
+        temperature=temperature,
+        relative_humidity=relative_humidity,
+    )
+
+    # Nyquist sampling rate (2.5) for CCD at seeing of 1 arcsec
+    sigma = pixel_scale * 2.5 * 1.0
+    x = np.arange(-100, 100.001, 0.001)
+    gaussian = gauss(x, a=1.0, x0=0.0, sigma=sigma)
+
+    # Generate the equally spaced-wavelength array, and the
+    # corresponding intensity
+    w = np.around(
+        np.arange(min_atlas_wavelength, max_atlas_wavelength + 0.001, 0.001),
+        decimals=3,
+    ).astype("float64")
+    i = np.zeros_like(w)
+
+    for e in elements:
+        i[
+            np.isin(
+                w, np.around(wavelength_list[element_list == e], decimals=3)
+            )
+        ] += intensity_list[element_list == e]
+    # Convolve to simulate the arc spectrum
+    model_spectrum = signal.convolve(i, gaussian, mode="same")
+
+    # now clean up by min_intensity and min_distance
+    intensity_mask = filter_intensity(
+        elements,
+        np.column_stack((element_list, wavelength_list, intensity_list)),
+        min_intensity=min_intensity,
+    )
+    wavelength_list = wavelength_list[intensity_mask]
+    intensity_list = intensity_list[intensity_mask]
+    element_list = element_list[intensity_mask]
+
+    distance_mask = filter_distance(wavelength_list, min_distance=min_distance)
+    wavelength_list = wavelength_list[distance_mask]
+    intensity_list = intensity_list[distance_mask]
+    element_list = element_list[distance_mask]
+
+    fig = plt.figure(**fig_kwarg)
+
+    for j, e in enumerate(elements):
+        e_mask = element_list == e
+        markerline, stemline, _ = plt.stem(
+            wavelength_list[e_mask],
+            intensity_list[e_mask],
+            label=e,
+            linefmt="C{}-".format(j),
+        )
+        plt.setp(stemline, linewidth=2.0)
+        plt.setp(markerline, markersize=2.5, color="C{}".format(j))
+
+        if label:
+
+            for _w in wavelength_list[e_mask]:
+
+                plt.text(
+                    _w,
+                    max(model_spectrum) * 1.05,
+                    s="{}: {:1.2f}".format(e, _w),
+                    rotation=90,
+                    bbox=dict(facecolor="white", alpha=1),
+                )
+
+            plt.vlines(
+                wavelength_list[e_mask],
+                intensity_list[e_mask],
+                max(model_spectrum) * 1.25,
+                linestyles="dashed",
+                lw=0.5,
+                color="grey",
+            )
+
+    plt.plot(w, model_spectrum, lw=1.0, c="k", label="Simulated Arc Spectrum")
+    if vacuum:
+        plt.xlabel("Vacuum Wavelength / A")
+    else:
+        plt.xlabel("Air Wavelength / A")
+    plt.ylabel("NIST intensity")
+    plt.grid()
+    plt.xlim(min(w), max(w))
+    plt.ylim(0, max(model_spectrum) * 1.25)
+    plt.legend()
+    plt.tight_layout()
+    if log:
+        plt.ylim(ymin=min_intensity * 0.75)
+        plt.yscale("log")
+
+    if save_fig:
+
+        fig_type = fig_type.split("+")
+
+        if filename is None:
+
+            filename_output = "rascal_arc"
+
+        else:
+
+            filename_output = filename
+
+        for t in fig_type:
+
+            if t in ["jpg", "png", "svg", "pdf"]:
+
+                plt.savefig(filename_output + "." + t, format=t)
+
+    if display:
+
+        plt.show()
+
+    return fig
 
 
 def plot_search_space(

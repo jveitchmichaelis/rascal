@@ -1,1 +1,1 @@
-include rascal/arc_lines/*.csv
+include arc_lines/*.csv
