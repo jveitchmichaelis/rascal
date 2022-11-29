@@ -5,9 +5,9 @@ name: Python package
 
 on:
   push:
-    branches: [main, dev, dev-stable, dev-0.3.X]
+    branches: [main, dev-0.3.X]
   pull_request:
-    branches: [main, dev, dev-stable, dev-0.3.X]
+    branches: [main, dev-0.3.X]
 
 jobs:
   build:
@@ -47,4 +47,12 @@ jobs:
       with:
         parallel: true
         flag-name: Test with pytest
-        github-token: ${{ secrets.COVERALL_TOKEN }}
+
+  coveralls_finish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Coveralls Finished
+      uses: AndreMiras/coveralls-python-action@develop
+      with:
+        parallel-finished: true
