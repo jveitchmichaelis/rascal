@@ -1,3 +1,16 @@
+Version 0.3.6
+-------------
+
+:Date: 29 Nov 2022
+
+* `@cylammarco <https://github.com/cylammarco>`__:
+
+  * Fixed MANIFEST after moving scrips to `src`
+  * Fixed vacuum-to-wavelength and wavelength-to-vacuum bug
+  * Added a plotting function for inspecting calibration lines
+  * Removed test-required dependencies from the requirements
+  * Testing in Python 3.11
+
 Version 0.3.5
 -------------
 
@@ -5,7 +18,7 @@ Version 0.3.5
 
 * `@cylammarco <https://github.com/cylammarco>`__:
 
-  * Moved all script to the `src`` folder
+  * Moved all script to the `src` folder
 
 Version 0.3.4
 -------------

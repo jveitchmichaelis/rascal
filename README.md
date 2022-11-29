@@ -26,8 +26,12 @@ More background information can be referred to this [arXiv article](https://ui.a
 * python >= 3.6
 * numpy
 * scipy
-* [astropy](https://github.com/astropy/astropy)
 * [plotly](https://github.com/plotly/plotly.py) >= 4.0
+* pynverse
+* matplotlib
+
+## Optional Dependencies
+* plotly
 
 ## Installation
 Instructions can be found [here](https://rascal.readthedocs.io/en/latest/installation/installation.html).
