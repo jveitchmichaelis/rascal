@@ -66,7 +66,6 @@ def _import_plotly():
 
 def plot_calibration_lines(
     elements=[],
-    linelist="nist",
     min_atlas_wavelength=3000.0,
     max_atlas_wavelength=15000.0,
     min_intensity=5.0,
@@ -83,6 +82,7 @@ def plot_calibration_lines(
     fig_type="png",
     filename=None,
     display=True,
+    linelist="nist",
     fig_kwarg={"figsize": (12, 8)},
 ):
     """
@@ -131,6 +131,8 @@ def plot_calibration_lines(
     -------
     fig: matplotlib figure object
     """
+
+    _import_matplotlib()
 
     # the min_intensity and min_distance are set to 0.0 because the
     # simulated spectrum would contain them. These arguments only
@@ -182,7 +184,7 @@ def plot_calibration_lines(
     element_list = element_list[intensity_mask]
 
     distance_mask = filter_separation(
-        wavelength_list, min_distance=min_distance
+        wavelength_list, min_separation=min_distance
     )
     wavelength_list = wavelength_list[distance_mask]
     intensity_list = intensity_list[distance_mask]

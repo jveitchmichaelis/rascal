@@ -40,7 +40,24 @@ def edlen_refraction(
 ):
     """
     Appendix A.IV of https://emtoolbox.nist.gov/Wavelength/Documentation.asp
+
+    Parameters
+    ----------
+    wavelengths: float
+        In unit of Angstrom
+    temperature: float
+        In unit of Celcius
+    pressure: float
+        In unit of Pascal
+
     """
+
+    # Convert to micron for computing variable S
+    w = np.array(wavelengths) / 1e4
+
+    t = temperature
+    T = temperature + 273.15
+
     A = 8342.54
     B = 2406147.0
     C = 15998.0
@@ -48,16 +65,14 @@ def edlen_refraction(
     E = 0.601
     F = 0.00972
     G = 0.003661
-    S = 1.0 / np.array(wavelengths) ** 2.0
+    S = np.array(w) ** -2.0
     n_s = 1.0 + 1e-8 * (A + B / (130 - S) + C / (38.9 - S))
-    X = (1.0 + 1e-8 * (E - F * (temperature - 273.15)) * pressure) / (
-        1.0 + G * (temperature - 273.15)
-    )
+    X = (1.0 + 1e-8 * (E - F * t) * pressure) / (1.0 + G * t)
     n_tp = 1.0 + pressure * (n_s - 1.0) * X / D
     n = (
         n_tp
         - 1e-10
-        * (292.75 / temperature)
+        * (292.75 / T)
         * (3.7345 - 0.0401 * S)
         * vapour_partial_pressure
     )
@@ -95,12 +110,54 @@ def vacuum_to_air_wavelength(
         The wavelengths in air given the condition
     """
 
-    vapour_pressure = get_vapour_pressure(temperature)
+    # Convert to celcius
+    t = temperature - 273.15
+
+    vapour_pressure = get_vapour_pressure(t)
     vapour_partial_pressure = get_vapour_partial_pressure(
         relative_humidity, vapour_pressure
     )
     return np.array(wavelengths) / edlen_refraction(
-        wavelengths, temperature, pressure, vapour_partial_pressure
+        wavelengths, t, pressure, vapour_partial_pressure
+    )
+
+
+def air_to_vacuum_wavelength(
+    wavelengths, temperature=273.15, pressure=101325, relative_humidity=0
+):
+    """
+    The conversion follows the Modified Edlén Equations
+    https://emtoolbox.nist.gov/Wavelength/Documentation.asp
+    https://iopscience.iop.org/article/10.1088/0026-1394/35/2/8
+    pressure drops by ~10% per 1000m above sea level
+    temperature depends heavily on the location
+    relative humidity is between 0-100, depends heavily on the location
+    Parameters
+    ----------
+    wavelengths: float or numpy.array
+        Wavelengths in vacuum in unit of Angstrom
+    temperature: float
+        In unit of Kelvin
+    pressure: float
+        In unit of Pa
+    relative_humidity: float
+        Unitless in percentage (i.e. 0 - 100)
+    Returns
+    -------
+    air wavelengths: float or numpy.array
+        The wavelengths in air given the condition
+    """
+
+    # Convert to celcius
+    t = temperature - 273.15
+
+    # get_vapour_pressure takes temperature in Celcius
+    vapour_pressure = get_vapour_pressure(t)
+    vapour_partial_pressure = get_vapour_partial_pressure(
+        relative_humidity, vapour_pressure
+    )
+    return np.array(wavelengths) * edlen_refraction(
+        wavelengths, t, pressure, vapour_partial_pressure
     )
 
 
@@ -126,12 +183,15 @@ def filter_wavelengths(lines, min_atlas_wavelength, max_atlas_wavelength):
 
     """
 
-    wavelengths = lines[:, 1].astype(np.float32)
-    wavelength_mask = (wavelengths >= min_atlas_wavelength) & (
-        wavelengths <= max_atlas_wavelength
+    wavelengths = lines[:, 1].astype(np.float64)
+
+    _, index, _ = np.unique(wavelengths, return_counts=True, return_index=True)
+
+    wavelength_mask = (wavelengths[index] >= min_atlas_wavelength) & (
+        wavelengths[index] <= max_atlas_wavelength
     )
 
-    return lines[wavelength_mask]
+    return lines[index][wavelength_mask]
 
 
 def filter_separation(wavelengths, min_separation=0):
@@ -168,31 +228,67 @@ def filter_separation(wavelengths, min_separation=0):
     return distance_mask
 
 
-def filter_intensity(lines, min_intensity=0):
+def filter_intensity(elements, lines, min_intensity=None):
     """
     Filters a line list by an intensity threshold
-
     Parameters
     ----------
-
     lines: list[tuple (str, float, float)]
-        A list of input lines where the 2nd parameter
-        is intensity
-    min_intensity: int
+        A list of input lines where 1st parameter is the name of the element
+        the 2nd parameter is the wavelength, the 3rd is the intensities
+    min_intensity: float
         Intensity threshold
-
     Returns
     -------
-
     lines: list
         Filtered line list
-
     """
 
+    if min_intensity is None:
+
+        min_intensity_dict = {}
+
+        for i, e in enumerate(elements):
+
+            min_intensity_dict[e] = 0.0
+
+    elif isinstance(min_intensity, (int, float)):
+
+        min_intensity_dict = {}
+
+        for i, e in enumerate(elements):
+
+            min_intensity_dict[e] = float(min_intensity)
+
+    elif isinstance(min_intensity, (list, np.ndarray)):
+
+        assert len(min_intensity) == len(elements), (
+            "min_intensity has to be in, float of list/array "
+            "the same size as the elements. min_intensity is {}"
+            "and elements is {}.".format(min_intensity, elements)
+        )
+
+        min_intensity_dict = {}
+
+        for i, e in enumerate(elements):
+
+            min_intensity_dict[e] = min_intensity[i]
+
+    else:
+
+        raise ValueError(
+            "min_intensity has to be in, float of list/array "
+            "the same size as the elements. min_intensity is {}"
+            "and elements is {}.".format(min_intensity, elements)
+        )
+
     out = []
+
     for line in lines:
-        _, _, intensity = line
-        if float(intensity) >= min_intensity:
+        element = line[0]
+        intensity = float(line[2])
+
+        if intensity >= min_intensity_dict[element]:
             out.append(True)
         else:
             out.append(False)
@@ -210,6 +306,8 @@ def load_calibration_lines(
     pressure=101325.0,
     temperature=273.15,
     relative_humidity=0.0,
+    linelist="nist",
+    brightest_n_lines=None,
 ):
     """
     Load calibration lines from the standard NIST atlas.
@@ -232,6 +330,8 @@ def load_calibration_lines(
     ----------
     elements: list
         List of short element names, e.g. He as per NIST
+    linelist: str
+        Either 'nist' to use the default lines or path to a linelist file.
     min_atlas_wavelength: int
         Minimum wavelength to search, Angstrom
     max_atlas_wavelength: int
@@ -259,15 +359,33 @@ def load_calibration_lines(
         elements = [elements]
 
     # Element, wavelength, intensity
-    file_path = pkg_resources.resource_filename(
-        "rascal", "arc_lines/nist_clean.csv"
-    )
-
-    lines = np.loadtxt(file_path, delimiter=",", dtype=">U12")
+    if isinstance(linelist, str):
+        if linelist.lower() == "nist":
+            file_path = pkg_resources.resource_filename(
+                "rascal", "arc_lines/nist_clean.csv"
+            )
+            lines = np.loadtxt(file_path, delimiter=",", dtype=">U12")
+        elif os.path.exists(linelist):
+            lines = np.loadtxt(linelist, delimiter=",", dtype=">U12")
+        else:
+            raise ValueError(
+                f"Unknown string is provided as linelist: {linelist}."
+            )
+    else:
+        raise ValueError("Please provide a valid format of line list.")
 
     # Mask elements
     mask = [(li[0] in elements) for li in lines]
     lines = lines[mask]
+
+    # update the wavelength limit
+    if not vacuum:
+        min_atlas_wavelength, max_atlas_wavelength = air_to_vacuum_wavelength(
+            (min_atlas_wavelength, max_atlas_wavelength),
+            temperature,
+            pressure,
+            relative_humidity,
+        )
 
     # Filter wavelengths
     lines = filter_wavelengths(
@@ -275,32 +393,40 @@ def load_calibration_lines(
     )
 
     # Filter intensities
-    if min_intensity > 0:
-        intensity_mask = filter_intensity(lines, min_intensity)
+    if isinstance(min_intensity, (float, int, list, np.ndarray)):
+        intensity_mask = filter_intensity(elements, lines, min_intensity)
     else:
         intensity_mask = np.ones_like(lines[:, 0]).astype(bool)
 
-    elements = lines[:, 0][intensity_mask]
-    wavelengths = lines[:, 1][intensity_mask].astype("float32")
-    intensities = lines[:, 2][intensity_mask].astype("float32")
+    element_list = lines[:, 0][intensity_mask]
+    wavelength_list = lines[:, 1][intensity_mask].astype("float64")
+    intensity_list = lines[:, 2][intensity_mask].astype("float64")
+
+    if brightest_n_lines is not None:
+        to_keep = np.argsort(np.array(intensity_list))[::-1][
+            :brightest_n_lines
+        ]
+        element_list = element_list[to_keep]
+        intensity_list = intensity_list[to_keep]
+        wavelength_list = wavelength_list[to_keep]
 
     # Calculate peak separation
     if min_distance > 0:
-        distance_mask = filter_separation(wavelengths, min_distance)
+        distance_mask = filter_separation(wavelength_list, min_distance)
     else:
-        distance_mask = np.ones_like(wavelengths.astype(bool))
+        distance_mask = np.ones_like(wavelength_list.astype(bool))
 
-    elements = elements[distance_mask]
-    wavelengths = wavelengths[distance_mask]
-    intensities = intensities[distance_mask]
+    element_list = element_list[distance_mask]
+    wavelength_list = wavelength_list[distance_mask]
+    intensity_list = intensity_list[distance_mask]
 
     # Vacuum to air conversion
     if not vacuum:
-        wavelengths = vacuum_to_air_wavelength(
-            wavelengths, temperature, pressure, relative_humidity
+        wavelength_list = vacuum_to_air_wavelength(
+            wavelength_list, temperature, pressure, relative_humidity
         )
 
-    return elements, wavelengths, intensities
+    return element_list, wavelength_list, intensity_list
 
 
 def gauss(x, a, x0, sigma):

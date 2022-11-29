@@ -4,10 +4,11 @@ from .util import vacuum_to_air_wavelength
 
 
 class AtlasLine:
-    def __init__(self, wavelength, element=None, intensity=None):
+    def __init__(self, wavelength, element=None, intensity=None, source=None):
         self.wavelength = wavelength
         self.element = element
         self.intensity = intensity
+        self.source = source
 
 
 class Atlas:
@@ -23,6 +24,7 @@ class Atlas:
         pressure=101325.0,
         temperature=273.15,
         relative_humidity=0.0,
+        linelist="nist",
     ):
         """
         Creates an atlas of arc lines.
@@ -88,6 +90,7 @@ class Atlas:
                 pressure=pressure,
                 temperature=temperature,
                 relative_humidity=relative_humidity,
+                linelist=linelist,
             )
 
     def add(
@@ -101,6 +104,8 @@ class Atlas:
         pressure=101325.0,
         temperature=273.15,
         relative_humidity=0.0,
+        linelist="nist",
+        brightest_n_lines=1000,
     ):
         """
         Adds arc lines to the atlas
@@ -185,22 +190,24 @@ class Atlas:
                     atlas_tmp,
                     atlas_intensities_tmp,
                 ) = load_calibration_lines(
-                    element,
-                    min_atlas_wavelength,
-                    max_atlas_wavelength,
-                    min_intensity,
-                    min_distance,
-                    vacuum,
-                    pressure,
-                    temperature,
-                    relative_humidity,
+                    elements=element,
+                    min_atlas_wavelength=min_atlas_wavelength,
+                    max_atlas_wavelength=max_atlas_wavelength,
+                    min_intensity=min_intensity,
+                    min_distance=min_distance,
+                    vacuum=vacuum,
+                    pressure=pressure,
+                    temperature=temperature,
+                    relative_humidity=relative_humidity,
+                    linelist=linelist,
+                    brightest_n_lines=brightest_n_lines,
                 )
 
                 for element, line, intensity in list(
                     zip(atlas_elements_tmp, atlas_tmp, atlas_intensities_tmp)
                 ):
                     self.atlas_lines.append(
-                        AtlasLine(line, element, intensity)
+                        AtlasLine(line, element, intensity, "NIST")
                     )
 
     def add_user_atlas(

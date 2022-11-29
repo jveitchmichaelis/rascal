@@ -1,4 +1,3 @@
-astropy
 matplotlib
 numpy
 pynverse

@@ -1,21 +1,20 @@
 import os
 from unittest.mock import patch
 
-
-from rascal import util
+from rascal import plotting
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
 
 @patch("matplotlib.pyplot.show")
 def test_plot_calibration_lines(mock_show):
-    util.plot_calibration_lines(elements=["He"])
+    plotting.plot_calibration_lines(elements=["He"])
 
 
 @patch("matplotlib.pyplot.show")
 def test_display_plot_calibration_lines_1_element(mock_show):
 
-    util.plot_calibration_lines(
+    plotting.plot_calibration_lines(
         elements=["He"],
         min_atlas_wavelength=2900,
         max_atlas_wavelength=4500,
@@ -29,7 +28,7 @@ def test_display_plot_calibration_lines_1_element(mock_show):
 
 def test_save_plot_calibration_lines_1_element():
 
-    util.plot_calibration_lines(
+    plotting.plot_calibration_lines(
         elements=["He"],
         min_atlas_wavelength=2900,
         max_atlas_wavelength=4500,
@@ -47,7 +46,7 @@ def test_save_plot_calibration_lines_1_element():
 
 def test_save_plot_calibration_lines_3_elements():
 
-    util.plot_calibration_lines(
+    plotting.plot_calibration_lines(
         elements=["Cu", "Ne", "Ar"],
         min_atlas_wavelength=2900,
         max_atlas_wavelength=4500,
