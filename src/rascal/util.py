@@ -1,6 +1,7 @@
+import os
+
 import numpy as np
 from scipy.optimize import curve_fit
-from numpy import exp
 import pkg_resources
 
 
@@ -450,7 +451,7 @@ def gauss(x, a, x0, sigma):
         The Gaussian function evaluated at provided x
     """
 
-    return a * exp(-((x - x0) ** 2) / (2 * sigma**2 + 1e-9))
+    return a * np.exp(-((x - x0) ** 2) / (2 * sigma**2 + 1e-9))
 
 
 def refine_peaks(spectrum, peaks, window_width=10, distance=None):
