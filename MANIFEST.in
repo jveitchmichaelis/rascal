@@ -1,1 +1,1 @@
-recursive-include rascal/arc_lines *
+recursive-include src/rascal/arc_lines *
