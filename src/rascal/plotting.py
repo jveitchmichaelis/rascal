@@ -1,7 +1,11 @@
 import logging
 import numpy as np
+from scipy import signal
 
-from .util import load_calibration_lines, gauss
+from .util import load_calibration_lines
+from .util import gauss
+from .util import filter_intensity
+from .util import filter_distance
 
 logger = logging.getLogger("plotting")
 
@@ -82,7 +86,8 @@ def plot_calibration_lines(
     fig_kwarg={"figsize": (12, 8)},
 ):
     """
-    Plot the expected arc spectrum.
+    Plot the expected arc spectrum. Only available in matplotlib at the moment.
+
     Parameters
     ----------
     elements: list
