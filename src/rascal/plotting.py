@@ -5,7 +5,7 @@ from scipy import signal
 from .util import load_calibration_lines
 from .util import gauss
 from .util import filter_intensity
-from .util import filter_distance
+from .util import filter_separation
 
 logger = logging.getLogger("plotting")
 
@@ -181,7 +181,9 @@ def plot_calibration_lines(
     intensity_list = intensity_list[intensity_mask]
     element_list = element_list[intensity_mask]
 
-    distance_mask = filter_distance(wavelength_list, min_distance=min_distance)
+    distance_mask = filter_separation(
+        wavelength_list, min_distance=min_distance
+    )
     wavelength_list = wavelength_list[distance_mask]
     intensity_list = intensity_list[distance_mask]
     element_list = element_list[distance_mask]
