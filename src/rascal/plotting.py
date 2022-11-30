@@ -990,6 +990,10 @@ def plot_fit(
 
             spec_max = np.nanmax(spectrum) * 1.05
 
+        else:
+
+            spec_max = vline_max
+
         fitted_peaks = []
         fitted_peaks_adu = []
         fitted_diff = []
