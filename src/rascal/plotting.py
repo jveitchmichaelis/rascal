@@ -1030,12 +1030,12 @@ def plot_fit(
                     fitted_peaks_adu.append(
                         spectrum[int(calibrator.pix_to_rawpix(p))]
                     )
-                    fitted_diff.append(diff[idx])
-                    calibrator.logger.info(
-                        "- matched to {} A".format(
-                            calibrator.atlas.get_lines()[idx]
-                        )
+                fitted_diff.append(diff[idx])
+                calibrator.logger.info(
+                    "- matched to {} A".format(
+                        calibrator.atlas.get_lines()[idx]
                     )
+                )
 
         x_fitted = calibrator.polyval(fitted_peaks, fit_coeff)
 
