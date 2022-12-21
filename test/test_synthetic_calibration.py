@@ -47,7 +47,7 @@ def test_default():
     c.do_hough_transform(brute_force=False)
 
     # And let's try and fit...
-    res = c.fit(max_tries=500)
+    res = c.fit(max_tries=1000)
 
     assert res is not None
 

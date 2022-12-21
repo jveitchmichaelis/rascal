@@ -289,9 +289,6 @@ class RansacSolver:
 
         return cost
 
-    def check_solution(self, fit):
-        pass
-
     def _update_best(self, result):
 
         if result.cost <= self.best_result.cost:

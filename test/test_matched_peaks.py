@@ -90,7 +90,8 @@ assert len(c.atlas.atlas_lines) == len(wavelengths) - 1
 c.atlas.list()
 
 # Run the wavelength calibration
-res = c.fit(max_tries=500, fit_deg=4, candidate_tolerance=5.0)
+res = c.fit(max_tries=1000, fit_deg=4, candidate_tolerance=5.0)
+assert res
 rms = res["rms"]
 n_peaks = len(c.matched_peaks)
 n_atlas = len(c.matched_atlas)

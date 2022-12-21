@@ -98,8 +98,10 @@ def run_sprat_calibration(fit_deg):
 
     # Run the wavelength calibration
     res = c.fit(
-        max_tries=500, fit_deg=fit_deg, candidate_tolerance=5.0, use_msac=True
+        max_tries=1000, fit_deg=fit_deg, candidate_tolerance=5.0, use_msac=True
     )
+
+    assert res
 
     # Refine solution
     res = c.match_peaks(res["fit_coeff"], refine=False, robust_refit=True)
@@ -145,7 +147,7 @@ def test_run_sprat_calibration_with_manual_linelist_file():
     )
 
     # Run the wavelength calibration
-    c.fit(max_tries=500, fit_deg=4)
+    assert c.fit(max_tries=500, fit_deg=4)
 
 
 def test_sprat_calibration():

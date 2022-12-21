@@ -42,40 +42,43 @@ class Sampler:
         for p in self.unique_x:
             self.y_for_x[p] = np.sort(np.unique(self.y[self.x == p]))
 
-        self.x_combinations = itertools.combinations(
-            self.unique_x, self.sample_size
-        )
-
         self._setup()
 
+    def sample_x(self):
+        """Simple random sample from population
+
+        Yields
+        ------
+            x_hat: sample
+        """
+        for _ in range(self.n_samples):
+            x_hat = np.sort(
+                np.random.choice(
+                    self.unique_x, self.sample_size, replace=False
+                )
+            )
+
+            yield x_hat
+
     def _permutations_for_sample(self, sample):
+        """Return x/y permutations for a sample
 
-        out = []
+        Parameters
+        ----------
+        sample
+            list of x values
 
+        Yields
+        ------
+            sample, y_sample: lists of x and y values
+        """
         for x in sample:
-
-            # Special case for the first x
-            if len(out) == 0:
-                for y in self.y_for_x[x]:
-                    out.append([[x], [y]])
-
-            # Other x's
-            else:
-                for o in out:
-                    for y in self.y_for_x[x]:
-                        if y > o[1][-1]:
-                            o[0].append(x)
-                            o[1].append(y)
-                            break
-
-        for o in out:
-            sample = o[0]
-            y_sample = o[1]
-
-            if len(y_sample) == self.sample_size:
+            for y_sample in itertools.product(
+                *[self.y_for_x[x] for x in sample]
+            ):
                 yield sample, y_sample
 
-    def _generate_samples(self, max_samples=None):
+    def _generate_samples(self):
         """
 
         Generate samples. This function will return samples that are unique
@@ -88,9 +91,16 @@ class Sampler:
         """
 
         # All unique variations of x with desired sample size
-        self.logger.info(
+        print(
             f"Generating samples of len {self.sample_size} from pool of {len(self.unique_x)} values"
         )
+
+        if self.n_samples > 0:
+            self.x_combinations = [sample for sample in self.sample_x()]
+        else:
+            self.x_combinations = itertools.combinations(
+                self.unique_x, self.sample_size
+            )
 
         for sample in tqdm(self.x_combinations):
             for x in self._permutations_for_sample(sample):
@@ -128,10 +138,7 @@ class UniformRandomSampler(Sampler):
         and then taking the first N.
 
         """
-        # Get a subset of the x combinations
-        all_x_combinations = [x for x in self.x_combinations]
-        random.shuffle(all_x_combinations)
-        self.x_combinations = all_x_combinations[: self.n_samples]
+        self.samples = [sample for sample in self._generate_samples()]
 
     def _setup(self):
         """
@@ -150,12 +157,11 @@ class UniformRandomSampler(Sampler):
             )
 
         self._select_samples()
-        self.samples = [sample for sample in self._generate_samples()]
 
         if self.n_samples > len(self.samples):
             self.logger.warning(
                 f"Returning all samples as max tries ({self.n_samples})is"
-                + "greater than number of combinations ({len(self.samples)})"
+                + f"greater than number of combinations ({len(self.samples)})"
             )
         else:
             random.shuffle(self.samples)
@@ -163,7 +169,7 @@ class UniformRandomSampler(Sampler):
 
 
 class WeightedRandomSampler(UniformRandomSampler):
-    def _select_samples(self, max_bins=10):
+    def sample_x(self, max_bins=10):
         """
 
         Select samples by weighting each based on density
@@ -174,9 +180,6 @@ class WeightedRandomSampler(UniformRandomSampler):
             max_bins: int, optional
                 Number of bins to use for histogram. Defaults to 10.
         """
-        all_x_combinations = [x for x in self.x_combinations]
-        random.shuffle(all_x_combinations)
-        self.x_combinations = all_x_combinations[: self.n_samples]
 
         n_bins = min(max_bins, len(self.unique_x))
         hist, bin_edges = np.histogram(self.unique_x, bins=n_bins)
@@ -185,21 +188,16 @@ class WeightedRandomSampler(UniformRandomSampler):
         )
         self.prob = prob / np.sum(prob)
 
-        prob_map = {}
-        for i, x in enumerate(self.unique_x):
-            prob_map[x] = self.prob[i]
-
-        weight = []
-        for x_hat in self.x_combinations:
-            weight.append(sum([prob_map[x] for x in x_hat]))
-
         try:
-            self.x_combinations = np.random.choice(
-                self.x_combinations,
-                size=self.n_samples,
-                replace=False,
-                p=weight,
-            )
+            for _ in range(self.n_samples):
+
+                yield np.random.choice(
+                    self.unique_x,
+                    size=self.sample_size,
+                    replace=False,
+                    p=prob,
+                )
+
         except ValueError:
             self.logger.error(
                 f"Unable to draw {self.n_samples} unique samples from population."

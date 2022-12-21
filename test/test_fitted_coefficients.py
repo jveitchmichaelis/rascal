@@ -181,16 +181,8 @@ def test_gmos_fit():
     c.do_hough_transform()
 
     # Run the wavelength calibration
-    (
-        best_p,
-        matched_peaks,
-        matched_atlas,
-        rms,
-        residual,
-        peak_utilisation,
-        atlas_utilisation,
-        success,
-    ) = c.fit(max_tries=1000, fit_deg=4)
+    res = c.fit(max_tries=1000, fit_deg=4)
+    assert res
 
     assert np.isclose(c.fit_coeff[:2], gmos_fit_coeff[:2], rtol=0.02).all()
 
@@ -269,16 +261,7 @@ def test_osiris_fit():
     c.do_hough_transform()
 
     # Run the wavelength calibration
-    (
-        fit_coeff,
-        matched_peaks,
-        matched_atlas,
-        rms,
-        residual,
-        peak_utilisation,
-        atlas_utilisation,
-        success,
-    ) = c.fit(max_tries=1000, fit_tolerance=10.0, fit_deg=4)
+    _ = c.fit(max_tries=1000, fit_tolerance=10.0, fit_deg=4)
 
     assert np.isclose(c.fit_coeff[:2], osiris_fit_coeff[:2], rtol=0.02).all()
 
@@ -380,15 +363,6 @@ def test_sprat_fit():
     c.do_hough_transform()
 
     # Run the wavelength calibration
-    (
-        best_p,
-        matched_peaks,
-        matched_atlas,
-        rms,
-        residual,
-        peak_utilisation,
-        atlas_utilisation,
-        success,
-    ) = c.fit(max_tries=2000, candidate_tolerance=3.0)
+    _ = c.fit(max_tries=2000, candidate_tolerance=3.0)
 
     assert np.isclose(c.fit_coeff[:2], sprat_fit_coeff[:2], rtol=0.02).all()

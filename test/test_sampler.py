@@ -4,6 +4,7 @@ import logging
 
 logger = logging.getLogger("test_samples")
 
+
 @pytest.mark.xfail()
 def test_mismatch_length():
 
@@ -11,6 +12,7 @@ def test_mismatch_length():
     y = range(5)
 
     _ = Sampler(x, y, 3)
+
 
 def test_exhaust_brute_sampler():
 
@@ -23,7 +25,11 @@ def test_exhaust_brute_sampler():
     samples = [x for x in sampler]
 
     import math
-    assert len(samples) == math.factorial(len(x))/(math.factorial(len(x)-sample_size)*math.factorial(sample_size))
+
+    assert len(samples) == math.factorial(len(x)) / (
+        math.factorial(len(x) - sample_size) * math.factorial(sample_size)
+    )
+
 
 def test_exhaust_weighted_random_sampler():
 
@@ -35,6 +41,7 @@ def test_exhaust_weighted_random_sampler():
 
     assert len(samples) > 0
 
+
 def test_exhaust_uniform_random_sampler():
 
     x = range(5)
@@ -45,10 +52,11 @@ def test_exhaust_uniform_random_sampler():
 
     assert len(samples) > 0
 
+
 def test_truncated_random_sample():
 
-    x = [1,1,2,3,4,4,5]
-    y = [0,1,2,3,4,5,6]
+    x = [1, 1, 2, 3, 4, 4, 5]
+    y = [0, 1, 2, 3, 4, 5, 6]
     n_samples = 10
 
     sampler = UniformRandomSampler(x, y, sample_size=3, n_samples=n_samples)
@@ -60,9 +68,10 @@ def test_truncated_random_sample():
 
     for sample in samples:
         sample_set.add(sample)
-    
+
     assert len(sample_set) == len(samples)
     assert len(samples) == n_samples
+
 
 def test_monotonicity():
 

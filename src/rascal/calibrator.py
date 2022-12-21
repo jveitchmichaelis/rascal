@@ -1646,7 +1646,7 @@ class Calibrator:
             "progress": self.progress,
             "polyfit_fn": self.polyfit,
             "polyval_fn": self.polyval,
-            "fit_valid_fn": self._fit_valid,
+            "fit_valid_fn": lambda x: True,  # self._fit_valid,
             "hough": self.ht,
         }
 
