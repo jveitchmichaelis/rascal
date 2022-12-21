@@ -1,4 +1,5 @@
 astropy
+dotmap
 kaleido
 matplotlib
 numpy
