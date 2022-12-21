@@ -2,6 +2,7 @@ import itertools
 import numpy as np
 import logging
 import random
+from tqdm.auto import tqdm
 
 
 class Sampler:
@@ -39,12 +40,42 @@ class Sampler:
         self.unique_x = np.sort(np.unique(self.x))
 
         for p in self.unique_x:
-            self.y_for_x[p] = self.y[self.x == p]
+            self.y_for_x[p] = np.sort(np.unique(self.y[self.x == p]))
 
-        self.samples = self._generate_samples()
+        self.x_combinations = itertools.combinations(
+            self.unique_x, self.sample_size
+        )
+
         self._setup()
 
-    def _generate_samples(self):
+    def _permutations_for_sample(self, sample):
+
+        out = []
+
+        for x in sample:
+
+            # Special case for the first x
+            if len(out) == 0:
+                for y in self.y_for_x[x]:
+                    out.append([[x], [y]])
+
+            # Other x's
+            else:
+                for o in out:
+                    for y in self.y_for_x[x]:
+                        if y > o[1][-1]:
+                            o[0].append(x)
+                            o[1].append(y)
+                            break
+
+        for o in out:
+            sample = o[0]
+            y_sample = o[1]
+
+            if len(y_sample) == self.sample_size:
+                yield sample, y_sample
+
+    def _generate_samples(self, max_samples=None):
         """
 
         Generate samples. This function will return samples that are unique
@@ -56,26 +87,14 @@ class Sampler:
                 sample of x and y values
         """
 
-        # All unqiue variations of x with desired sample size
-        samples = itertools.combinations(self.unique_x, self.sample_size)
+        # All unique variations of x with desired sample size
+        self.logger.info(
+            f"Generating samples of len {self.sample_size} from pool of {len(self.unique_x)} values"
+        )
 
-        for sample in samples:
-
-            # Possible y's for this sample
-            for y_sample in itertools.product(
-                *[self.y_for_x[x] for x in sample]
-            ):
-
-                # Filter duplicate y's
-                if len(np.unique(y_sample)) != len(y_sample):
-                    continue
-
-                # Filter non-monotonic y, can happen when two peaks match
-                # to two close calibration lines
-                if not np.all(y_sample[1:] >= y_sample[:-1], axis=0):
-                    continue
-
-                yield sample, y_sample
+        for sample in tqdm(self.x_combinations):
+            for x in self._permutations_for_sample(sample):
+                yield x
 
     def _setup(self):
         """
@@ -83,7 +102,7 @@ class Sampler:
         Internal setup function, should be defined by sub-classes
 
         """
-        pass
+        self.samples = self._generate_samples()
 
     def __iter__(self):
         """
@@ -109,8 +128,10 @@ class UniformRandomSampler(Sampler):
         and then taking the first N.
 
         """
-        random.shuffle(self.samples)
-        self.samples = self.samples[: self.n_samples]
+        # Get a subset of the x combinations
+        all_x_combinations = [x for x in self.x_combinations]
+        random.shuffle(all_x_combinations)
+        self.x_combinations = all_x_combinations[: self.n_samples]
 
     def _setup(self):
         """
@@ -122,36 +143,41 @@ class UniformRandomSampler(Sampler):
 
         """
 
-        # Generate
-        self.samples = [sample for sample in self.samples]
-
         # Fallback to returning all samples
         if self.n_samples == -1:
             self.logger.warning(
                 "Returning all samples as number of samples was not provided."
             )
-        elif self.n_samples > len(self.samples):
+
+        self._select_samples()
+        self.samples = [sample for sample in self._generate_samples()]
+
+        if self.n_samples > len(self.samples):
             self.logger.warning(
                 f"Returning all samples as max tries ({self.n_samples})is"
                 + "greater than number of combinations ({len(self.samples)})"
             )
         else:
-            self._select_samples()
+            random.shuffle(self.samples)
+            self.samples = self.samples[: self.n_samples]
 
 
 class WeightedRandomSampler(UniformRandomSampler):
     def _select_samples(self, max_bins=10):
         """
 
-        Select samples by weighting each based on Hough density
+        Select samples by weighting each based on density
         and then randomly sampling with this cost.
 
         Parameters:
         -----------
             max_bins: int, optional
-                Number of bins to use for Hough histogram. Defaults to 10.
+                Number of bins to use for histogram. Defaults to 10.
         """
-        # Hough density weighting
+        all_x_combinations = [x for x in self.x_combinations]
+        random.shuffle(all_x_combinations)
+        self.x_combinations = all_x_combinations[: self.n_samples]
+
         n_bins = min(max_bins, len(self.unique_x))
         hist, bin_edges = np.histogram(self.unique_x, bins=n_bins)
         prob = (
@@ -164,13 +190,15 @@ class WeightedRandomSampler(UniformRandomSampler):
             prob_map[x] = self.prob[i]
 
         weight = []
-        for sample in self.samples:
-            x_hat, _ = sample
+        for x_hat in self.x_combinations:
             weight.append(sum([prob_map[x] for x in x_hat]))
 
         try:
-            self.samples = np.random.choice(
-                self.samples, size=self.n_samples, replace=False, p=weight
+            self.x_combinations = np.random.choice(
+                self.x_combinations,
+                size=self.n_samples,
+                replace=False,
+                p=weight,
             )
         except ValueError:
             self.logger.error(

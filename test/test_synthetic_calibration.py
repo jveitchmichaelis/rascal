@@ -17,6 +17,10 @@ s = SyntheticSpectrum(coefficients=best_p)
 peaks, waves = s.get_pixels(np.linspace(200, 1200, num=25))
 assert len(peaks) > 0
 
+import logging
+
+logging.basicConfig(level=logging.INFO)
+
 
 def test_default():
 
@@ -44,6 +48,8 @@ def test_default():
 
     # And let's try and fit...
     res = c.fit(max_tries=500)
+
+    assert res is not None
 
     res = c.match_peaks(res["fit_coeff"], refine=False, robust_refit=True)
 

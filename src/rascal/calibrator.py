@@ -16,7 +16,7 @@ from .util import gauss
 from . import plotting
 from . import models
 from . import atlas
-from .ransac import solve_candidate_ransac
+from .ransac import RansacSolver
 from .houghtransform import HoughTransform
 
 
@@ -1349,12 +1349,12 @@ class Calibrator:
 
     def do_hough_transform(self, brute_force=False):
 
-        if self.pairs == []:
+        if self.pairs is not None and not len(self.pairs) > 0:
 
             logging.warning("pairs list is empty. Try generating now.")
             self._generate_pairs()
 
-            if self.pairs == []:
+            if not len(self.pairs) > 0:
 
                 logging.error("pairs list is still empty.")
 
@@ -1631,62 +1631,170 @@ class Calibrator:
         x = np.array(self.candidate_peak)
         y = np.array(self.candidate_arc)
 
-        solver = RansacSolver(x, y, config["ransac"])
+        self.success = False
+
+        config = {
+            "sample_size": self.sample_size,
+            "filter_close": self.filter_close,
+            "fit_tolerance": self.fit_tolerance,
+            "hough_weight": self.hough_weight,
+            "fit_type": self.fit_type,
+            "max_tries": self.max_tries,
+            "fit_deg": self.fit_deg,
+            "use_msac": self.use_msac,
+            "weight_samples": True,
+            "progress": self.progress,
+            "polyfit_fn": self.polyfit,
+            "polyval_fn": self.polyval,
+            "fit_valid_fn": self._fit_valid,
+            "hough": self.ht,
+        }
+
+        solver = RansacSolver(x, y, config)
         solver.solve()
 
-        (fit_coeff, rms, residual, n_inliers, valid,) = solve_candidate_ransac(
-            self,
-            fit_deg=self.fit_deg,
-            fit_coeff=self.fit_coeff,
-            max_tries=self.max_tries,
-            candidate_tolerance=candidate_tolerance,
-            brute_force=self.brute_force,
-            progress=self.progress,
-        )
+        if solver.valid_solution:
 
-        peak_utilisation = n_inliers / len(self.peaks)
-        atlas_utilisation = n_inliers / len(self.atlas)
+            result = solver.best_result
 
-        if not valid:
+            peak_utilisation = len(result.x) / len(self.peaks)
+            atlas_utilisation = len(result.y) / len(self.atlas)
+            self.matched_peaks = result.x
+            self.matched_atlas = result.y
 
-            self.logger.warning("Invalid fit")
+            if result.rms_residual > self.fit_tolerance:
 
-        if rms > self.fit_tolerance:
-
-            self.logger.warning(
-                "RMS too large {} > {}".format(rms, self.fit_tolerance)
-            )
-
-        if fit_coeff is None:
-
-            self.success = False
-
-        else:
+                self.logger.warning(
+                    "RMS too large {} > {}".format(
+                        result.rms_residual, self.fit_tolerance
+                    )
+                )
 
             self.success = True
 
-        self.fit_coeff = fit_coeff
-        if fit_coeff is not None:
+            self.fit_coeff = result.fit_coeffs
+            self.rms = result.rms_residual
+            self.residuals = result.residual
+            self.peak_utilisation = peak_utilisation
+            self.atlas_utilisation = atlas_utilisation
 
-            self.fit_deg = len(fit_coeff) - 1
+            self.res = {
+                "fit_coeff": self.fit_coeff,
+                "matched_peaks": self.matched_peaks,
+                "matched_atlas": self.matched_atlas,
+                "rms": self.rms,
+                "residual": self.residuals,
+                "peak_utilisation": self.peak_utilisation,
+                "atlas_utilisation": self.atlas_utilisation,
+                "success": self.success,
+            }
 
-        self.rms = rms
-        self.residuals = residual
-        self.peak_utilisation = peak_utilisation
-        self.atlas_utilisation = atlas_utilisation
+            return self.res
 
-        self.res = {
-            "fit_coeff": self.fit_coeff,
-            "matched_peaks": self.matched_peaks,
-            "matched_atlas": self.matched_atlas,
-            "rms": self.rms,
-            "residual": self.residuals,
-            "peak_utilisation": self.peak_utilisation,
-            "atlas_utilisation": self.atlas_utilisation,
-            "success": self.success,
-        }
+    def _fit_valid(self, result):
+        # reject lines outside the rms limit (ransac_tolerance)
+        # TODO: should n_inliers be recalculated from the robust
+        # fit?
 
-        return self.res
+        # Check the intercept.
+        fit_intercept = result.fit_coeffs[0]
+        if (fit_intercept < self.min_intercept) | (
+            fit_intercept > self.max_intercept
+        ):
+
+            self.logger.debug(
+                f"Intercept exceeds bounds, {fit_intercept} not within [{self.min_intercept}, {self.max_intercept}]."
+            )
+            return False
+
+        # Check monotonicity.
+        # Note, this could be pre-calculated
+        pix_min = self.peaks[0] - np.ptp(self.peaks) * 0.2
+        num_pix = self.peaks[-1] + np.ptp(self.peaks) * 0.2
+        self.logger.debug((pix_min, num_pix))
+
+        if not np.all(
+            np.diff(
+                self.polyval(
+                    np.arange(result.x[0], num_pix, 1), result.fit_coeffs
+                )
+            )
+            > 0
+        ):
+            self.logger.debug("Solution is not monotonically increasing.")
+            return False
+
+        # Check ends of fit:
+        if self.min_wavelength is not None:
+
+            min_wavelength_px = self.polyval(0, result.fit_coeffs)
+
+            if min_wavelength_px < (
+                self.min_wavelength - self.range_tolerance
+            ) or min_wavelength_px > (
+                self.min_wavelength + self.range_tolerance
+            ):
+                self.logger.debug(
+                    "Lower wavelength of fit too small, "
+                    "{:1.2f}.".format(min_wavelength_px)
+                )
+
+                return False
+
+        if self.max_wavelength is not None:
+
+            if self.spectrum is not None:
+                fit_max_wavelength = len(self.spectrum)
+            else:
+                fit_max_wavelength = self.num_pix
+
+            max_wavelength_px = self.polyval(
+                fit_max_wavelength, result.fit_coeffs
+            )
+
+            if max_wavelength_px > (
+                self.max_wavelength + self.range_tolerance
+            ) or max_wavelength_px < (
+                self.max_wavelength - self.range_tolerance
+            ):
+                self.logger.debug(
+                    "Upper wavelength of fit too large, "
+                    "{:1.2f}.".format(max_wavelength_px)
+                )
+
+                return False
+
+        # Make sure that we don't accept fits with zero error
+        if result.rms_residual < self.minimum_fit_error:
+
+            self.logger.debug(
+                "Fit error too small, " "{:1.2f}.".format(result.rms_residual)
+            )
+
+            return False
+
+        # Check that we have enough inliers based on user specified
+        # constraints
+        n_inliers = len(result.x)
+        if n_inliers < self.minimum_matches:
+
+            self.logger.debug(
+                "Not enough matched peaks for valid solution, "
+                "user specified {}.".format(self.minimum_matches)
+            )
+            return False
+
+        if n_inliers < self.minimum_peak_utilisation * len(self.peaks):
+
+            self.logger.debug(
+                "Not enough matched peaks for valid solution, "
+                "user specified {:1.2f} %.".format(
+                    100 * self.minimum_peak_utilisation
+                )
+            )
+            return False
+
+        return True
 
     def match_peaks(
         self,

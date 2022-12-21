@@ -1,9 +1,9 @@
 import copy
-import itertools
 from tqdm.auto import tqdm
 import numpy as np
 from scipy import interpolate
 from dotmap import DotMap
+import logging
 
 from . import models
 from .util import _derivative
@@ -17,25 +17,32 @@ Ransac_properties
 
 _default_config = {
     "sample_size": 5,
-    "top_n_candidate": 5,
-    "linear": True,
     "filter_close": False,
     "fit_tolerance": 5,
-    "candidate_weighted": True,
     "hough_weight": 1.0,
-    "minimum_matches": 3,
-    "minimum_peak_utilisation": 0.0,
-    "minimum_fit_error": 1.0e-4,
     "fit_type": "poly",
     "max_tries": -1,
     "fit_deg": 4,
     "use_msac": True,
     "weight_samples": True,
-    "hide_progress": False,
-    "polyfit": np.polynomial.polynomial.polyfit,
-    "polyval": np.polynomial.polynomial.polyval,
+    "progress": False,
+    "polyfit_fn": np.polynomial.polynomial.polyfit,
+    "polyval_fn": np.polynomial.polynomial.polyval,
+    "fit_valid_fn": lambda x: True,
     "hough": None,
 }
+
+
+class SolveResult:
+    def __init__(self, fit_coeffs=None, cost=1e9, x=[], y=[], residual=[]):
+        self.fit_coeffs = fit_coeffs
+        self.x = x
+        self.y = y
+        self.cost = cost
+
+        if len(residual) > 0:
+            self.residual = residual
+            self.rms_residual = np.sqrt(np.mean(self.residual**2))
 
 
 class RansacSolver:
@@ -44,7 +51,7 @@ class RansacSolver:
         if config is None:
             config = _default_config
 
-        self.config = DotMap(config)
+        self.config = DotMap(config, _dynamic=False)
 
         self.x = x
         self.y = y
@@ -54,15 +61,19 @@ class RansacSolver:
 
     def setup(self):
 
+        self.logger = logging.getLogger("ransac")
+
         if len(np.unique(self.x)) <= self.config.fit_deg:
             raise ValueError(
                 "Fit degree is greater than the provided number of points"
             )
 
-        self.polyfit = self.config.polyfit
-        self.polyval = self.config.polyval
+        self.polyfit = self.config.polyfit_fn
+        self.polyval = self.config.polyval_fn
+        self._fit_valid = self.config.fit_valid_fn
 
         if self.config == "weight_samples":
+            self.logger.debug(f"Using weighted random sampler")
             self.sampler = WeightedRandomSampler(
                 self.x,
                 self.y,
@@ -70,6 +81,7 @@ class RansacSolver:
                 n_samples=self.config.max_tries,
             )
         else:
+            self.logger.debug(f"Using uniform random sampler")
             self.sampler = UniformRandomSampler(
                 self.x,
                 self.y,
@@ -78,16 +90,19 @@ class RansacSolver:
             )
 
         if self.config.filter_close:
+            self.logger.debug(
+                f"Filtering close x-values with tolerance {self.config.fit_tolerance}"
+            )
             self._filter_close()
 
         if self.config.hough is not None:
-
+            self.logger.debug(f"Using hough weighting")
             ht = self.config.hough
 
             xbin_size = (ht.xedges[1] - ht.xedges[0]) / 2.0
             ybin_size = (ht.yedges[1] - ht.yedges[0]) / 2.0
 
-            if np.isfinite(ht.hough_weight):
+            if np.isfinite(self.config.hough_weight):
 
                 self.twoditp = interpolate.RectBivariateSpline(
                     ht.xedges[1:] - xbin_size,
@@ -103,7 +118,7 @@ class RansacSolver:
         unique_y = np.unique(self.y)
 
         idx = np.argwhere(
-            unique_y[1:] - unique_y[0:-1] < 3 * self.fit_tolerance
+            unique_y[1:] - unique_y[0:-1] < 3 * self.config.fit_tolerance
         )
         separation_mask = np.argwhere((self.y == unique_y[idx]).sum(0) == 0)
 
@@ -116,14 +131,14 @@ class RansacSolver:
 
         # Reset/init best params
         self.valid_solution = False
-        self.best_p = None
-        self.best_cost = 1e50
-        self.best_err = 1e50
-        self.best_mask = [False]
-        self.best_residual = None
-        self.best_inliers = 0
+        self.best_result = SolveResult()
 
-        for sample in self.sampler:
+        sample_iter = self.sampler
+
+        if self.config.progress:
+            sample_iter = tqdm(sample_iter)
+
+        for sample in sample_iter:
 
             if self.should_stop:
                 break
@@ -131,8 +146,41 @@ class RansacSolver:
             x, y = sample
 
             fit_coeffs = self._fit_sample(x, y)
-            err, cost = self._cost(fit_coeffs)
-            self._update_cost(err, cost)
+            self.logger.debug(f"Sample fit coeffs: {fit_coeffs}")
+
+            residual, matched_x, matched_y = self._match_bijective(
+                self.sampler.y_for_x, self.unique_x, fit_coeffs
+            )
+
+            result = SolveResult(
+                fit_coeffs=fit_coeffs,
+                residual=residual,
+                x=matched_x,
+                y=matched_y,
+            )
+
+            result.cost = self._cost(result)
+            self.logger.debug(f"Fit cost: {result.cost}")
+            self.logger.debug(f"Fit error: {result.rms_residual}")
+
+            self._update_best(result)
+
+            if self.config.progress:
+                if self.valid_solution:
+                    sample_iter.set_description(
+                        "Most inliers: {:d}, "
+                        "best error: {:1.4f}".format(
+                            len(self.best_result.x),
+                            self.best_result.rms_residual,
+                        )
+                    )
+
+        if self.valid_solution:
+            self.logger.info(
+                "Found {} inliers".format(len(self.best_result.x))
+            )
+
+        return self.valid_solution
 
     def _match_bijective(self, y_for_x, x, fit_coeff):
         """
@@ -206,49 +254,16 @@ class RansacSolver:
         # This doesn't need to be robust, it's an exact fit.
         return self.polyfit(x_hat, y_hat, self.config.fit_deg)
 
-    def _fit_valid(self, fit_coeffs):
-
-        # Check the intercept.
-        if (fit_coeffs[0] < self.min_intercept) | (
-            fit_coeffs[0] > self.max_intercept
-        ):
-
-            self.logger.debug("Intercept exceeds bounds.")
-            return False
-
-        # Check monotonicity.
-        pix_min = peaks[0] - np.ptp(peaks) * 0.2
-        num_pix = peaks[-1] + np.ptp(peaks) * 0.2
-        self.logger.debug((pix_min, num_pix))
-
-        if not np.all(
-            np.diff(self.polyval(np.arange(pix_min, num_pix, 1), fit_coeffs))
-            > 0
-        ):
-
-            self.logger.debug("Solution is not monotonically increasing.")
-            return False
-
-        # Compute error and filter out many-to-one matches
-        err, matched_x, matched_y = self._match_bijective(
-            candidates, peaks, fit_coeffs
-        )
-
-        if len(matched_x) == 0:
-            return False
-
-        return valid
-
-    def _cost(self, fit_coeffs):
+    def _cost(self, result):
 
         # modified cost function weighted by the Hough space density
         if (self.config.hough is not None) & (self.twoditp is not None):
 
-            wave = self.polyval(self.x, fit_coeffs)
-            gradient = self.polyval(self.x, _derivative(fit_coeffs))
+            wave = self.polyval(self.x, result.fit_coeffs)
+            gradient = self.polyval(self.x, _derivative(result.fit_coeffs))
             intercept = wave - gradient
 
-            weight = self.hough_weight * np.sum(
+            weight = self.config.hough_weight * np.sum(
                 self.twoditp(intercept, gradient, grid=False)
             )
 
@@ -256,37 +271,37 @@ class RansacSolver:
 
             weight = 1.0
 
-        err, self.matched_x, self.matched_y = self._match_bijective(
-            self.sampler.y_for_x, self.unique_x, fit_coeffs
-        )
-
         if self.config.use_msac:
             # M-SAC Estimator (Torr and Zisserman, 1996)
-            err[err > self.config.fit_tolerance] = self.config.fit_tolerance
+            result.residual[
+                result.residual > self.config.fit_tolerance
+            ] = self.config.fit_tolerance
 
             cost = (
-                sum(err) / (len(err) - len(fit_coeffs) + 1) / (weight + 1e-9)
+                sum(result.residual)
+                / (len(result.residual) - len(result.fit_coeffs) + 1)
+                / (weight + 1e-9)
             )
         else:
-            cost = 1.0 / (sum(err < self.config.fit_tolerance) + 1e-9)
+            cost = 1.0 / (
+                sum(result.residual < self.config.fit_tolerance) + 1e-9
+            )
 
-        return err, cost
+        return cost
 
     def check_solution(self, fit):
         pass
 
-    def _update_cost(self, err, cost):
+    def _update_best(self, result):
 
-        if cost <= self.best_cost:
-            # reject lines outside the rms limit (ransac_tolerance)
-            # TODO: should n_inliers be recalculated from the robust
-            # fit?
-            mask = err < self.config.fit_tolerance
+        if result.cost <= self.best_result.cost:
+
+            mask = result.residual < self.config.fit_tolerance
             n_inliers = sum(mask)
-            matched_peaks = self.matched_x[mask]
-            matched_atlas = self.matched_y[mask]
+            inliers_x = result.x[mask]
+            inliers_y = result.y[mask]
 
-            if len(matched_peaks) <= self.config.fit_deg:
+            if len(inliers_x) <= self.config.fit_deg:
 
                 self.logger.debug("Too few good candidates for fitting.")
                 return
@@ -294,9 +309,8 @@ class RansacSolver:
             # Now we do a robust fit
             if self.config.fit_type == "poly":
                 try:
-
                     coeffs = models.robust_polyfit(
-                        matched_peaks, matched_atlas, self.config.fit_deg
+                        inliers_x, inliers_y, self.config.fit_deg
                     )
 
                 except np.linalg.LinAlgError:
@@ -305,236 +319,56 @@ class RansacSolver:
                     return
             else:
                 coeffs = self.polyfit(
-                    matched_peaks, matched_atlas, self.config.fit_deg
+                    inliers_x, inliers_y, self.config.fit_deg
                 )
 
-            # Check ends of fit:
-            if self.config.min_wavelength is not None:
+            if self._fit_valid(result):
 
-                min_wavelength_px = self.polyval(0, coeffs)
+                # Get the residual of the inliers
+                residual = self.polyval(inliers_x, coeffs) - inliers_y
+                residual[
+                    np.abs(residual) > self.config.fit_tolerance
+                ] = self.config.fit_tolerance
 
-                if min_wavelength_px < (
-                    self.config.min_wavelength - self.config.range_tolerance
-                ) or min_wavelength_px > (
-                    self.config.min_wavelength + self.config.range_tolerance
+                rms_residual = np.sqrt(np.mean(residual**2))
+
+                if (
+                    not self.config.use_msac
+                    and n_inliers == len(self.best_result.x)
+                    and rms_residual > self.best_result.rms_residual
                 ):
-                    self.logger.debug(
-                        "Lower wavelength of fit too small, "
-                        "{:1.2f}.".format(min_wavelength_px)
+                    self.logger.info(
+                        "Match has same number of inliers, "
+                        "but fit error is worse "
+                        "({:1.2f} > {:1.2f}) %.".format(
+                            rms_residual, self.best_result.rms_residual
+                        )
                     )
-
                     return
 
-            if self.config.max_wavelength is not None:
-
-                if self.config.spectrum is not None:
-                    fit_max_wavelength = len(self.config.spectrum)
-                else:
-                    fit_max_wavelength = self.config.num_pix
-
-                max_wavelength_px = self.polyval(fit_max_wavelength, coeffs)
-
-                if max_wavelength_px > (
-                    self.config.max_wavelength + self.config.range_tolerance
-                ) or max_wavelength_px < (
-                    self.config.max_wavelength - self.config.range_tolerance
-                ):
-                    self.logger.debug(
-                        "Upper wavelength of fit too large, "
-                        "{:1.2f}.".format(max_wavelength_px)
-                    )
-
+                # Overfit
+                if n_inliers <= self.config.fit_deg + 1:
                     return
 
-            # Get the residual of the fit
-            residual = self.polyval(matched_peaks, coeffs) - matched_atlas
-            residual[
-                np.abs(residual) > self.config.fit_tolerance
-            ] = self.config.fit_tolerance
+                # Sanity check that matching peaks/atlas lines are 1:1
+                assert len(np.unique(inliers_x)) == len(inliers_x)
+                assert len(np.unique(inliers_y)) == len(inliers_y)
+                assert len(np.unique(inliers_x)) == len(np.unique(inliers_y))
 
-            rms_residual = np.sqrt(np.mean(residual**2))
+                # Are these still required?
+                # assert n_inliers == len(result.x)
+                # assert n_inliers == len(result.y)
+                # assert len(result.y) == len(set(result.y))
 
-            # Make sure that we don't accept fits with zero error
-            if rms_residual < self.config.minimum_fit_error:
-
-                self.logger.debug(
-                    "Fit error too small, " "{:1.2f}.".format(rms_residual)
+                self.best_result = SolveResult(
+                    fit_coeffs=coeffs,
+                    cost=result.cost,
+                    residual=residual,
+                    x=list(copy.deepcopy(inliers_x)),
+                    y=list(copy.deepcopy(inliers_y)),
                 )
 
-                return
+                if n_inliers == len(self.x):
+                    self.should_stop = True
 
-            # Check that we have enough inliers based on user specified
-            # constraints
-
-            if n_inliers < self.config.minimum_matches:
-
-                self.logger.debug(
-                    "Not enough matched peaks for valid solution, "
-                    "user specified {}.".format(self.config.minimum_matches)
-                )
-                return
-
-            if n_inliers < self.config.minimum_peak_utilisation * len(
-                self.unique_x
-            ):
-
-                self.logger.debug(
-                    "Not enough matched peaks for valid solution, "
-                    "user specified {:1.2f} %.".format(
-                        100 * self.config.minimum_peak_utilisation
-                    )
-                )
-                return
-
-            if (
-                not self.config.use_msac
-                and n_inliers == self.best_inliers
-                and rms_residual > self.best_err
-            ):
-                self.logger.info(
-                    "Match has same number of inliers, "
-                    "but fit error is worse "
-                    "({:1.2f} > {:1.2f}) %.".format(
-                        rms_residual, self.best_err
-                    )
-                )
-                return
-
-            # If the best fit is accepted, update the lists
-            self.best_cost = cost
-            self.best_inliers = n_inliers
-            self.best_p = coeffs
-            self.best_err = rms_residual
-            self.best_residual = residual
-            self.matched_peaks = list(copy.deepcopy(matched_peaks))
-            self.matched_atlas = list(copy.deepcopy(matched_atlas))
-
-            # Sanity check that matching peaks/atlas lines are 1:1
-            assert len(np.unique(self.matched_peaks)) == len(
-                self.matched_peaks
-            )
-            assert len(np.unique(self.matched_atlas)) == len(
-                self.matched_atlas
-            )
-            assert len(np.unique(self.matched_atlas)) == len(
-                np.unique(self.matched_peaks)
-            )
-
-
-def solve_candidate_ransac(
-    calibrator,
-    fit_deg,
-    fit_coeff,
-    max_tries,
-    candidate_tolerance,
-    brute_force,
-    progress,
-):
-    """
-    Use RANSAC to sample the parameter space and give best guess
-
-    Parameters
-    ----------
-    fit_deg: int
-        The order of polynomial.
-    fit_coeff: None or 1D numpy array
-        Initial polynomial fit fit_coefficients.
-    max_tries: int
-        Number of trials of polynomial fitting.
-    candidate_tolerance: float
-        toleranceold  (Angstroms) for considering a point to be an inlier
-        during candidate peak/line selection. This should be reasonable
-        small as we want to search for candidate points which are
-        *locally* linear.
-    brute_force: boolean
-        Solve all pixel-wavelength combinations with set to True.
-    progress: boolean
-        Show the progress bar with tdqm if set to True.
-
-
-    Returns
-    -------
-    best_p: list
-        A list of size fit_deg of the best fit polynomial
-        fit_coefficient.
-    best_err: float
-        Arithmetic mean of the residuals.
-    sum(best_inliers): int
-        Number of lines fitted within the ransac_tolerance.
-    valid_solution: boolean
-        False if overfitted.
-
-    """
-
-    # Calculate initial error given pre-existing fit
-    if fit_coeff is not None:
-        err, _, _ = np.zeros()
-        best_cost = sum(err)
-        best_err = np.sqrt(np.mean(err**2.0))
-
-    # The histogram is fixed, so pre-computed outside the loop
-    if not brute_force:
-
-        # weight the probability of choosing the sample by the inverse
-        # line density
-        pass
-
-    for sample in sampler_list:
-
-        keep_trying = True
-        self.logger.debug(sample)
-
-        while keep_trying:
-
-            should_stop = False
-
-            if brute_force:
-
-                x_hat = x[[sample]]
-                y_hat = y[[sample]]
-
-            else:
-                pass
-
-            if should_stop:
-
-                break
-
-            # insert user given known pairs
-            if calibrator.pix_known is not None:
-
-                x_hat = np.concatenate((x_hat, calibrator.pix_known))
-                y_hat = np.concatenate((y_hat, calibrator.wave_known))
-
-                if progress:
-
-                    sampler_list.set_description(
-                        "Most inliers: {:d}, "
-                        "best error: {:1.4f}".format(best_inliers, best_err)
-                    )
-
-                # Break early if all peaks are matched
-                if best_inliers == len(peaks):
-                    break
-
-            # If we got this far, then we can continue to the next sample
-            keep_trying = False
-
-    # Overfit check
-    if best_inliers <= calibrator.fit_deg + 1:
-
-        valid_solution = False
-
-    else:
-
-        valid_solution = True
-
-    # If we totally failed then this can be empty
-    assert best_inliers == len(calibrator.matched_peaks)
-    assert best_inliers == len(calibrator.matched_atlas)
-
-    assert len(calibrator.matched_atlas) == len(set(calibrator.matched_atlas))
-
-    self.logger.info("Found: {}".format(best_inliers))
-
-    return best_p, best_err, best_residual, best_inliers, valid_solution
+                self.valid_solution = True

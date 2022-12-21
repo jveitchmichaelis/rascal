@@ -1,5 +1,6 @@
 from rascal.ransac import RansacSolver
 import numpy as np
+import random
 
 
 def test_ransac():
@@ -10,3 +11,24 @@ def test_ransac():
     solver = RansacSolver(x, y)
 
     solver.solve()
+    assert solver.valid_solution
+
+
+def test_ransac_outliers():
+
+    noise_mag = 5
+    n = 15
+    inlier_ratio = 0.5
+    x = np.arange(n)
+    eps = noise_mag * np.random.random(n)
+    y = x**2 + eps
+
+    assert inlier_ratio <= 1
+
+    for i in range(int((1 - inlier_ratio) * n)):
+        y[random.randint(0, n - 1)] *= 2
+
+    solver = RansacSolver(x, y)
+
+    solver.solve()
+    assert solver.valid_solution
