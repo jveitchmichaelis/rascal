@@ -875,19 +875,18 @@ class Calibrator:
 
             try:
                 if self.spectrum is None:
-                    self.logger.warning(e)
                     self.logger.warning(
                         "Neither num_pix nor spectrum is given, "
                         "it uses 1.1 times max(peaks) as the "
                         "maximum pixel value."
                     )
                     self.num_pix = 1.1 * max(self.peaks)
-                    self.effective_pixel = np.arange(self.num_pix)
                 else:
                     self.num_pix = len(self.spectrum)
-                    self.effective_pixel = np.arange(self.num_pix)
 
-            except Exception as e2:
+                self.effective_pixel = np.arange(self.num_pix)
+
+            except Exception as e:
                 self.logger.warning(e)
                 self.logger.warning(
                     "num_pix cannot be set, please provide a num_pix, "
