@@ -98,7 +98,7 @@ def run_sprat_calibration(fit_deg):
 
     # Run the wavelength calibration
     res = c.fit(
-        max_tries=1000, fit_deg=fit_deg, candidate_tolerance=5.0, use_msac=True
+        max_tries=5000, fit_deg=fit_deg, candidate_tolerance=5.0, use_msac=True
     )
 
     assert res
