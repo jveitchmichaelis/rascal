@@ -5,9 +5,9 @@ from astropy.io import fits
 from matplotlib import pyplot as plt
 from scipy.signal import find_peaks
 
-from rascal.calibrator import Calibrator
-from rascal.atlas import Atlas
 from rascal import util
+from rascal.atlas import Atlas
+from rascal.calibrator import Calibrator
 
 # Load the LT SPRAT data
 base_dir = os.path.dirname(os.path.abspath(__file__))

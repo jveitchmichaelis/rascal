@@ -1,16 +1,16 @@
-from itertools import combinations
 import logging
 import os
+from functools import partialmethod
+from itertools import combinations
 
 import numpy as np
 import pytest
 
-from rascal.calibrator import Calibrator
-from rascal.atlas import Atlas
-
 # Suppress tqdm output
 from tqdm import tqdm
-from functools import partialmethod
+
+from rascal.atlas import Atlas
+from rascal.calibrator import Calibrator
 
 tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 

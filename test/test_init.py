@@ -1,12 +1,11 @@
-import pkg_resources
 import unittest.mock as mock
+from functools import partialmethod
 
-
+import pkg_resources
 import pytest
 
 # Suppress tqdm output
 from tqdm import tqdm
-from functools import partialmethod
 
 tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 

@@ -1,10 +1,12 @@
-from rascal.sampler import Sampler, WeightedRandomSampler, UniformRandomSampler
-import pytest
 import logging
+from functools import partialmethod
+
+import pytest
 
 # Suppress tqdm output
 from tqdm import tqdm
-from functools import partialmethod
+
+from rascal.sampler import Sampler, UniformRandomSampler, WeightedRandomSampler
 
 tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 

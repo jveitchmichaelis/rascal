@@ -1,12 +1,13 @@
+import bisect
 import itertools
-import numpy as np
 import logging
 import random
-from tqdm.auto import tqdm
-import bisect
-import scipy
-from operator import mul
 from functools import reduce
+from operator import mul
+
+import numpy as np
+import scipy
+from tqdm.auto import tqdm
 
 
 class Sampler:

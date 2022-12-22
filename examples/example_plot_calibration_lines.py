@@ -1,7 +1,5 @@
 import os
 
-import numpy as np
-
 from rascal import util
 
 base_dir = os.path.dirname(os.path.abspath(__file__))

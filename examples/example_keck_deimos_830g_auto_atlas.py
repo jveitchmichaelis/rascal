@@ -4,8 +4,8 @@ import os
 import numpy as np
 from scipy.signal import find_peaks
 
-from rascal.calibrator import Calibrator
 from rascal.atlas import Atlas
+from rascal.calibrator import Calibrator
 from rascal.util import refine_peaks
 
 base_dir = os.path.dirname(os.path.abspath(__file__))

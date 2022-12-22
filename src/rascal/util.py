@@ -1,12 +1,12 @@
-from collections import defaultdict
 import os
-import pkg_resources
+from collections import defaultdict
 
-from matplotlib import pyplot as plt
 import numpy as np
+import pkg_resources
+from matplotlib import pyplot as plt
 from numpy import exp
-from scipy.optimize import curve_fit
 from scipy import signal
+from scipy.optimize import curve_fit
 
 
 def get_vapour_pressure(temperature):

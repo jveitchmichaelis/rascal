@@ -1,15 +1,15 @@
 import os
-import pkg_resources
+from functools import partialmethod
 from unittest.mock import patch
 
 import numpy as np
+import pkg_resources
 import pytest
-
-from rascal import util
 
 # Suppress tqdm output
 from tqdm import tqdm
-from functools import partialmethod
+
+from rascal import util
 
 tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 

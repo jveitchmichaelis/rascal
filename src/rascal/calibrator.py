@@ -5,19 +5,15 @@ import os
 import time
 
 import numpy as np
-from scipy.spatial import Delaunay
-from scipy.optimize import minimize
-from scipy import interpolate
-from tqdm.auto import tqdm
 import yaml
+from scipy.optimize import minimize
+from scipy.spatial import Delaunay
+from tqdm.auto import tqdm
 
-from .util import _make_unique_permutation, _clean_matches
-from .util import gauss
-from . import plotting
-from . import models
-from . import atlas
-from .ransac import RansacSolver
+from . import atlas, models, plotting
 from .houghtransform import HoughTransform
+from .ransac import RansacSolver
+from .util import _clean_matches, _make_unique_permutation, gauss
 
 
 class Calibrator:

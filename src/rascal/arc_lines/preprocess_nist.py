@@ -3,7 +3,6 @@ import re
 
 import numpy as np
 
-
 # The nist_raw.txt is obtained from
 # https://physics.nist.gov/cgi-bin/ASD/lines1.pl?spectra=&limits_type=0&low_w=100&upp_w=30000&unit=0&de=0&format=1&line_out=3&remove_js=on&no_spaces=on&en_unit=0&output=0&page_size=15&show_obs_wl=1&order_out=0&max_low_enrg=&show_av=3&max_upp_enrg=&tsb_value=0&min_str=&A_out=0&intens_out=on&max_str=&allowed_out=1&min_accur=&min_intens=&submit=Retrieve+Data
 lines = []

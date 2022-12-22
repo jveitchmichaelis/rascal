@@ -1,15 +1,15 @@
 import os
-import pkg_resources
+from functools import partialmethod
 
 import numpy as np
+import pkg_resources
 import pytest
 import yaml
 
-from rascal import calibrator
-
 # Suppress tqdm output
 from tqdm import tqdm
-from functools import partialmethod
+
+from rascal import calibrator
 
 tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 

@@ -1,13 +1,14 @@
 import copy
-from tqdm.auto import tqdm
-import numpy as np
-from scipy import interpolate
-from dotmap import DotMap
 import logging
 
+import numpy as np
+from dotmap import DotMap
+from scipy import interpolate
+from tqdm.auto import tqdm
+
 from . import models
-from .util import _derivative
 from .sampler import UniformRandomSampler, WeightedRandomSampler
+from .util import _derivative
 
 """
 

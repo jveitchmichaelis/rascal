@@ -3,13 +3,12 @@ import os
 import numpy as np
 from astropy.io import fits
 from matplotlib import pyplot as plt
-from scipy.signal import find_peaks
 from scipy import interpolate
+from scipy.signal import find_peaks
 
-from rascal.calibrator import Calibrator
-from rascal.atlas import Atlas
 from rascal import util
-
+from rascal.atlas import Atlas
+from rascal.calibrator import Calibrator
 
 # All pixel values here are unbinned
 # n for north

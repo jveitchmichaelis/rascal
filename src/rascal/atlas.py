@@ -1,12 +1,11 @@
-from collections import Counter
 import os
 import time
+from collections import Counter
 
 import numpy as np
 import yaml
 
-from .util import load_calibration_lines
-from .util import vacuum_to_air_wavelength
+from .util import load_calibration_lines, vacuum_to_air_wavelength
 
 
 class AtlasLine:

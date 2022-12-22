@@ -1,12 +1,13 @@
-import numpy as np
 import os
-import pytest
+from functools import partialmethod
 
-from rascal.calibrator import HoughTransform, Calibrator
+import numpy as np
+import pytest
 
 # Suppress tqdm output
 from tqdm import tqdm
-from functools import partialmethod
+
+from rascal.calibrator import Calibrator, HoughTransform
 
 tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 

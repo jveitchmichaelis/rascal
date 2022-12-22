@@ -1,11 +1,11 @@
 import os
 
-from astropy.io import fits
 import numpy as np
+from astropy.io import fits
 from scipy.signal import find_peaks
 
-from rascal.calibrator import Calibrator
 from rascal.atlas import Atlas
+from rascal.calibrator import Calibrator
 from rascal.util import refine_peaks
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -59,15 +59,7 @@ c.set_atlas(atlas)
 c.do_hough_transform()
 
 # Run the wavelength calibration
-(
-    best_p,
-    matched_peaks,
-    matched_atlas,
-    rms,
-    residual,
-    peak_utilisation,
-    atlas_utilisation,
-) = c.fit(max_tries=1000, fit_deg=3, candidate_tolerance=5)
+res = c.fit(max_tries=1000, fit_deg=3, candidate_tolerance=5)
 
 c.plot_fit(
     res["fit_coeffs"],

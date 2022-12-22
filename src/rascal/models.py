@@ -1,6 +1,7 @@
 import copy
-import scipy.optimize
+
 import numpy as np
+import scipy.optimize
 
 """
 Model functions for spectral fitting

@@ -1,16 +1,16 @@
 import os
+from functools import partialmethod
 
 import numpy as np
 from astropy.io import fits
 from scipy.signal import find_peaks
 
-from rascal.atlas import Atlas
-from rascal.calibrator import Calibrator
-from rascal import util
-
 # Suppress tqdm output
 from tqdm import tqdm
-from functools import partialmethod
+
+from rascal import util
+from rascal.atlas import Atlas
+from rascal.calibrator import Calibrator
 
 tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 

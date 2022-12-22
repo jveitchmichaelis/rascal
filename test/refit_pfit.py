@@ -1,8 +1,8 @@
 import numpy as np
+from matplotlib import pyplot as plt
 from numpy.polynomial.polynomial import polyfit as polyfit
 from numpy.polynomial.polynomial import polyval as polyval
 from scipy.optimize import minimize
-from matplotlib import pyplot as plt
 
 x = np.arange(-10, 10, 0.1)
 y_noise = (np.random.random(len(x)) - 0.5) * x * 10.0

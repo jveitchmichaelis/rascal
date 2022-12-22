@@ -1,16 +1,16 @@
 import os
+from functools import partialmethod
 
-from astropy.io import fits
 import numpy as np
+from astropy.io import fits
 from scipy.signal import find_peaks
-
-from rascal.atlas import Atlas
-from rascal.calibrator import Calibrator
-from rascal import util
 
 # Suppress tqdm output
 from tqdm import tqdm
-from functools import partialmethod
+
+from rascal import util
+from rascal.atlas import Atlas
+from rascal.calibrator import Calibrator
 
 tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 
@@ -120,7 +120,7 @@ def test_match_peaks_NOT_robust_refit():
     # repeat 10 times
     for i in range(10):
         # Refine solution
-        res = c.match_peaks(fit_coeff, refine=True, robust_refit=False)
+        _ = c.match_peaks(fit_coeff, refine=True, robust_refit=False)
 
         assert len(c.matched_peaks) >= n_peaks
         assert len(c.matched_atlas) >= n_atlas
@@ -131,7 +131,7 @@ def test_match_peaks_robust_refit_powell():
     # repeat 10 times
     for i in range(10):
         # Refine solution
-        res = c.match_peaks(
+        _ = c.match_peaks(
             fit_coeff, refine=True, robust_refit=True, method="powell"
         )
 
@@ -144,7 +144,7 @@ def test_match_peaks_robust_refit_different_fit_deg():
     # repeat 10 times
     for i in range(10):
         # Refine solution
-        res = c.match_peaks(
+        _ = c.match_peaks(
             fit_coeff,
             refine=True,
             robust_refit=True,

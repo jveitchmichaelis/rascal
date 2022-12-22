@@ -1,15 +1,15 @@
+from functools import partialmethod
+
 import numpy as np
+
+# Suppress tqdm output
+from tqdm import tqdm
 
 from rascal.atlas import Atlas
 from rascal.calibrator import Calibrator
 from rascal.synthetic import SyntheticSpectrum
 
-# Suppress tqdm output
-from tqdm import tqdm
-from functools import partialmethod
-
 tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
-
 
 # Create a test spectrum with a simple linear relationship
 # between pixels/wavelengths. The intercept is set to

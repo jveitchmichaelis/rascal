@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import pkg_resources
-import warnings
 
 try:
     __version__ = pkg_resources.get_distribution(__name__).version
@@ -11,10 +10,7 @@ except pkg_resources.DistributionNotFound:
         "rascal is not setup or installed properly. Unable to get version."
     )
 
-from . import calibrator
-from . import models
-from . import synthetic
-from . import util
+from . import calibrator, models, synthetic, util
 
 __all__ = [
     "calibrator",
