@@ -1,6 +1,7 @@
 import numpy as np
 from rascal.atlas import Atlas
 from rascal.calibrator import Calibrator
+import pytest
 
 np.random.seed(0)
 
@@ -198,13 +199,13 @@ def test_quadratic_fit_legendre():
     )
     c.set_atlas(a)
     c.set_ransac_properties(
-        sample_size=8, minimum_matches=18, minimum_fit_error=1e-18
+        sample_size=4, minimum_matches=18, minimum_fit_error=1e-18
     )
     c.do_hough_transform(brute_force=False)
 
     # Run the wavelength calibration
     res = c.fit(
-        max_tries=2000,
+        max_tries=10000,
         fit_tolerance=5.0,
         candidate_tolerance=2.0,
         fit_deg=2,
@@ -212,6 +213,7 @@ def test_quadratic_fit_legendre():
     )
 
     # Legendre 2nd order takes the form
+
     assert np.abs(res["fit_coeff"][1] - 4.0) / 4.0 < 0.001
     assert np.abs(res["fit_coeff"][0] - 3000.0) / 3000.0 < 0.001
     assert res["peak_utilisation"] > 0.6
@@ -237,13 +239,13 @@ def test_quadratic_fit_chebyshev():
     )
     c.set_atlas(a)
     c.set_ransac_properties(
-        sample_size=8, minimum_matches=18, minimum_fit_error=1e-18
+        sample_size=4, minimum_matches=18, minimum_fit_error=1e-18
     )
     c.do_hough_transform(brute_force=False)
 
     # Run the wavelength calibration
     res = c.fit(
-        max_tries=2000,
+        max_tries=10000,
         fit_tolerance=5.0,
         candidate_tolerance=2.0,
         fit_deg=2,
