@@ -4,6 +4,5 @@ kaleido
 matplotlib
 numpy
 plotly
-pynverse
 scipy
 tqdm

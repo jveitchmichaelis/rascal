@@ -1,4 +1,3 @@
-import pynverse
 import numpy as np
 from . import models
 
@@ -126,7 +125,8 @@ class SyntheticSpectrum:
                 1
             ]
         else:
-            pixels = pynverse.inversefunc(self.model, wavelengths)
+            p = np.poly1d(self.coefficients)
+            pixels = [(p - w).roots for w in wavelengths]
 
         return pixels, wavelengths
 
