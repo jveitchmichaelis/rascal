@@ -1,7 +1,12 @@
 import numpy as np
 from rascal.atlas import Atlas
 from rascal.calibrator import Calibrator
-import pytest
+
+# Suppress tqdm output
+from tqdm import tqdm
+from functools import partialmethod
+
+tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 
 np.random.seed(0)
 

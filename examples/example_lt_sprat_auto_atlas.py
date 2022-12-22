@@ -78,19 +78,11 @@ c.set_atlas(atlas, candidate_tolerance=5.0)
 c.do_hough_transform()
 
 # Run the wavelength calibration
-(
-    best_p,
-    matched_peaks,
-    matched_atlas,
-    rms,
-    residual,
-    peak_utilisation,
-    atlas_utilisation,
-) = c.fit(max_tries=2000)
+res = c.fit(max_tries=2000)
 
 # Plot the solution
 c.plot_fit(
-    best_p,
+    res["fit_coeff"],
     spectrum=spectrum,
     display=False,
     plot_atlas=True,
@@ -109,6 +101,7 @@ c.plot_search_space(
     ),
 )
 
-print("Stdev error: {} A".format(residual.std()))
-print("Peaks utilisation rate: {}%".format(peak_utilisation * 100))
-print("Atlas utilisation rate: {}%".format(atlas_utilisation * 100))
+print("RMS: {}".format(res["rms"]))
+print("Stdev error: {} A".format(res["residual"].std()))
+print("Peaks utilisation rate: {}%".format(res["peak_utilisation"] * 100))
+print("Atlas utilisation rate: {}%".format(res["atlas_utilisation"] * 100))

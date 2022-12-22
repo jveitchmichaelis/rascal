@@ -101,19 +101,11 @@ c.plot_arc(
 c.do_hough_transform()
 
 # Run the wavelength calibration
-(
-    fit_coeff,
-    matched_peaks,
-    matched_atlas,
-    rms,
-    residual,
-    peak_utilisation,
-    atlas_utilisation,
-) = c.fit(max_tries=1000, fit_tolerance=10.0, fit_deg=4)
+res = c.fit(max_tries=1000, fit_tolerance=10.0, fit_deg=4)
 
 # Plot the solution
 c.plot_fit(
-    fit_coeff,
+    res["fit_coeff"],
     plot_atlas=True,
     log_spectrum=False,
     display=False,
@@ -124,10 +116,10 @@ c.plot_fit(
 )
 
 # Show the parameter space for searching possible solution
-print("RMS: {}".format(rms))
-print("Stdev error: {} A".format(np.abs(residual).std()))
-print("Peaks utilisation rate: {}%".format(peak_utilisation * 100))
-print("Atlas utilisation rate: {}%".format(atlas_utilisation * 100))
+print("RMS: {}".format(res["rms"]))
+print("Stdev error: {} A".format(res["residual"].std()))
+print("Peaks utilisation rate: {}%".format(res["peak_utilisation"] * 100))
+print("Atlas utilisation rate: {}%".format(res["atlas_utilisation"] * 100))
 
 c.plot_search_space(
     save_fig="png",

@@ -4,6 +4,12 @@ import unittest.mock as mock
 
 import pytest
 
+# Suppress tqdm output
+from tqdm import tqdm
+from functools import partialmethod
+
+tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
+
 
 @pytest.mark.xfail("ImportError")
 @mock.patch("pkg_resources.get_distribution")

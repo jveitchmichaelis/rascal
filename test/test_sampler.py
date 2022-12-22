@@ -1,7 +1,12 @@
 from rascal.sampler import Sampler, WeightedRandomSampler, UniformRandomSampler
 import pytest
 import logging
-import scipy
+
+# Suppress tqdm output
+from tqdm import tqdm
+from functools import partialmethod
+
+tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 
 logger = logging.getLogger("test_samples")
 

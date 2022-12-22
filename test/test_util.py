@@ -7,6 +7,12 @@ import pytest
 
 from rascal import util
 
+# Suppress tqdm output
+from tqdm import tqdm
+from functools import partialmethod
+
+tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
+
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
 pressure = np.array([9, 10, 12, 10, 10, 10, 10, 10]) * 1e4

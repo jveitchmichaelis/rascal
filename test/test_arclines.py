@@ -8,6 +8,12 @@ import pytest
 from rascal.calibrator import Calibrator
 from rascal.atlas import Atlas
 
+# Suppress tqdm output
+from tqdm import tqdm
+from functools import partialmethod
+
+tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
+
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger()
 

@@ -7,6 +7,12 @@ import yaml
 
 from rascal import calibrator
 
+# Suppress tqdm output
+from tqdm import tqdm
+from functools import partialmethod
+
+tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
+
 base_dir = os.path.dirname(__file__)
 
 

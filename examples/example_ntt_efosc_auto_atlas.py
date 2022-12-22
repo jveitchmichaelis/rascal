@@ -70,7 +70,7 @@ c.do_hough_transform()
 ) = c.fit(max_tries=1000, fit_deg=3, candidate_tolerance=5)
 
 c.plot_fit(
-    best_p,
+    res["fit_coeffs"],
     plot_atlas=True,
     log_spectrum=False,
     display=False,
@@ -87,6 +87,7 @@ c.plot_search_space(
     ),
 )
 
-print("Stdev error: {} A".format(np.abs(residual).std()))
-print("Peaks utilisation rate: {}%".format(peak_utilisation * 100))
-print("Atlas utilisation rate: {}%".format(atlas_utilisation * 100))
+print("RMS: {}".format(res["rms"]))
+print("Stdev error: {} A".format(res["residual"].std()))
+print("Peaks utilisation rate: {}%".format(res["peak_utilisation"] * 100))
+print("Atlas utilisation rate: {}%".format(res["atlas_utilisation"] * 100))

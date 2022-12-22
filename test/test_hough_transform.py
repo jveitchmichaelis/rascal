@@ -4,6 +4,12 @@ import pytest
 
 from rascal.calibrator import HoughTransform, Calibrator
 
+# Suppress tqdm output
+from tqdm import tqdm
+from functools import partialmethod
+
+tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
+
 HERE = os.path.dirname(os.path.realpath(__file__))
 
 ht = HoughTransform()

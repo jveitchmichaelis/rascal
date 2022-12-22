@@ -2,6 +2,12 @@ from rascal.ransac import RansacSolver
 import numpy as np
 import random
 
+# Suppress tqdm output
+from tqdm import tqdm
+from functools import partialmethod
+
+tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
+
 
 def test_ransac():
 

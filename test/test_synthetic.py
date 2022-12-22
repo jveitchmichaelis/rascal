@@ -3,6 +3,12 @@ import pytest
 
 from rascal.synthetic import SyntheticSpectrum
 
+# Suppress tqdm output
+from tqdm import tqdm
+from functools import partialmethod
+
+tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
+
 wave1 = np.arange(1500)
 wave2 = np.arange(500, 1500)
 wave3 = np.arange(500)
