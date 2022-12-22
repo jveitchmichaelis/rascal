@@ -69,11 +69,22 @@ class Sampler:
             x_sample, y_sample: lists of x and y values
         """
 
-        for x in x_sample:
-            for y_sample in itertools.product(
-                *[self.y_for_x[x] for x in x_sample]
-            ):
-                yield x_sample, y_sample
+        for y_sample in itertools.product(
+            *[self.y_for_x[x] for x in x_sample]
+        ):
+            # Filter duplicate y's
+            if len(np.unique(y_sample)) != len(y_sample):
+                continue
+
+            # Filter non-monotonic y, can happen when two peaks match
+            # to two close calibration lines
+            if not np.all(y_sample[1:] >= y_sample[:-1], axis=0):
+                continue
+
+            yield x_sample, y_sample
+            return
+
+        yield None, None
 
     def _setup(self):
         """
@@ -93,7 +104,8 @@ class Sampler:
         if self.n_samples < 0:
             for sample in tqdm(self.x_combinations):
                 for x in self._permutations_for_sample(sample):
-                    yield x
+                    if x[0] is not None:
+                        yield x
         else:
 
             # Sample from the iterator since we know the max number of permutations
