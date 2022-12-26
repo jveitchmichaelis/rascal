@@ -281,11 +281,11 @@ class RansacSolver:
             cost = (
                 sum(result.residual)
                 / (len(result.residual) - len(result.fit_coeffs) + 1)
-                / (weight + 1e-9)
+                / (weight + 1e-16)
             )
         else:
             cost = 1.0 / (
-                sum(result.residual < self.config.fit_tolerance) + 1e-9
+                sum(result.residual < self.config.fit_tolerance) + 1e-16
             )
 
         return cost
