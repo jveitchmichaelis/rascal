@@ -81,7 +81,6 @@ def test_effective_pixel_not_affecting_fit_int_peaks():
     assert np.in1d(c.matched_peaks, c.peaks).all()
 
 
-@pytest.mark.skip()
 def test_effective_pixel_not_affecting_fit_perfect_peaks():
 
     # Create a test spectrum with a simple linear relationship
