@@ -25,7 +25,6 @@ ht.generate_hough_points(
 ht.bin_hough_points(xbins=100, ybins=100)
 
 
-@pytest.mark.xfail
 def test_save_as_npy():
     ht.save(
         filename=os.path.join(HERE, "test_output", "test_hough_transform_npy"),
@@ -42,7 +41,6 @@ def test_save_as_json():
     )
 
 
-@pytest.mark.xfail
 def test_load_npy():
     ht_loaded = HoughTransform()
     ht_loaded.load(
@@ -111,7 +109,6 @@ def test_load_fail():
     )
 
 
-@pytest.mark.xfail
 def test_ht_not_saved_to_disk():
     a = ht.save(
         filename=os.path.join(HERE, "test_output", "test_hough_transform_npy"),
@@ -167,7 +164,6 @@ def test_extending_ht_expect_fail():
     ht.add_hough_points("hello")
 
 
-@pytest.mark.xfail
 def test_loading_ht_into_calibrator():
     c = Calibrator(np.arange(10))
     c.load_hough_transform(

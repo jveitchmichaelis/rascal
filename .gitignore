@@ -138,3 +138,7 @@ test/*.png
 test/test_output/*
 
 examples/output
+
+.vscode
+
+rascal_arc.png

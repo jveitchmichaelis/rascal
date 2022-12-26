@@ -36,7 +36,7 @@ class Calibrator:
 
         """
 
-        self.logger = logger_name
+        self.logger = logging.getLogger()
         self.log_level = log_level
 
         self.matplotlib_imported = False
@@ -81,11 +81,23 @@ class Calibrator:
         # results
         self.matched_peaks = []
         self.matched_atlas = []
-        self.fit_coeff = None
+        self.fit_coeff = []
         self.rms = 1e30
         self.residuals = []
         self.peak_utilisation = 0.0
         self.atlas_utilisation = 0.0
+
+        self.success = False
+        self.res = {
+            "fit_coeff": None,
+            "matched_peaks": None,
+            "matched_atlas": None,
+            "rms": None,
+            "residual": None,
+            "peak_utilisation": None,
+            "atlas_utilisation": None,
+            "success": False,
+        }
 
         self.set_logger(logger_name, log_level)
         self.add_data(peaks, spectrum)
@@ -487,6 +499,14 @@ class Calibrator:
                 "'filepath' or 'stream'".format(y_type)
             )
 
+        # update logger properties
+        self.logger = config["logger"]
+        self.log_level = config["log_level"]
+        self.set_logger(
+            logger_name=self.logger,
+            log_level=self.log_level,
+        )
+
         # Add data to the calibrator
         self.peaks = config["peaks"]
         self.spectrum = config["spectrum"]
@@ -497,16 +517,12 @@ class Calibrator:
         self.effective_pixel = config["effective_pixel"]
         self.plotting_library = config["plotting_library"]
         self.seed = config["seed"]
-        self.logger = config["logger"]
-        self.log_level = config["log_level"]
         self.hide_progress = config["hide_progress"]
         self.set_calibrator_properties(
             num_pix=self.num_pix,
             effective_pixel=self.effective_pixel,
             plotting_library=self.plotting_library,
             seed=self.seed,
-            logger=self.logger,
-            log_level=self.log_level,
             hide_progress=self.hide_progress,
         )
 
@@ -763,8 +779,6 @@ class Calibrator:
         effective_pixel=None,
         plotting_library=None,
         seed=None,
-        logger=None,
-        log_level="warning",
         hide_progress=False,
     ):
         """
@@ -792,11 +806,6 @@ class Calibrator:
             Set to hide tdqm progress bar.
 
         """
-
-        self.set_logger(
-            logger,
-            log_level,
-        )
 
         self.hide_progress = hide_progress
 
@@ -870,25 +879,33 @@ class Calibrator:
         elif self.num_pix is None:
 
             try:
-                if self.spectrum is None:
-                    self.logger.warning(
-                        "Neither num_pix nor spectrum is given, "
-                        "it uses 1.1 times max(peaks) as the "
-                        "maximum pixel value."
-                    )
-                    self.num_pix = 1.1 * max(self.peaks)
-                else:
-                    self.num_pix = len(self.spectrum)
 
+                self.num_pix = len(self.spectrum)
                 self.effective_pixel = np.arange(self.num_pix)
 
             except Exception as e:
+
                 self.logger.warning(e)
                 self.logger.warning(
-                    "num_pix cannot be set, please provide a num_pix, "
-                    "or the peaks, so that we can guess the num_pix."
+                    "Neither num_pix nor spectrum is given, "
+                    "it uses 1.1 times max(peaks) as the "
+                    "maximum pixel value."
                 )
+                try:
+
+                    self.num_pix = 1.1 * max(self.peaks)
+                    self.effective_pixel = np.arange(self.num_pix)
+
+                except Exception as e2:
+
+                    self.logger.warning(e)
+                    self.logger.warning(
+                        "num_pix cannot be set, please provide a num_pix, "
+                        "or the peaks, so that we can guess the num_pix."
+                    )
+
         else:
+
             pass
 
         self.logger.info("num_pix is set to {}.".format(num_pix))
@@ -1653,9 +1670,9 @@ class Calibrator:
             if result.rms_residual > self.fit_tolerance:
 
                 self.logger.warning(
-                    "RMS too large {} > {}".format(
-                        result.rms_residual, self.fit_tolerance
-                    )
+                    "RMS too large {%s} > {%s}",
+                    result.rms_residual,
+                    self.fit_tolerance,
                 )
 
             self.success = True
@@ -1677,7 +1694,7 @@ class Calibrator:
                 "success": self.success,
             }
 
-            return self.res
+        return self.res
 
     def _fit_valid(self, result):
         # reject lines outside the rms limit (ransac_tolerance)
@@ -1879,7 +1896,7 @@ class Calibrator:
             # fit everything
             fitted_delta = minimize(
                 self._adjust_polyfit,
-                fit_coeff_new[: int(n_delta)] * 1e-3,
+                np.array(fit_coeff_new[: int(n_delta)]) * 1e-3,
                 args=(fit_coeff, tolerance, min_frac),
                 method=method,
                 tol=convergence,
@@ -2018,12 +2035,10 @@ class Calibrator:
 
         """
 
-        order_of_polynomial = len(self.fit_coeff)
-        output = "Order of polynomial fitted: {}{}".format(
-            order_of_polynomial, os.linesep
-        )
+        order_of_poly = len(self.fit_coeff)
+        output = f"Order of polynomial fitted: {order_of_poly}{os.linesep}"
 
-        for i in range(order_of_polynomial):
+        for i in range(order_of_poly):
 
             if i == 0:
 

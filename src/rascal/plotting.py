@@ -561,7 +561,7 @@ def plot_fit(
 
             calibrator.logger.error(e)
             calibrator.logger.error(
-                "Spectrum is not provided, it cannot be " "plotted."
+                "Spectrum is not provided, it cannot be plotted."
             )
 
     if spectrum is not None:
@@ -779,9 +779,14 @@ def plot_fit(
 
             spec_max = np.nanmax(spectrum) * 1.05
 
+        else:
+
+            spec_max = vline_max
+
         fitted_peaks = []
         fitted_peaks_adu = []
         fitted_diff = []
+        all_diff = []
 
         for p in calibrator.peaks:
 
@@ -991,12 +996,12 @@ def plot_fit(
 
     else:
 
-        assert calibrator.matplotlib_imported, (
-            "matplotlib package not available. " + "Plot cannot be generated."
-        )
-        assert calibrator.plotly_imported, (
-            "plotly package is not available. " + "Plot cannot be generated."
-        )
+        assert (
+            calibrator.matplotlib_imported
+        ), "matplotlib package not available. Plot cannot be generated."
+        assert (
+            calibrator.plotly_imported
+        ), "plotly package is not available. Plot cannot be generated."
 
 
 def plot_arc(
