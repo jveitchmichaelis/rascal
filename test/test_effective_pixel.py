@@ -59,7 +59,7 @@ def test_effective_pixel_not_affecting_fit_int_peaks():
 
     assert res
 
-    c.plot_fit()
+    c.plot_fit(display=False)
 
     (
         res["fit_coeff"],
@@ -127,7 +127,7 @@ def test_effective_pixel_not_affecting_fit_perfect_peaks():
 
     assert res
 
-    c.plot_fit()
+    c.plot_fit(display=False)
 
     (
         res["fit_coeff"],
