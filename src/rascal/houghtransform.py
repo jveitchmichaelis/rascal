@@ -262,6 +262,8 @@ class HoughTransform:
             output_npy.append([self.min_intercept])
             output_npy.append([self.max_intercept])
 
+            output_npy = np.array(output_npy, dtype=object)
+
             if to_disk:
 
                 np.save(filename + ".npy", output_npy)

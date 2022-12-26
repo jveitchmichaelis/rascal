@@ -130,8 +130,10 @@ def test_ht_not_saved_to_disk():
         fileformat="blabla",
         to_disk=False,
     )
-    assert a == c
-    assert b == d
+
+    assert np.hstack(
+        [np.array(i).ravel() for i in np.equal(a, c, dtype=object)]
+    ).all()
     assert e is None
 
 
