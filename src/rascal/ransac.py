@@ -273,6 +273,7 @@ class RansacSolver:
             weight = 1.0
 
         if self.config.use_msac:
+
             # M-SAC Estimator (Torr and Zisserman, 1996)
             result.residual[
                 result.residual > self.config.fit_tolerance
@@ -284,9 +285,8 @@ class RansacSolver:
                 / (weight + 1e-16)
             )
         else:
-            cost = 1.0 / (
-                sum(result.residual < self.config.fit_tolerance) + 1e-16
-            )
+
+            cost = sum(result.residual > self.config.fit_tolerance) + 1e-16
 
         return cost
 
