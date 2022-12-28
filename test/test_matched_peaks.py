@@ -3,14 +3,13 @@ from functools import partialmethod
 
 import numpy as np
 from astropy.io import fits
+from rascal import util
+from rascal.atlas import Atlas
+from rascal.calibrator import Calibrator
 from scipy.signal import find_peaks
 
 # Suppress tqdm output
 from tqdm import tqdm
-
-from rascal import util
-from rascal.atlas import Atlas
-from rascal.calibrator import Calibrator
 
 # Line list
 wavelengths = [
@@ -155,10 +154,12 @@ def test_match_peaks_robust_refit_different_fit_deg():
 def test_match_peaks_output():
 
     c.save_matches(
-        filename=os.path.join(base_dir, "test_output", "matches"), format="csv"
+        filename=os.path.join(base_dir, "test_output", "matches"),
+        file_format="csv",
     )
     assert os.path.exists(os.path.join(base_dir, "test_output", "matches.csv"))
     c.save_matches(
-        filename=os.path.join(base_dir, "test_output", "matches"), format="npy"
+        filename=os.path.join(base_dir, "test_output", "matches"),
+        file_format="npy",
     )
     assert os.path.exists(os.path.join(base_dir, "test_output", "matches.npy"))

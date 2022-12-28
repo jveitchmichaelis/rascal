@@ -1736,7 +1736,7 @@ class Calibrator:
             "polyval_fn": self.polyval,
             "fit_valid_fn": self._fit_valid,
             "sampler": self.sampler,
-            "hough": self.ht,
+            "hough": self.hough_transformer,
         }
 
         solver = RansacSolver(_x, _y, config)

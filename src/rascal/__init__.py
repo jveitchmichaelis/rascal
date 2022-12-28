@@ -18,8 +18,13 @@ except pkg_resources.DistributionNotFound as e:
 from . import calibrator, models, synthetic, util
 
 __all__ = [
+    "atlas",
     "calibrator",
+    "houghtransform",
     "models",
+    "plotting",
+    "ransac",
+    "sampler",
     "synthetic",
     "util",
 ]
