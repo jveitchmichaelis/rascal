@@ -1502,7 +1502,7 @@ class Calibrator:
         candidate_tolerance=4.0,
         brute_force=False,
         progress=True,
-        use_msac=True,
+        use_msac=False,
     ):
         """
         Solve for the wavelength calibration polynomial by getting the most

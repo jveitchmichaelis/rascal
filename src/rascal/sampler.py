@@ -227,10 +227,12 @@ class ProbabilisticSampler(UniformRandomSampler):
     def _setup(self):
 
         self.sample_count = {}
+        self.sample_count_x = {}
         self.pairs = []
 
         for x in self.unique_x:
             for y in self.y_for_x[x]:
+                self.sample_count_x[x] = 1
                 self.sample_count[(x, y)] = 1
                 self.pairs.append((x, y))
 
@@ -242,9 +244,16 @@ class ProbabilisticSampler(UniformRandomSampler):
 
     def update(self, matched_x, matched_y):
 
-        for pair in zip(matched_x, matched_y):
-            self.sample_count[pair] += 1
+        for x in matched_x:
+            self.sample_count_x[x] += 1
 
+        self.sample_x_prob = np.ones_like(self.unique_x, dtype=np.float64)
+        for i, x in enumerate(self.unique_x):
+            self.sample_x_prob[i] = float(self.sample_count_x[x])
+
+        self.sample_x_prob /= self.sample_x_prob.sum()
+
+    """
     def get_sample(self):
 
         prob = np.zeros(len(self.pairs))
@@ -273,6 +282,7 @@ class ProbabilisticSampler(UniformRandomSampler):
             y_hat.append(_y)
 
         return np.array(x_hat), np.array(y_hat)
+    """
 
     def __iter__(self):
         """
@@ -286,6 +296,5 @@ class ProbabilisticSampler(UniformRandomSampler):
         """
 
         while self.samples_returned < self.n_samples:
-            sample = self.get_sample()
             self.samples_returned += 1
-            yield sample
+            yield from self.get_sample()
