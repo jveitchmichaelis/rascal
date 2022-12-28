@@ -12,9 +12,6 @@ from rascal import util
 from rascal.atlas import Atlas
 from rascal.calibrator import Calibrator
 
-tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
-
-
 # Line list
 wavelengths = [
     4193.5,
@@ -96,7 +93,7 @@ assert len(c.atlas.atlas_lines) == len(wavelengths) - 1
 c.atlas.list()
 
 # Run the wavelength calibration
-res = c.fit(max_tries=1000, fit_deg=4, candidate_tolerance=5.0)
+res = c.fit(max_tries=7500, fit_deg=4, candidate_tolerance=5.0)
 assert res
 rms = res["rms"]
 n_peaks = len(c.matched_peaks)
@@ -157,7 +154,6 @@ def test_match_peaks_robust_refit_different_fit_deg():
 
 def test_match_peaks_output():
 
-    # repeat 10 times
     c.save_matches(
         filename=os.path.join(base_dir, "test_output", "matches"), format="csv"
     )

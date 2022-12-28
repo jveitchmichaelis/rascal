@@ -682,6 +682,7 @@ class Calibrator:
         ransac_config = config["ransac"]
 
         self.sample_size = ransac_config["sample_size"]
+        self.sampler = ransac_config["sampler"]
         self.top_n_candidate = ransac_config["top_n_candidate"]
         self.linear = ransac_config["linear"]
         self.filter_close = ransac_config["filter_close"]
@@ -705,6 +706,7 @@ class Calibrator:
             minimum_matches=self.minimum_matches,
             minimum_peak_utilisation=self.minimum_peak_utilisation,
             minimum_fit_error=self.minimum_fit_error,
+            sampler=self.sampler,
         )
 
         # Results
@@ -1137,6 +1139,7 @@ class Calibrator:
         minimum_matches: int = None,
         minimum_peak_utilisation: float = None,
         minimum_fit_error: float = None,
+        sampler: "rascal.sampler.Sampler" = None,
     ):
         """
         Configure the Calibrator. This may require some manual twiddling before
@@ -1195,6 +1198,11 @@ class Calibrator:
         else:
 
             pass
+
+        if sampler is not None:
+            self.sampler = sampler
+        else:
+            self.sampler = "probabilistic"
 
         # Set top_n_candidate
         if top_n_candidate is not None:
@@ -1727,7 +1735,8 @@ class Calibrator:
             "polyfit_fn": self.polyfit,
             "polyval_fn": self.polyval,
             "fit_valid_fn": self._fit_valid,
-            "hough": self.hough_transformer,
+            "sampler": self.sampler,
+            "hough": self.ht,
         }
 
         solver = RansacSolver(_x, _y, config)

@@ -16,7 +16,11 @@ from scipy import interpolate
 from tqdm.auto import tqdm
 
 from . import models
-from .sampler import UniformRandomSampler, WeightedRandomSampler
+from .sampler import (
+    ProbabilisticSampler,
+    UniformRandomSampler,
+    WeightedRandomSampler,
+)
 from .util import _derivative
 
 _default_config = {
@@ -28,7 +32,8 @@ _default_config = {
     "max_tries": -1,
     "fit_deg": 4,
     "use_msac": True,
-    "weight_samples": True,
+    "candidate_weighted": True,
+    "sampler": "probabilistic",
     "progress": False,
     "polyfit_fn": np.polynomial.polynomial.polyfit,
     "polyval_fn": np.polynomial.polynomial.polyval,
@@ -117,9 +122,17 @@ class RansacSolver:
         self.polyval = self.config.polyval_fn
         self._fit_valid = self.config.fit_valid_fn
 
-        if self.config == "weight_samples":
-            self.logger.debug("Using weighted random sampler")
+        if self.config.sampler == "weighted":
+            self.logger.debug(f"Using weighted random sampler")
             self.sampler = WeightedRandomSampler(
+                self.x,
+                self.y,
+                self.config.sample_size,
+                n_samples=self.config.max_tries,
+            )
+        elif self.config.sampler == "probabilistic":
+            self.logger.debug(f"Using probalistic random sampler")
+            self.sampler = ProbabilisticSampler(
                 self.x,
                 self.y,
                 self.config.sample_size,
@@ -199,6 +212,8 @@ class RansacSolver:
             residual, matched_x, matched_y = self._match_bijective(
                 self.sampler.y_for_x, self.unique_x, fit_coeffs
             )
+
+            self.sampler.update(matched_x, matched_y)
 
             result = SolveResult(
                 fit_coeffs=fit_coeffs,
