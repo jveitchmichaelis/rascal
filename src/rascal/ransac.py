@@ -300,7 +300,6 @@ class RansacSolver:
                 / (weight + 1e-16)
             )
         else:
-
             cost = sum(result.residual > self.config.fit_tolerance) + 1e-16
 
         return cost
