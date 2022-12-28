@@ -280,6 +280,10 @@ class ProbabilisticSampler(UniformRandomSampler):
             sample: tuple, tuple
                 sample of x and y values
         """
+
+        if self.n_samples < 0:
+            self.n_samples = self.maximum_samples
+
         while self.samples_returned < self.n_samples:
             sample = self.get_sample()
             self.samples_returned += 1
