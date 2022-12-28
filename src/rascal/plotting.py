@@ -10,9 +10,8 @@ import logging
 from typing import Union
 
 import numpy as np
-from scipy import signal
-
 from rascal import calibrator, util
+from scipy import signal
 
 logger = logging.getLogger("plotting")
 
@@ -74,7 +73,7 @@ def _import_plotly():
 
 
 def plot_search_space(
-    calibrator: "rascal.calibrator.Calibrator",
+    calibrator: "calibrator.Calibrator",
     fit_coeff: Union[list, np.ndarray] = None,
     top_n_candidate: int = 3,
     weighted: bool = True,
@@ -509,7 +508,7 @@ def plot_search_space(
 
 
 def plot_fit(
-    calibrator: "rascal.calibrator.Calibrator",
+    calibrator: "calibrator.Calibrator",
     fit_coeff: Union[list, np.ndarray],
     spectrum: Union[list, np.ndarray] = None,
     plot_atlas: bool = True,
@@ -1003,7 +1002,7 @@ def plot_fit(
 
 
 def plot_arc(
-    calibrator: "rascal.calibrator.Calibrator",
+    calibrator: "calibrator.Calibrator",
     effective_pixel: Union[list, np.ndarray] = None,
     log_spectrum: Union[list, np.ndarray] = False,
     save_fig: bool = False,

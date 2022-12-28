@@ -18,7 +18,7 @@ import yaml
 from scipy.optimize import minimize
 from scipy.spatial import Delaunay
 
-from . import atlas, models, plotting
+from . import atlas, models, plotting, sampler
 from .houghtransform import HoughTransform
 from .ransac import RansacSolver, SolveResult
 from .util import _clean_matches, _make_unique_permutation, gauss
@@ -1139,7 +1139,7 @@ class Calibrator:
         minimum_matches: int = None,
         minimum_peak_utilisation: float = None,
         minimum_fit_error: float = None,
-        sampler: "rascal.sampler.Sampler" = None,
+        sampler: "sampler.Sampler" = None,
     ):
         """
         Configure the Calibrator. This may require some manual twiddling before
@@ -1355,7 +1355,7 @@ class Calibrator:
 
     def set_atlas(
         self,
-        atlas: "rascal.atlas.Atlas",
+        atlas: "atlas.Atlas",
         candidate_tolerance: float = 10.0,
         constrain_poly: bool = False,
     ):
