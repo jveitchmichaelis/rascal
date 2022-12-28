@@ -73,13 +73,10 @@ class Sampler:
         for y_sample in itertools.product(
             *[self.y_for_x[x] for x in x_sample]
         ):
-            # Filter duplicate y's
-            if len(np.unique(y_sample)) != len(y_sample):
-                continue
 
             # Filter non-monotonic y, can happen when two peaks match
             # to two close calibration lines
-            if not np.all(y_sample[1:] >= y_sample[:-1], axis=0):
+            if not np.all(y_sample[1:] > y_sample[:-1], axis=0):
                 continue
 
             yield x_sample, y_sample
@@ -97,6 +94,9 @@ class Sampler:
             self.unique_x, self.sample_size
         )
 
+    def update(self, matched_x, matched_y):
+        pass
+
     def samples(self):
         self.logger.info(
             f"Generating samples of len {self.sample_size} from pool of {len(self.unique_x)} values"
@@ -111,18 +111,16 @@ class Sampler:
 
             # Sample from the iterator since we know the max number of permutations
             _choices = random.sample(
-                range(self.maximum_samples), self.n_samples
+                population=range(self.maximum_samples), k=self.n_samples
             )
             choices = {}
             for choice in _choices:
                 choices[choice] = 1
 
-            count = 0
-            for sample in self.x_combinations:
+            for idx, sample in enumerate(self.x_combinations):
                 for x in self._permutations_for_sample(sample):
-                    if count in choices:
+                    if idx in choices:
                         yield x
-                    count += 1
 
     def __iter__(self):
         """
@@ -223,3 +221,66 @@ class WeightedRandomSampler(UniformRandomSampler):
             1.0 / hist[np.digitize(self.unique_x, bin_edges, right=True) - 1]
         )
         self.sample_x_prob = prob / np.sum(prob)
+
+
+class ProbabilisticSampler(UniformRandomSampler):
+    def _setup(self):
+
+        self.sample_count = {}
+        self.pairs = []
+
+        for x in self.unique_x:
+            for y in self.y_for_x[x]:
+                self.sample_count[(x, y)] = 1
+                self.pairs.append((x, y))
+
+        self.samples_returned = 0
+
+    def update(self, matched_x, matched_y):
+
+        for pair in zip(matched_x, matched_y):
+            self.sample_count[pair] += 1
+
+    def get_sample(self):
+
+        prob = np.zeros(len(self.pairs))
+
+        for i, pair in enumerate(self.pairs):
+            prob[i] = self.sample_count[pair]
+
+        prob /= prob.sum()
+
+        idx = np.arange(len(self.pairs))
+
+        sample = np.sort(
+            np.random.choice(
+                a=idx,
+                size=self.sample_size,
+                replace=False,
+                p=prob,
+            )
+        )
+
+        x_hat = []
+        y_hat = []
+        for s in sample:
+            _x, _y = self.pairs[s]
+            x_hat.append(_x)
+            y_hat.append(_y)
+
+        return np.array(x_hat), np.array(y_hat)
+
+    def __iter__(self):
+        """
+
+        Obtain the next sample probabilistically.
+
+        Yields
+        ------
+            sample: tuple, tuple
+                sample of x and y values
+        """
+        while self.samples_returned < self.n_samples:
+            sample = self.get_sample()
+            self.samples_returned += 1
+            yield sample

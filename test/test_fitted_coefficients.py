@@ -262,6 +262,7 @@ def test_osiris_fit():
         candidate_weighted=True,
         hough_weight=1.0,
         minimum_matches=11,
+        sampler="probabilistic",
     )
 
     c.do_hough_transform()

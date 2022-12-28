@@ -109,7 +109,7 @@ c.set_atlas(atlas)
 c.do_hough_transform(brute_force=True)
 
 # Run the wavelength calibration
-res = c.fit(max_tries=1000, candidate_tolerance=5.0)
+res = c.fit(max_tries=5000, candidate_tolerance=5.0)
 
 c.plot_arc(
     display=False,

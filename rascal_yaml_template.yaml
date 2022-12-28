@@ -59,6 +59,7 @@ ransac:
   candidate_weighted: true
   hough_weight: 1.0
   minimum_matches: 3
+  sampler: 'probabilistic'
   minimum_peak_utilisation: 0.0
   minimum_fit_error: 1.0e-4
 

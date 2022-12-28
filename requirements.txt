@@ -4,5 +4,6 @@ kaleido
 matplotlib
 numpy
 plotly
+pyyaml
 scipy
 tqdm

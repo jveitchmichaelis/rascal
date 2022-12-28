@@ -14,8 +14,6 @@ from rascal import util
 from rascal.atlas import Atlas
 from rascal.calibrator import Calibrator
 
-tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
-
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger()
 
@@ -129,7 +127,9 @@ def test_run_sprat_calibration_with_manual_linelist_file():
     spectrum = np.median(spectrum2D[110:120], axis=0)
 
     # Identify the peaks
-    peaks, _ = find_peaks(spectrum, height=500, distance=5, threshold=None)
+    peaks, _ = find_peaks(
+        spectrum, height=300, prominence=150, distance=5, threshold=None
+    )
     peaks = util.refine_peaks(spectrum, peaks, window_width=5)
 
     # Initialise the calibrator
@@ -144,16 +144,17 @@ def test_run_sprat_calibration_with_manual_linelist_file():
     c.set_atlas(a)
     c.set_calibrator_properties(num_pix=1024)
     c.set_hough_properties(
-        num_slopes=1000,
-        range_tolerance=500.0,
+        num_slopes=2000,
+        range_tolerance=200.0,
         xbins=100,
         ybins=100,
-        min_wavelength=3500.0,
+        min_wavelength=3600.0,
         max_wavelength=8000.0,
     )
 
     # Run the wavelength calibration
-    assert c.fit(max_tries=500, fit_deg=4)
+    res = c.fit(max_tries=2500, fit_deg=4, candidate_tolerance=5)
+    assert res
 
 
 def test_sprat_calibration():
