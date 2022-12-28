@@ -236,6 +236,10 @@ class ProbabilisticSampler(UniformRandomSampler):
 
         self.samples_returned = 0
 
+        assert (
+            self.n_samples > 0
+        ), "Probabilistic sampler requires a fixed number of iterations"
+
     def update(self, matched_x, matched_y):
 
         for pair in zip(matched_x, matched_y):
@@ -280,9 +284,6 @@ class ProbabilisticSampler(UniformRandomSampler):
             sample: tuple, tuple
                 sample of x and y values
         """
-
-        if self.n_samples < 0:
-            self.n_samples = self.maximum_samples
 
         while self.samples_returned < self.n_samples:
             sample = self.get_sample()
