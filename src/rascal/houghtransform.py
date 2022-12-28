@@ -1,3 +1,11 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+Hough transform
+
+"""
+
 import json
 
 import numpy as np
@@ -10,19 +18,27 @@ class HoughTransform:
     """
 
     def __init__(self):
+        """
+        Initialise an hough transform.
 
-        self.hough_points = None
+        """
+
+        self.hough_points = np.empty(2)
         self.hough_lines = None
-        self.hist = None
-        self.xedges = None
-        self.yedges = None
-        self.min_slope = None
-        self.max_slope = None
-        self.min_intercept = None
-        self.max_intercept = None
+        self.hist = np.empty(1)
+        self.xedges = np.empty(1)
+        self.yedges = np.empty(1)
+        self.min_slope = 1e-10
+        self.max_slope = 1e10
+        self.min_intercept = 1e-10
+        self.max_intercept = 1e10
 
     def set_constraints(
-        self, min_slope, max_slope, min_intercept, max_intercept
+        self,
+        min_slope: float,
+        max_slope: float,
+        min_intercept: float,
+        max_intercept: float,
     ):
         """
         Define the minimum and maximum of the intercepts (wavelength) and
@@ -30,36 +46,38 @@ class HoughTransform:
 
         Parameters
         ----------
-        min_slope: int or float
+        min_slope: float
             Minimum gradient for wavelength/pixel
-        max_slope: int or float
+        max_slope: float
             Maximum gradient for wavelength/pixel
-        min_intercept: int/float
+        min_intercept: float
             Minimum interception point of the Hough line
-        max_intercept: int/float
+        max_intercept: float
             Maximum interception point of the Hough line
 
         """
 
-        assert np.isfinite(min_slope), (
-            "min_slope has to be finite, %s is given " % min_slope
-        )
-        assert np.isfinite(max_slope), (
-            "max_slope has to be finite, %s is given " % max_slope
-        )
-        assert np.isfinite(min_intercept), (
-            "min_intercept has to be finite, %s is given " % min_intercept
-        )
-        assert np.isfinite(max_intercept), (
-            "max_intercept has to be finite, %s is given " % max_intercept
-        )
+        assert np.isfinite(
+            min_slope
+        ), f"min_slope has to be finite, {min_slope} is given."
+        assert np.isfinite(
+            max_slope
+        ), f"max_slope has to be finite, {max_slope} is given."
+        assert np.isfinite(
+            min_intercept
+        ), f"min_intercept has to be finite, {min_intercept} is given."
+        assert np.isfinite(
+            max_intercept
+        ), f"max_intercept has to be finite, {max_intercept} is given."
 
         self.min_slope = min_slope
         self.max_slope = max_slope
         self.min_intercept = min_intercept
         self.max_intercept = max_intercept
 
-    def generate_hough_points(self, x, y, num_slopes):
+    def generate_hough_points(
+        self, x: np.ndarray, y: np.ndarray, num_slopes: int
+    ):
         """
         Calculate the Hough transform for a set of input points and returns the
         2D Hough hough_points matrix.
@@ -93,7 +111,7 @@ class HoughTransform:
         # Create an array of Hough Points
         self.hough_points = np.column_stack((gradients, intercepts))
 
-    def generate_hough_points_brute_force(self, x, y):
+    def generate_hough_points_brute_force(self, x: np.ndarray, y: np.ndarray):
         """
         Calculate the Hough transform for a set of input points and returns the
         2D Hough hough_points matrix.
@@ -142,7 +160,7 @@ class HoughTransform:
         # Create an array of Hough Points
         self.hough_points = np.column_stack((gradients, intercepts))
 
-    def add_hough_points(self, hp):
+    def add_hough_points(self, hough_points: np.ndarray):
         """
         Extending the Hough pairs with an externally supplied HoughTransform
         object. This can be useful if the arc lines are very concentrated in
@@ -150,19 +168,19 @@ class HoughTransform:
 
         Parameters
         ----------
-        hp: numpy.ndarray with 2 columns or HoughTransform object
+        hough_points: numpy.ndarray with 2 columns or HoughTransform object
             An externally supplied HoughTransform object that contains
             hough_points.
 
         """
 
-        if isinstance(hp, HoughTransform):
+        if isinstance(hough_points, HoughTransform):
 
-            points = hp.hough_points
+            points = hough_points.hough_points
 
-        elif isinstance(hp, np.ndarray):
+        elif isinstance(hough_points, np.ndarray):
 
-            points = hp
+            points = hough_points
 
         else:
 
@@ -170,7 +188,7 @@ class HoughTransform:
 
         self.hough_points = np.vstack((self.hough_points, points))
 
-    def bin_hough_points(self, xbins, ybins):
+    def bin_hough_points(self, xbins: int, ybins: int):
         """
         Bin up data by using a 2D histogram method.
 
@@ -207,12 +225,12 @@ class HoughTransform:
 
         lines = []
 
-        for b in hist_sorted_arg:
+        for bin_i in hist_sorted_arg:
 
             lines.append(
                 (
-                    self.xedges[b[0]] + xbin_width,
-                    self.yedges[b[1]] + ybin_width,
+                    self.xedges[bin_i[0]] + xbin_width,
+                    self.yedges[bin_i[1]] + ybin_width,
                 )
             )
 
@@ -220,10 +238,10 @@ class HoughTransform:
 
     def save(
         self,
-        filename="hough_transform",
-        fileformat="npy",
-        delimiter="+",
-        to_disk=True,
+        filename: str = "hough_transform",
+        fileformat: str = "npy",
+        delimiter: str = "+",
+        to_disk: bool = True,
     ):
         """
         Store the binned Hough space and/or the raw Hough pairs.
@@ -268,6 +286,12 @@ class HoughTransform:
 
                 np.save(filename + ".npy", output_npy)
 
+            else:
+
+                if "json" not in fileformat_split:
+
+                    return output_npy
+
         if "json" in fileformat_split:
 
             output_json = {}
@@ -283,31 +307,21 @@ class HoughTransform:
 
             if to_disk:
 
-                with open(filename + ".json", "w+") as f:
+                with open(
+                    filename + ".json", "w+", encoding="ascii"
+                ) as json_file:
 
-                    json.dump(output_json, f)
-
-        if not to_disk:
-
-            if ("npy" in fileformat_split) and (
-                "json" not in fileformat_split
-            ):
-
-                return output_npy
-
-            elif ("npy" not in fileformat_split) and (
-                "json" in fileformat_split
-            ):
-
-                return output_json
-
-            elif ("npy" in fileformat_split) and ("json" in fileformat_split):
-
-                return output_npy, output_json
+                    json.dump(output_json, json_file)
 
             else:
 
-                return None
+                if "npy" in fileformat_split:
+
+                    return output_npy, output_json
+
+                else:
+
+                    return output_json
 
     def load(self, filename="hough_transform", filetype="npy"):
         """
@@ -347,7 +361,7 @@ class HoughTransform:
 
                 filename += ".json"
 
-            input_json = json.load(open(filename))
+            input_json = json.load(open(filename, encoding="ascii"))
 
             self.hough_points = input_json["hough_points"]
             self.hist = np.array(input_json["hist"]).astype("float")
@@ -361,5 +375,5 @@ class HoughTransform:
         else:
 
             raise ValueError(
-                "Unknown filetype %s, it has to be npy or json" % filetype
+                f"Unknown filetype {filetype}, it has to be npy or json."
             )

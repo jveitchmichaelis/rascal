@@ -1,28 +1,41 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+This is the core of rascal.
+
+"""
+
 import copy
 import itertools
 import logging
 import os
 import time
+from typing import Union
 
 import numpy as np
 import yaml
 from scipy.optimize import minimize
 from scipy.spatial import Delaunay
-from tqdm.auto import tqdm
 
 from . import atlas, models, plotting
 from .houghtransform import HoughTransform
-from .ransac import RansacSolver
+from .ransac import RansacSolver, SolveResult
 from .util import _clean_matches, _make_unique_permutation, gauss
 
 
 class Calibrator:
+    """
+    Josh will write something here.
+
+    """
+
     def __init__(
         self,
-        peaks=None,
-        spectrum=None,
-        logger_name="Calibrator",
-        log_level="warning",
+        peaks: Union[list, np.ndarray] = None,
+        spectrum: Union[list, np.ndarray] = None,
+        logger_name: str = "Calibrator",
+        log_level: str = "warning",
     ):
         """
         Initialise the calibrator object.
@@ -49,7 +62,7 @@ class Calibrator:
         self.hough_lines = None
         self.hough_points = None
         self.pairs = None
-        self.ht = HoughTransform()
+        self.hough_transformer = HoughTransform()
 
         # calibrator_properties
         self.num_pix = None
@@ -57,35 +70,36 @@ class Calibrator:
         self.plotting_library = None
         self.constrain_poly = None
 
-        # hough_properties
-        self.num_slopes = None
-        self.xbins = None
-        self.ybins = None
-        self.min_wavelength = None
-        self.max_wavelength = None
-        self.range_tolerance = None
-        self.linearity_tolerance = None
+        self.peaks = None
+        self.spectrum = None
+        self.seed = None
+        self.hide_progress = None
+        self.candidate_tolerance = None
+        self.atlas_config = None
 
-        # ransac_properties
-        self.sample_size = None
-        self.top_n_candidate = None
-        self.linear = None
-        self.filter_close = None
-        self.ransac_tolerance = None
-        self.candidate_weighted = None
-        self.hough_weight = None
-        self.minimum_matches = None
-        self.minimum_peak_utilisation = None
-        self.minimum_fit_error = None
+        # fitting properties
+        self.max_tries = None
+        self.fit_deg = None
+        self.fit_tolerance = None
+        self.fit_type = None
+        self.brute_force = None
+        self.progress = None
+        self.use_msac = None
+        self.polyfit = None
+        self.polyval = None
+
+        self.candidates = None
+        self.candidate_peak = None
+        self.candidate_arc = None
 
         # results
-        self.matched_peaks = []
-        self.matched_atlas = []
-        self.fit_coeff = []
-        self.rms = 1e30
-        self.residuals = []
-        self.peak_utilisation = 0.0
-        self.atlas_utilisation = 0.0
+        self.matched_peaks = None
+        self.matched_atlas = None
+        self.fit_coeff = None
+        self.rms = None
+        self.residuals = None
+        self.peak_utilisation = None
+        self.atlas_utilisation = None
 
         self.success = False
         self.res = {
@@ -102,10 +116,35 @@ class Calibrator:
         self.set_logger(logger_name, log_level)
         self.add_data(peaks, spectrum)
         self.set_calibrator_properties()
+
+        # hough_properties
+        self.num_slopes = None
+        self.xbins = None
+        self.ybins = None
+        self.min_wavelength = None
+        self.max_wavelength = None
+        self.range_tolerance = None
+        self.linearity_tolerance = None
         self.set_hough_properties()
+
+        # ransac_properties
+        self.sample_size = None
+        self.top_n_candidate = None
+        self.linear = None
+        self.filter_close = None
+        self.ransac_tolerance = None
+        self.candidate_weighted = None
+        self.hough_weight = None
+        self.minimum_matches = None
+        self.minimum_peak_utilisation = None
+        self.minimum_fit_error = None
         self.set_ransac_properties()
 
-    def add_data(self, peaks, spectrum):
+    def add_data(
+        self,
+        peaks: Union[list, np.ndarray] = None,
+        spectrum: Union[list, np.ndarray] = None,
+    ):
         """
         Add the peaks to be solved for wavelength solution. The arc spectrum
         is optional but it would be a useful for visualisation/diagnostics.
@@ -123,7 +162,11 @@ class Calibrator:
 
             self.set_num_pix(None)
 
-    def set_logger(self, logger_name, log_level):
+    def set_logger(self, logger_name: str, log_level: str):
+        """
+        Josh will write something here.
+
+        """
 
         # initialise the logger
         self.logger = logging.getLogger(logger_name)
@@ -194,7 +237,7 @@ class Calibrator:
 
             self.pairs = np.array(pairs)
 
-    def _merge_candidates(self, candidates):
+    def _merge_candidates(self, candidates: Union[list, np.ndarray]):
         """
         Merge two candidate lists.
 
@@ -216,7 +259,7 @@ class Calibrator:
         return np.sort(np.array(merged))
 
     def _get_most_common_candidates(
-        self, candidates, top_n_candidate, weighted
+        self, candidates: list, top_n_candidate: int, weighted: bool
     ):
         """
         Takes a number of candidate pair sets and returns the most common
@@ -268,25 +311,25 @@ class Calibrator:
 
                     counts = np.ones_like(probabilities[idx])
 
-                n = int(
+                num = int(
                     min(top_n_candidate, len(np.unique(wavelengths_matched)))
                 )
 
                 unique_wavelengths = np.unique(wavelengths_matched)
                 aggregated_count = np.zeros_like(unique_wavelengths)
-                for j, w in enumerate(unique_wavelengths):
+                for j, wave in enumerate(unique_wavelengths):
 
-                    idx_j = np.where(wavelengths_matched == w)
+                    idx_j = np.where(wavelengths_matched == wave)
                     aggregated_count[j] = np.sum(counts[idx_j])
 
-                out_peaks.extend([peak] * n)
+                out_peaks.extend([peak] * num)
                 out_wavelengths.extend(
-                    wavelengths_matched[np.argsort(-aggregated_count)[:n]]
+                    wavelengths_matched[np.argsort(-aggregated_count)[:num]]
                 )
 
         return out_peaks, out_wavelengths
 
-    def _get_candidate_points_linear(self, candidate_tolerance):
+    def _get_candidate_points_linear(self, candidate_tolerance: float):
         """
         Returns a list of peak/wavelengths pairs which agree with the fit
 
@@ -297,7 +340,7 @@ class Calibrator:
 
         Parameters
         ----------
-        candidate_tolerance: float (default: 10)
+        candidate_tolerance: float
             tolerance  (Angstroms) for considering a point to be an inlier
             during candidate peak/line selection. This should be reasonable
             small as we want to search for candidate points which are
@@ -334,7 +377,7 @@ class Calibrator:
                 (self.pairs[:, 0][mask], actual[mask], weight)
             )
 
-    def _get_candidate_points_poly(self, candidate_tolerance):
+    def _get_candidate_points_poly(self, candidate_tolerance: float):
         """
         **EXPERIMENTAL**
 
@@ -347,7 +390,7 @@ class Calibrator:
 
         Parameters
         ----------
-        candidate_tolerance: float (default: 10)
+        candidate_tolerance: float
             toleranceold  (Angstroms) for considering a point to be an inlier
             during candidate peak/line selection. This should be reasonable
             small as we want to search for candidate points which are
@@ -368,17 +411,17 @@ class Calibrator:
         # actual wavelengths
         actual = np.array(self.atlas.get_lines())
 
-        n = len(self.hough_lines)
+        num = len(self.hough_lines)
 
         delta = (
-            np.random.random(n) * self.range_tolerance * 2.0
+            np.random.random(num) * self.range_tolerance * 2.0
             - self.range_tolerance
         )
 
-        for d in delta:
+        for _d in delta:
 
             # predicted wavelength
-            predicted = self.polyval(self.peaks, self.fit_coeff) + d
+            predicted = self.polyval(self.peaks, self.fit_coeff) + _d
             diff = np.abs(actual - predicted)
             mask = diff < candidate_tolerance
 
@@ -391,7 +434,13 @@ class Calibrator:
                     [self.peaks[mask], actual[mask], weight]
                 )
 
-    def _adjust_polyfit(self, delta, fit, tolerance, min_frac):
+    def _adjust_polyfit(
+        self,
+        delta: Union[list, np.ndarray],
+        fit: Union[list, np.ndarray],
+        tolerance: float,
+        min_frac: float,
+    ):
         """
         **EXPERIMENTAL**
 
@@ -423,20 +472,20 @@ class Calibrator:
 
         atlas_lines = self.atlas.get_lines()
 
-        for i, d in enumerate(delta):
+        for i, _d in enumerate(delta):
 
-            fit_new[i] += d
+            fit_new[i] += _d
 
-        for p in self.peaks:
+        for _p in self.peaks:
 
-            x = self.polyval(p, fit_new)
-            diff = atlas_lines - x
+            _x = self.polyval(_p, fit_new)
+            diff = atlas_lines - _x
             diff_abs = np.abs(diff)
             idx = np.argmin(diff_abs)
 
             if diff_abs[idx] < tolerance:
 
-                x_matched.append(p)
+                x_matched.append(_p)
                 y_matched.append(atlas_lines[idx])
 
         x_matched = np.array(x_matched)
@@ -465,7 +514,9 @@ class Calibrator:
 
         return lsq
 
-    def load_config(self, yaml_config, y_type="filepath"):
+    def load_config(
+        self, yaml_config: Union[str, dict], y_type: str = "filepath"
+    ):
         """
         Load a yaml configuration file to populate a Calibrator object
         and optionally an Atlas object.
@@ -483,7 +534,7 @@ class Calibrator:
         # Load from file
         if y_type == "filepath":
 
-            with open(yaml_config, "r") as stream:
+            with open(yaml_config, "r", encoding="ascii") as stream:
 
                 config = yaml.safe_load(stream)
 
@@ -495,16 +546,14 @@ class Calibrator:
         else:
 
             raise ValueError(
-                "Unknown y_type: {}. Please choose from "
-                "'filepath' or 'stream'".format(y_type)
+                f"Unknown y_type: {y_type}. Please choose from "
+                + "'filepath' or 'stream'"
             )
 
         # update logger properties
-        self.logger = config["logger"]
-        self.log_level = config["log_level"]
         self.set_logger(
-            logger_name=self.logger,
-            log_level=self.log_level,
+            logger_name=config["logger"],
+            log_level=config["log_level"],
         )
 
         # Add data to the calibrator
@@ -543,8 +592,8 @@ class Calibrator:
 
             if self.atlas_config["linelist"] == "nist":
 
-                a = atlas.Atlas()
-                a.add(
+                als = atlas.Atlas()
+                als.add(
                     elements=self.atlas_config["elements"],
                     linelist=self.atlas_config["linelist"],
                     min_atlas_wavelength=self.atlas_config[
@@ -568,8 +617,8 @@ class Calibrator:
             # This loads the lines directly
             elif self.atlas_config["linelist"] == "user":
 
-                a = atlas.Atlas()
-                a.add_user_atlas(
+                als = atlas.Atlas()
+                als.add_user_atlas(
                     elements=self.atlas_config["element_list"],
                     wavelengths=self.atlas_config["wavelength_list"],
                     intensities=self.atlas_config["intensity_list"],
@@ -586,28 +635,27 @@ class Calibrator:
             else:
 
                 raise ValueError(
-                    "Unknown linelist type: {}. Please choose from "
-                    "'nist' or 'user'.".format(self.atlas_config["linelist"])
+                    "Unknown linelist type: {self.atlas_config['linelist']}. "
+                    + "Please choose from 'nist' or 'user'."
                 )
 
         elif isinstance(self.atlas_config["config"], str):
 
-            a = atlas.Atlas()
-            a.load_config(self.atlas_config["config"], y_type="filepath")
+            als = atlas.Atlas()
+            als.load_config(self.atlas_config["config"], y_type="filepath")
 
         else:
 
             raise ValueError(
-                "Unknown atlas config type: {}. Please choose from 'true', "
-                "'false' or a valid path to an Atlas config.".format(
-                    self.atlas_config["config"]
-                )
+                f"Unknown atlas config type: {self.atlas_config['config']}. "
+                + "Please choose from 'true', 'false' or a valid path to an "
+                + "Atlas config."
             )
 
         # Only add the atlas to the Calibrator if it were set to True
         if self.atlas_config["config"]:
 
-            self.set_atlas(a, self.candidate_tolerance, self.constrain_poly)
+            self.set_atlas(als, self.candidate_tolerance, self.constrain_poly)
 
         # Hough transform properties
         hough_config = config["hough_transform"]
@@ -666,7 +714,11 @@ class Calibrator:
         self.matched_atlas = result_config["matched_atlas"]
         self.fit_coeff = result_config["fit_coeff"]
 
-    def save_config(self, filename):
+    def save_config(self, filename: str):
+        """
+        Josh will write something here.
+
+        """
 
         output_data = {
             "peaks": self.peaks,
@@ -729,9 +781,9 @@ class Calibrator:
             },
         }
 
-        with open(filename, "w+") as f:
+        with open(filename, "w+", encoding="ascii") as config_file:
 
-            yaml.dump(output_data, f, default_flow_style=False)
+            yaml.dump(output_data, config_file, default_flow_style=False)
 
     def which_plotting_library(self):
         """
@@ -775,11 +827,11 @@ class Calibrator:
 
     def set_calibrator_properties(
         self,
-        num_pix=None,
-        effective_pixel=None,
-        plotting_library=None,
-        seed=None,
-        hide_progress=False,
+        num_pix: int = None,
+        effective_pixel: Union[list, np.ndarray] = None,
+        plotting_library: str = None,
+        seed: int = None,
+        hide_progress: bool = False,
     ):
         """
         Initialise the calibrator object.
@@ -825,9 +877,7 @@ class Calibrator:
 
             pass
 
-        self.logger.info(
-            "effective_pixel is set to {}.".format(effective_pixel)
-        )
+        self.logger.info(f"effective_pixel is set to {effective_pixel}.")
 
         if seed is not None:
             np.random.seed(seed)
@@ -869,7 +919,11 @@ class Calibrator:
                 "use_plotly() to manually select the library."
             )
 
-    def set_num_pix(self, num_pix):
+    def set_num_pix(self, num_pix: int):
+        """
+        Josh will write something here.
+
+        """
 
         if num_pix is not None:
 
@@ -898,7 +952,7 @@ class Calibrator:
 
                 except Exception as e2:
 
-                    self.logger.warning(e)
+                    self.logger.warning(e2)
                     self.logger.warning(
                         "num_pix cannot be set, please provide a num_pix, "
                         "or the peaks, so that we can guess the num_pix."
@@ -908,17 +962,17 @@ class Calibrator:
 
             pass
 
-        self.logger.info("num_pix is set to {}.".format(num_pix))
+        self.logger.info(f"num_pix is set to {num_pix}.")
 
     def set_hough_properties(
         self,
-        num_slopes=None,
-        xbins=None,
-        ybins=None,
-        min_wavelength=None,
-        max_wavelength=None,
-        range_tolerance=None,
-        linearity_tolerance=None,
+        num_slopes: int = None,
+        xbins: int = None,
+        ybins: int = None,
+        min_wavelength: float = None,
+        max_wavelength: float = None,
+        range_tolerance: float = None,
+        linearity_tolerance: float = None,
     ):
         """
         parameters
@@ -1073,16 +1127,16 @@ class Calibrator:
 
     def set_ransac_properties(
         self,
-        sample_size=None,
-        top_n_candidate=None,
-        linear=None,
-        filter_close=None,
-        ransac_tolerance=None,
-        candidate_weighted=None,
-        hough_weight=None,
-        minimum_matches=None,
-        minimum_peak_utilisation=None,
-        minimum_fit_error=None,
+        sample_size: int = None,
+        top_n_candidate: int = None,
+        linear: bool = None,
+        filter_close: bool = None,
+        ransac_tolerance: float = None,
+        candidate_weighted: bool = None,
+        hough_weight: float = None,
+        minimum_matches: int = None,
+        minimum_peak_utilisation: float = None,
+        minimum_fit_error: float = None,
     ):
         """
         Configure the Calibrator. This may require some manual twiddling before
@@ -1117,7 +1171,7 @@ class Calibrator:
             Set to only accept fit solutions with a minimum number of
             matches. Setting this will prevent the fitting function from
             accepting spurious low-error fits.
-        minimum_peak_utilisation: int or None (default: 0)
+        minimum_peak_utilisation: int or None (default: 0.0)
             Set to only accept fit solutions with a fraction of matches. This
             option is convenient if you don't want to specify an absolute
             number of atlas lines. Range is 0 - 1 inclusive.
@@ -1265,9 +1319,12 @@ class Calibrator:
 
             pass
 
-    def remove_atlas_lines_range(self, wavelength, tolerance=10):
+    def remove_atlas_lines_range(
+        self, wavelength: float, tolerance: float = 10.0
+    ):
         """
         Remove arc lines within a certain wavelength range.
+
         """
 
         self.atlas.remove_atlas_lines_range(wavelength, tolerance)
@@ -1275,6 +1332,7 @@ class Calibrator:
     def list_atlas(self):
         """
         List all the lines loaded to the Calibrator.
+
         """
 
         self.atlas.list()
@@ -1282,17 +1340,23 @@ class Calibrator:
     def clear_atlas(self):
         """
         Remove all the lines loaded to the Calibrator.
+
         """
 
         self.atlas.clear()
 
-    def set_atlas(self, atlas, candidate_tolerance=10.0, constrain_poly=False):
+    def set_atlas(
+        self,
+        atlas: "rascal.atlas.Atlas",
+        candidate_tolerance: float = 10.0,
+        constrain_poly: bool = False,
+    ):
         """
         Adds an atlas of arc lines to the calibrator
 
         Parameters
         ----------
-        atlas: rascal.Atlas
+        atlas: rascal.atlas.Atlas
             Chemical symbol, case insensitive
         candidate_tolerance: float (default: 10)
             toleranceold  (Angstroms) for considering a point to be an inlier
@@ -1301,6 +1365,7 @@ class Calibrator:
             *locally* linear.
         constrain_poly: boolean
             Apply a polygonal constraint on possible peak/atlas pairs
+
         """
 
         self.atlas = atlas
@@ -1314,16 +1379,16 @@ class Calibrator:
 
             self._generate_pairs()
 
-    def atlas_summary(self, mode="executive", return_string=False):
+    def atlas_summary(self, mode: str = "short", return_string: bool = False):
         """
-        Return a summary of the content of the Atlas object. The executive
+        Return a summary of the content of the Atlas object. The short
         mode only return basic info. The full mode list items in details.
 
         Parameters
         ----------
         mode : str, optional
-            Mode of summery, choose from "executive" and "full".
-            (Default: "executive")
+            Mode of summery, choose from "short" and "full".
+            (Default: "short")
 
         """
 
@@ -1333,14 +1398,14 @@ class Calibrator:
 
             return summary
 
-    def save_atlas_summary(self, mode="full", filename=None):
+    def save_atlas_summary(self, mode: str = "full", filename: str = None):
         """
         Save the summary of the Atlas object, see `summary` for more detail.
 
         Parameters
         ----------
         mode : str, optional
-            Mode of summery, choose from "executive" and "full".
+            Mode of summery, choose from "short" and "full".
             (Default: "full")
         filename : str, optional
             The export destination path, None will return with filename
@@ -1352,7 +1417,11 @@ class Calibrator:
 
         return output_path
 
-    def do_hough_transform(self, brute_force=False):
+    def do_hough_transform(self, brute_force: bool = False):
+        """
+        Josh will write something here.
+
+        """
 
         if self.pairs is not None and not len(self.pairs) > 0:
 
@@ -1364,7 +1433,7 @@ class Calibrator:
                 logging.error("pairs list is still empty.")
 
         # Generate the hough_points from the pairs
-        self.ht.set_constraints(
+        self.hough_transformer.set_constraints(
             self.min_slope,
             self.max_slope,
             self.min_intercept,
@@ -1372,24 +1441,24 @@ class Calibrator:
         )
 
         if brute_force:
-            self.ht.generate_hough_points_brute_force(
+            self.hough_transformer.generate_hough_points_brute_force(
                 self.pairs[:, 0], self.pairs[:, 1]
             )
         else:
-            self.ht.generate_hough_points(
+            self.hough_transformer.generate_hough_points(
                 self.pairs[:, 0], self.pairs[:, 1], num_slopes=self.num_slopes
             )
 
-        self.ht.bin_hough_points(self.xbins, self.ybins)
-        self.hough_points = self.ht.hough_points
-        self.hough_lines = self.ht.hough_lines
+        self.hough_transformer.bin_hough_points(self.xbins, self.ybins)
+        self.hough_points = self.hough_transformer.hough_points
+        self.hough_lines = self.hough_transformer.hough_lines
 
     def save_hough_transform(
         self,
-        filename="hough_transform",
-        fileformat="npy",
-        delimiter="+",
-        to_disk=True,
+        filename: str = "hough_transform",
+        fileformat: str = "npy",
+        delimiter: str = "+",
+        to_disk: bool = True,
     ):
         """
         Save the HoughTransform object to memory or to disk.
@@ -1413,14 +1482,16 @@ class Calibrator:
 
         """
 
-        self.ht.save(
+        self.hough_transformer.save(
             filename=filename,
             fileformat=fileformat,
             delimiter=delimiter,
             to_disk=to_disk,
         )
 
-    def load_hough_transform(self, filename="hough_transform", filetype="npy"):
+    def load_hough_transform(
+        self, filename: str = "hough_transform", filetype: str = "npy"
+    ):
         """
         Store the binned Hough space and/or the raw Hough pairs.
 
@@ -1435,9 +1506,13 @@ class Calibrator:
 
         """
 
-        self.ht.load(filename=filename, filetype=filetype)
+        self.hough_transformer.load(filename=filename, filetype=filetype)
 
-    def set_known_pairs(self, pix=(), wave=()):
+    def set_known_pairs(
+        self,
+        pix: Union[float, list, np.ndarray],
+        wave: Union[float, list, np.ndarray],
+    ):
         """
         Provide manual pixel-wavelength pair(s), they will be appended to the
         list of pixel-wavelength pairs after the random sample being drawn from
@@ -1465,8 +1540,8 @@ class Calibrator:
         wave = np.asarray(wave, dtype="float").reshape(-1)
 
         assert pix.size == wave.size, ValueError(
-            "Please check the length of the input arrays. pix has size {} "
-            "and wave has size {}.".format(pix.size, wave.size)
+            "Please check the length of the input arrays. pix has size "
+            + f"{pix.size} and wave has size {wave.size}."
         )
 
         if not all(
@@ -1486,15 +1561,15 @@ class Calibrator:
 
     def fit(
         self,
-        max_tries=500,
-        fit_deg=4,
-        fit_coeff=None,
-        fit_tolerance=5.0,
-        fit_type="poly",
-        candidate_tolerance=4.0,
-        brute_force=False,
-        progress=True,
-        use_msac=False,
+        max_tries: int = 500,
+        fit_deg: int = 4,
+        fit_coeff: Union[list, np.ndarray] = None,
+        fit_tolerance: float = 5.0,
+        fit_type: str = "poly",
+        candidate_tolerance: float = 4.0,
+        brute_force: bool = False,
+        progress: bool = True,
+        use_msac: bool = False,
     ):
         """
         Solve for the wavelength calibration polynomial by getting the most
@@ -1600,17 +1675,17 @@ class Calibrator:
 
         if self.minimum_matches > len(self.atlas):
             self.logger.warning(
-                "Requested minimum matches is greater than the atlas size"
-                "setting the minimum number of matches to equal the atlas"
-                "size = " + str(len(self.atlas)) + "."
+                "Requested minimum matches is greater than the atlas size "
+                + "setting the minimum number of matches to equal the atlas "
+                + f"size = {len(self.atlas)}."
             )
             self.minimum_matches = len(self.atlas)
 
         if self.minimum_matches > len(self.peaks):
             self.logger.warning(
                 "Requested minimum matches is greater than the number of "
-                "peaks detected, which has a size of "
-                "size = " + str(len(self.peaks)) + "."
+                + "peaks detected, which has a size of "
+                + f"size = {len(self.peaks)}."
             )
             self.minimum_matches = len(self.peaks)
 
@@ -1633,8 +1708,8 @@ class Calibrator:
 
         # Note that there may be multiple matches for
         # each peak, that is len(x) > len(np.unique(x))
-        x = np.array(self.candidate_peak)
-        y = np.array(self.candidate_arc)
+        _x = np.array(self.candidate_peak)
+        _y = np.array(self.candidate_arc)
 
         self.success = False
 
@@ -1652,10 +1727,10 @@ class Calibrator:
             "polyfit_fn": self.polyfit,
             "polyval_fn": self.polyval,
             "fit_valid_fn": self._fit_valid,
-            "hough": self.ht,
+            "hough": self.hough_transformer,
         }
 
-        solver = RansacSolver(x, y, config)
+        solver = RansacSolver(_x, _y, config)
         solver.solve()
 
         if solver.valid_solution:
@@ -1670,9 +1745,8 @@ class Calibrator:
             if result.rms_residual > self.fit_tolerance:
 
                 self.logger.warning(
-                    "RMS too large {%s} > {%s}",
-                    result.rms_residual,
-                    self.fit_tolerance,
+                    f"RMS too large {result.rms_residual} > "
+                    + f"{self.fit_tolerance}."
                 )
 
             self.success = True
@@ -1696,7 +1770,12 @@ class Calibrator:
 
         return self.res
 
-    def _fit_valid(self, result):
+    def _fit_valid(self, result: SolveResult):
+        """
+        Josh will write something here.
+
+        """
+
         # reject lines outside the rms limit (ransac_tolerance)
         # TODO: should n_inliers be recalculated from the robust
         # fit?
@@ -1708,7 +1787,8 @@ class Calibrator:
         ):
 
             self.logger.debug(
-                f"Intercept exceeds bounds, {fit_intercept} not within [{self.min_intercept}, {self.max_intercept}]."
+                f"Intercept exceeds bounds, {fit_intercept} not within "
+                + f"[{self.min_intercept}, {self.max_intercept}]."
             )
             return False
 
@@ -1716,7 +1796,7 @@ class Calibrator:
         # Note, this could be pre-calculated
         pix_min = self.peaks[0] - np.ptp(self.peaks) * 0.2
         num_pix = self.peaks[-1] + np.ptp(self.peaks) * 0.2
-        self.logger.debug((pix_min, num_pix))
+        self.logger.debug(f"pix_min: {pix_min}, num_pix: {num_pix}")
 
         if not np.all(
             np.diff(
@@ -1741,7 +1821,7 @@ class Calibrator:
             ):
                 self.logger.debug(
                     "Lower wavelength of fit too small, "
-                    "{:1.2f}.".format(min_wavelength_px)
+                    + f"{min_wavelength_px:1.2f}."
                 )
 
                 return False
@@ -1764,7 +1844,7 @@ class Calibrator:
             ):
                 self.logger.debug(
                     "Upper wavelength of fit too large, "
-                    "{:1.2f}.".format(max_wavelength_px)
+                    + f"{max_wavelength_px:1.2f}."
                 )
 
                 return False
@@ -1773,7 +1853,7 @@ class Calibrator:
         if result.rms_residual < self.minimum_fit_error:
 
             self.logger.debug(
-                "Fit error too small, " "{:1.2f}.".format(result.rms_residual)
+                "Fit error too small, {result.rms_residual:1.2f}."
             )
 
             return False
@@ -1785,17 +1865,15 @@ class Calibrator:
 
             self.logger.debug(
                 "Not enough matched peaks for valid solution, "
-                "user specified {}.".format(self.minimum_matches)
+                + f"user specified {self.minimum_matches}."
             )
             return False
 
         if n_inliers < self.minimum_peak_utilisation * len(self.peaks):
 
             self.logger.debug(
-                "Not enough matched peaks for valid solution, "
-                "user specified {:1.2f} %.".format(
-                    100 * self.minimum_peak_utilisation
-                )
+                "Not enough matched peaks for valid solution, user specified "
+                + f"{100 * self.minimum_peak_utilisation:1.2f} %."
             )
             return False
 
@@ -1803,16 +1881,16 @@ class Calibrator:
 
     def match_peaks(
         self,
-        fit_coeff=None,
-        n_delta=None,
-        refine=False,
-        tolerance=10.0,
-        method="Nelder-Mead",
-        convergence=1e-6,
-        min_frac=0.5,
-        robust_refit=True,
-        best_err=1e9,
-        fit_deg=None,
+        fit_coeff: Union[list, np.ndarray] = None,
+        n_delta: int = None,
+        refine: bool = False,
+        tolerance: float = 10.0,
+        method: str = "Nelder-Mead",
+        convergence: float = 1e-6,
+        min_frac: float = 0.5,
+        robust_refit: bool = True,
+        best_err: float = 1e9,
+        fit_deg: int = None,
     ):
         """
         ** refine option is EXPERIMENTAL, use with caution **
@@ -1903,9 +1981,9 @@ class Calibrator:
                 options={"maxiter": 10000},
             ).x
 
-            for i, d in enumerate(fitted_delta):
+            for i, _d in enumerate(fitted_delta):
 
-                fit_coeff_new[i] += d
+                fit_coeff_new[i] += _d
 
             if np.any(np.isnan(fit_coeff_new)):
 
@@ -1936,15 +2014,15 @@ class Calibrator:
         atlas_lines = self.atlas.get_lines()
 
         # Find all Atlas peaks within tolerance
-        for p in self.peaks:
+        for _p in self.peaks:
 
-            x = self.polyval(p, fit_coeff)
-            diff = atlas_lines - x
+            _x = self.polyval(_p, fit_coeff)
+            diff = atlas_lines - _x
             diff_abs = np.abs(diff) < tolerance
 
             if diff_abs.any():
 
-                matched_peaks.append(p)
+                matched_peaks.append(_p)
                 matched_atlas.append(list(np.asarray(atlas_lines)[diff_abs]))
                 residuals.append(diff_abs)
 
@@ -1987,8 +2065,8 @@ class Calibrator:
                     candidate_peaks, candidate_atlas, fit_deg
                 )
 
-            x = self.polyval(candidate_peaks, fit_coeff)
-            residuals = np.abs(candidate_atlas - x)
+            _x = self.polyval(candidate_peaks, fit_coeff)
+            residuals = np.abs(candidate_atlas - _x)
             err = np.sum(residuals)
 
             if err < best_err:
@@ -2024,7 +2102,7 @@ class Calibrator:
 
         return self.res
 
-    def summary(self, return_string=False):
+    def summary(self, return_string: bool = False):
         """
         Return a summary of the fitted results of the Calibrator object.
 
@@ -2056,32 +2134,31 @@ class Calibrator:
 
                 ordinal = "th"
 
-            output += "--> Coefficient of {}{} order: {}{}".format(
-                i + 1, ordinal, self.fit_coeff[i], os.linesep
+            output += (
+                f"--> Coefficient of {i + 1}{ordinal} order: "
+                + f"{self.fit_coeff[i]}{os.linesep}"
             )
 
-        output += "RMS of the best fit solution: {}{}".format(
-            self.rms, os.linesep
-        )
-        output += "Percentage of peaks unsed for fitting: {:.2f}%{}".format(
-            self.peak_utilisation * 100.0, os.linesep
+        output += "RMS of the best fit solution: {self.rms}{os.linesep}"
+        output += (
+            "Percentage of peaks unsed for fitting: "
+            + f"{self.peak_utilisation * 100.0:.2f}%{os.linesep}"
         )
         output += (
-            "Percentage of atlas lines unsed for fitting: {:.2f}%{}".format(
-                self.atlas_utilisation * 100.0, os.linesep
-            )
+            "Percentage of atlas lines unsed for fitting: "
+            + f"{self.atlas_utilisation * 100.0:.2f}%{os.linesep}"
         )
 
         output2 = ""
         output2_max_width = 0
 
-        for p, a, r in zip(
+        for _p, _a, _r in zip(
             self.matched_peaks, self.matched_atlas, self.residuals
         ):
 
             output2_tmp = (
-                "Peak {} (pix) is matched to wavelength {} A with a residual "
-                "of {} A.{}".format(p, a, r, os.linesep)
+                f"Peak {_p} (pix) is matched to wavelength {_a} A with a "
+                + f"residual of {_r} A.{os.linesep}"
             )
 
             if len(output2_tmp) - 2 > output2_max_width:
@@ -2099,7 +2176,7 @@ class Calibrator:
 
             return output
 
-    def save_summary(self, filename=None):
+    def save_summary(self, filename: str = None):
         """
         Save the summary of the Calibrator object, see `summary` for more
         detail.
@@ -2114,14 +2191,13 @@ class Calibrator:
 
         if filename is None:
 
-            filename = "rascal_fit_summary_{}.txt".format(
-                time.strftime("%Y%m%d_%H%M%S", time.gmtime())
-            )
+            time_str = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
+            filename = f"rascal_fit_summary_{time_str}.txt"
 
         summary = self.summary(return_string=True)
 
-        with open(filename, "w+") as f:
-            f.write(summary)
+        with open(filename, "w+", encoding="ascii") as summary_file:
+            summary_file.write(summary)
 
         return filename
 
@@ -2140,20 +2216,18 @@ class Calibrator:
 
         pw_pairs = []
 
-        for i, (p, w) in enumerate(
+        for _i, (_p, _w) in enumerate(
             zip(self.matched_peaks, self.matched_atlas)
         ):
 
-            pw_pairs.append((i, p, w))
+            pw_pairs.append((_i, _p, _w))
             self.logger.info(
-                "Position {}: pixel {} is matched to wavelength {}".format(
-                    i, p, w
-                )
+                f"Position {_i}: pixel {_p} is matched to wavelength {_w}"
             )
 
         return pw_pairs
 
-    def add_pix_wave_pair(self, pix, wave):
+    def add_pix_wave_pair(self, pix: float, wave: float):
         """
         Adding extra pixel-wavelength pair to the Calibrator for refitting.
         This DOES NOT work before the Calibrator having fit for a solution
@@ -2177,7 +2251,7 @@ class Calibrator:
         self.matched_peaks = matched_peaks
         self.matched_atlas = matched_atlas
 
-    def remove_pix_wave_pair(self, arg):
+    def remove_pix_wave_pair(self, arg: int):
         """
         Remove fitted pixel-wavelength pair from the Calibrator for refitting.
         The positions can be found from get_pix_wave_pairs(). One at a time.
@@ -2197,7 +2271,11 @@ class Calibrator:
         self.matched_atlas = matched_atlas
 
     def manual_refit(
-        self, matched_peaks=None, matched_atlas=None, degree=None, x0=None
+        self,
+        matched_peaks: Union[list, np.ndarray] = None,
+        matched_atlas: Union[list, np.ndarray] = None,
+        degree: int = None,
+        x0: Union[list, np.ndarray] = None,
     ):
         """
         Perform a refinement of the matched peaks and atlas lines.
@@ -2271,23 +2349,23 @@ class Calibrator:
             assert isinstance(degree, int)
             assert len(x0) == degree + 1
 
-        x = np.asarray(matched_peaks)
-        y = np.asarray(matched_atlas)
+        _x = np.asarray(matched_peaks)
+        _y = np.asarray(matched_atlas)
 
-        assert len(x) == len(y)
-        assert len(x) > 0
+        assert len(_x) == len(_y)
+        assert len(_x) > 0
         assert degree > 0
-        assert degree <= len(x) - 1
+        assert degree <= len(_x) - 1
 
         # Run robust fitting again
-        fit_coeff_new = models.robust_polyfit(x, y, degree, x0)
-        self.logger.info("Input fit_coeff is {}.".format(x0))
-        self.logger.info("Refit fit_coeff is {}.".format(fit_coeff_new))
+        fit_coeff_new = models.robust_polyfit(_x, _y, degree, x0)
+        self.logger.info(f"Input fit_coeff is {x0}.")
+        self.logger.info(f"Refit fit_coeff is {fit_coeff_new}.")
 
         self.fit_coeff = fit_coeff_new
         self.matched_peaks = copy.deepcopy(matched_peaks)
         self.matched_atlas = copy.deepcopy(matched_atlas)
-        self.residuals = y - self.polyval(x, fit_coeff_new)
+        self.residuals = _y - self.polyval(_x, fit_coeff_new)
         self.rms = np.sqrt(
             np.nansum(self.residuals**2.0) / len(self.residuals)
         )
@@ -2309,7 +2387,7 @@ class Calibrator:
 
         return self.res
 
-    def save_matches(self, filename=None, format="csv"):
+    def save_matches(self, filename: str = None, file_format: str = "csv"):
         """
         Export the matched peak-atlas pairs
 
@@ -2317,7 +2395,7 @@ class Calibrator:
         ----------
         filename: str (Default: None)
             Export file name, if None, it will be saved as "matched_peaks"
-        format: str (Default: csv)
+        file_format: str (Default: csv)
             Export format, choose from csv and npy.
 
         """
@@ -2328,31 +2406,31 @@ class Calibrator:
 
             filename = "matched_peaks"
 
-        if format.lower() == "csv":
+        if file_format.lower() == "csv":
 
             np.savetxt(filename + ".csv", X=output, delimiter=",")
 
-        elif format.lower() == "npy":
+        elif file_format.lower() == "npy":
 
             np.save(file=filename + ".npy", arr=output)
 
     def plot_arc(
         self,
-        effective_pixel=None,
-        log_spectrum=False,
-        save_fig=False,
-        fig_type="png",
-        filename=None,
-        return_jsonstring=False,
-        renderer="default",
-        display=True,
+        effective_pixel: Union[list, np.ndarray] = None,
+        log_spectrum: bool = False,
+        save_fig: bool = False,
+        fig_type: str = "png",
+        filename: str = None,
+        return_jsonstring: bool = False,
+        renderer: str = "default",
+        display: bool = True,
     ):
         """
         Plots the 1D spectrum of the extracted arc.
 
         parameters
         ----------
-        effective_pixel: array (default: None)
+        effective_pixel: np.ndarray (default: None)
             pixel value of the of the spectrum, this is only needed if the
             spectrum spans multiple detector arrays.
         log_spectrum: boolean (default: False)
@@ -2398,15 +2476,15 @@ class Calibrator:
 
     def plot_search_space(
         self,
-        fit_coeff=None,
-        top_n_candidate=3,
-        weighted=True,
-        save_fig=False,
-        fig_type="png",
-        filename=None,
-        return_jsonstring=False,
-        renderer="default",
-        display=True,
+        fit_coeff: Union[list, np.ndarray] = None,
+        top_n_candidate: int = 3,
+        weighted: bool = True,
+        save_fig: bool = False,
+        fig_type: str = "png",
+        filename: str = None,
+        return_jsonstring: bool = False,
+        renderer: str = "default",
+        display: bool = True,
     ):
         """
         Plots the peak/arc line pairs that are considered as potential match
@@ -2463,16 +2541,16 @@ class Calibrator:
 
     def plot_fit(
         self,
-        fit_coeff=None,
-        spectrum=None,
-        plot_atlas=True,
-        log_spectrum=False,
-        save_fig=False,
-        fig_type="png",
-        filename=None,
-        return_jsonstring=False,
-        renderer="default",
-        display=True,
+        fit_coeff: Union[list, np.ndarray] = None,
+        spectrum: Union[list, np.ndarray] = None,
+        plot_atlas: bool = True,
+        log_spectrum: bool = False,
+        save_fig: bool = False,
+        fig_type: str = "png",
+        filename: str = None,
+        return_jsonstring: bool = False,
+        renderer: str = "default",
+        display: bool = True,
     ):
         """
         Plots of the wavelength calibrated arc spectrum, the residual and the

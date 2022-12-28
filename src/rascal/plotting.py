@@ -1,6 +1,18 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+Some plotting functions for diagnostic and inspection.
+
+"""
+
 import logging
+from typing import Union
 
 import numpy as np
+from scipy import signal
+
+from rascal import calibrator, util
 
 logger = logging.getLogger("plotting")
 
@@ -32,6 +44,7 @@ def _import_plotly():
         global go
         global pio
         global psp
+        global pio_color
         import plotly.graph_objects as go
         import plotly.io as pio
         import plotly.subplots as psp
@@ -53,6 +66,7 @@ def _import_plotly():
 
         # setting Google color palette as default
         pio.templates.default = "CN"
+        pio_color = pio.templates["CN"].layout.colorway
 
     except ImportError:
 
@@ -60,16 +74,16 @@ def _import_plotly():
 
 
 def plot_search_space(
-    calibrator,
-    fit_coeff=None,
-    top_n_candidate=3,
-    weighted=True,
-    save_fig=False,
-    fig_type="png",
-    filename=None,
-    return_jsonstring=False,
-    renderer="default",
-    display=True,
+    calibrator: "rascal.calibrator.Calibrator",
+    fit_coeff: Union[list, np.ndarray] = None,
+    top_n_candidate: int = 3,
+    weighted: bool = True,
+    save_fig: bool = False,
+    fig_type: str = "png",
+    filename: str = None,
+    return_jsonstring: bool = False,
+    renderer: str = "default",
+    display: bool = True,
 ):
     """
     Plots the peak/arc line pairs that are considered as potential match
@@ -290,9 +304,7 @@ def plot_search_space(
                 y=calibrator.pairs[:, 1],
                 mode="markers",
                 name="All Pairs",
-                marker=dict(
-                    color=pio.templates["CN"].layout.colorway[0], opacity=0.2
-                ),
+                marker=dict(color=pio_color[0], opacity=0.2),
             )
         )
 
@@ -302,9 +314,7 @@ def plot_search_space(
                 y=calibrator._merge_candidates(calibrator.candidates)[:, 1],
                 mode="markers",
                 name="Candidate Pairs",
-                marker=dict(
-                    color=pio.templates["CN"].layout.colorway[1], opacity=0.2
-                ),
+                marker=dict(color=pio_color[1], opacity=0.2),
             )
         )
         fig.add_trace(
@@ -313,7 +323,7 @@ def plot_search_space(
                 y=candidate_arc,
                 mode="markers",
                 name="Best Candidate Pairs",
-                marker=dict(color=pio.templates["CN"].layout.colorway[2]),
+                marker=dict(color=pio_color[2]),
             )
         )
 
@@ -396,7 +406,7 @@ def plot_search_space(
                 y=y_1,
                 mode="lines",
                 name="Linear Fit",
-                line=dict(color=pio.templates["CN"].layout.colorway[3]),
+                line=dict(color=pio_color[3]),
             )
         )
         fig.add_trace(
@@ -406,7 +416,7 @@ def plot_search_space(
                 mode="lines",
                 name="Tolerance Region",
                 line=dict(
-                    color=pio.templates["CN"].layout.colorway[3],
+                    color=pio_color[3],
                     dash="dashdot",
                 ),
             )
@@ -418,7 +428,7 @@ def plot_search_space(
                 showlegend=False,
                 mode="lines",
                 line=dict(
-                    color=pio.templates["CN"].layout.colorway[3],
+                    color=pio_color[3],
                     dash="dashdot",
                 ),
             )
@@ -432,7 +442,7 @@ def plot_search_space(
                     y=calibrator.polyval(calibrator.peaks, fit_coeff),
                     mode="markers",
                     name="Solution",
-                    marker=dict(color=pio.templates["CN"].layout.colorway[4]),
+                    marker=dict(color=pio_color[4]),
                 )
             )
 
@@ -499,17 +509,17 @@ def plot_search_space(
 
 
 def plot_fit(
-    calibrator,
-    fit_coeff,
-    spectrum=None,
-    plot_atlas=True,
-    log_spectrum=False,
-    save_fig=False,
-    fig_type="png",
-    filename=None,
-    return_jsonstring=False,
-    renderer="default",
-    display=True,
+    calibrator: "rascal.calibrator.Calibrator",
+    fit_coeff: Union[list, np.ndarray],
+    spectrum: Union[list, np.ndarray] = None,
+    plot_atlas: bool = True,
+    log_spectrum: bool = False,
+    save_fig: bool = False,
+    fig_type: str = "png",
+    filename: str = None,
+    return_jsonstring: bool = False,
+    renderer: str = "default",
+    display: bool = True,
 ):
     """
     Plots of the wavelength calibrated arc spectrum, the residual and the
@@ -629,12 +639,12 @@ def plot_fit(
             diff = calibrator.atlas.get_lines() - x
             idx = np.argmin(np.abs(diff))
 
-            calibrator.logger.info("Peak at: {} A".format(x))
+            calibrator.logger.info(f"Peak at: {x} A")
 
             fitted_peaks.append(p)
             fitted_diff.append(diff[idx])
             calibrator.logger.info(
-                "- matched to {} A".format(calibrator.atlas.get_lines()[idx])
+                f"- matched to {calibrator.atlas.get_lines()[idx]} A"
             )
 
             if spectrum is not None:
@@ -660,9 +670,9 @@ def plot_fit(
             ax1.text(
                 x - 3,
                 text_box_pos,
-                s="{}:{:1.2f}".format(
-                    calibrator.atlas.get_elements()[idx],
-                    calibrator.atlas.get_lines()[idx],
+                s=(
+                    f"{calibrator.atlas.get_elements()[idx]}:"
+                    + f"{calibrator.atlas.get_lines()[idx]:1.2f}"
                 ),
                 rotation=90,
                 bbox=dict(facecolor="white", alpha=1),
@@ -707,13 +717,6 @@ def plot_fit(
         ax2.grid(linestyle=":")
         ax2.set_ylabel("Residual / A")
         ax2.legend()
-        """
-        ax2.text(
-            min(wave) + np.ptp(wave) * 0.05,
-            max(spectrum),
-            'RMS =' + str(rms)[:6]
-            )
-        """
 
         # Plot the polynomial
         ax3.scatter(
@@ -786,7 +789,6 @@ def plot_fit(
         fitted_peaks = []
         fitted_peaks_adu = []
         fitted_diff = []
-        all_diff = []
 
         for p in calibrator.peaks:
 
@@ -801,9 +803,7 @@ def plot_fit(
                 y0=0,
                 x1=x,
                 y1=spec_max,
-                line=dict(
-                    color=pio.templates["CN"].layout.colorway[1], width=1
-                ),
+                line=dict(color=pio_color[1], width=1),
             )
 
             if p in calibrator.matched_peaks:
@@ -817,7 +817,7 @@ def plot_fit(
                     fitted_peaks_adu.append(spectrum[int(p)])
 
                 calibrator.logger.info(
-                    "- matched to {} A".format(calibrator.matched_atlas[idx])
+                    f"- matched to {calibrator.matched_atlas[idx]} A"
                 )
 
         x_fitted = calibrator.polyval(fitted_peaks, fit_coeff)
@@ -827,7 +827,7 @@ def plot_fit(
                 x=x_fitted,
                 y=fitted_peaks_adu,
                 mode="markers",
-                marker=dict(color=pio.templates["CN"].layout.colorway[1]),
+                marker=dict(color=pio_color[1]),
                 yaxis="y3",
                 showlegend=False,
             )
@@ -840,7 +840,7 @@ def plot_fit(
                 x=x_fitted,
                 y=fitted_diff,
                 mode="markers",
-                marker=dict(color=pio.templates["CN"].layout.colorway[1]),
+                marker=dict(color=pio_color[1]),
                 yaxis="y2",
                 showlegend=False,
             )
@@ -850,9 +850,7 @@ def plot_fit(
                 x=[wave.min(), wave.max()],
                 y=[0, 0],
                 mode="lines",
-                line=dict(
-                    color=pio.templates["CN"].layout.colorway[0], dash="dash"
-                ),
+                line=dict(color=pio_color[0], dash="dash"),
                 yaxis="y2",
                 showlegend=False,
             )
@@ -884,7 +882,7 @@ def plot_fit(
                 x=x_fitted,
                 y=fitted_peaks,
                 mode="markers",
-                marker=dict(color=pio.templates["CN"].layout.colorway[1]),
+                marker=dict(color=pio_color[1]),
                 yaxis="y1",
                 name="Fitted Peaks",
             )
@@ -894,7 +892,7 @@ def plot_fit(
                 x=wave,
                 y=calibrator.effective_pixel,
                 mode="lines",
-                line=dict(color=pio.templates["CN"].layout.colorway[2]),
+                line=dict(color=pio_color[2]),
                 yaxis="y1",
                 name="Solution",
             )
@@ -1005,15 +1003,15 @@ def plot_fit(
 
 
 def plot_arc(
-    calibrator,
-    effective_pixel=None,
-    log_spectrum=False,
-    save_fig=False,
-    fig_type="png",
-    filename=None,
-    return_jsonstring=False,
-    renderer="default",
-    display=True,
+    calibrator: "rascal.calibrator.Calibrator",
+    effective_pixel: Union[list, np.ndarray] = None,
+    log_spectrum: Union[list, np.ndarray] = False,
+    save_fig: bool = False,
+    fig_type: str = "png",
+    filename: str = None,
+    return_jsonstring: bool = False,
+    renderer: str = "default",
+    display: bool = True,
 ):
     """
     Plots the 1D spectrum of the extracted arc.
@@ -1175,9 +1173,7 @@ def plot_arc(
                 y0=0,
                 x1=i,
                 y1=1.05,
-                line=dict(
-                    color=pio.templates["CN"].layout.colorway[1], width=1
-                ),
+                line=dict(color=pio_color[1], width=1),
             )
 
         fig.update_layout(
@@ -1240,3 +1236,207 @@ def plot_arc(
         if return_jsonstring:
 
             return fig.to_json()
+
+
+def plot_calibration_lines(
+    elements: Union[list, np.ndarray] = [],
+    linelist: str = "nist",
+    min_atlas_wavelength: float = 3000.0,
+    max_atlas_wavelength: float = 15000.0,
+    min_intensity: float = 5.0,
+    min_distance: float = 0.0,
+    brightest_n_lines: int = None,
+    pixel_scale: float = 1.0,
+    vacuum: bool = False,
+    pressure: float = 101325.0,
+    temperature: float = 273.15,
+    relative_humidity: float = 0.0,
+    label: bool = False,
+    log: bool = False,
+    save_fig: bool = False,
+    fig_type: str = "png",
+    filename: str = None,
+    display: bool = True,
+    fig_kwarg: dict = {"figsize": (12, 8)},
+):
+    """
+    Plot the expected arc spectrum.
+
+    Parameters
+    ----------
+    elements: list
+        List of short element names, e.g. He as per NIST
+    linelist: str
+        Either 'nist' to use the default lines or path to a linelist file.
+    min_atlas_wavelength: int
+        Minimum wavelength to search, Angstrom
+    max_atlas_wavelength: int
+        Maximum wavelength to search, Angstrom
+    min_intensity: int
+        Minimum intensity to search, per NIST
+    min_distance: int
+        All ines within this distance from other lines are treated
+        as unresolved, all of them get removed from the list.
+    brightest_n_lines: int
+        Only return the n brightest lines
+    vacuum: bool
+        Return vacuum wavelengths
+    pressure: float
+        Atmospheric pressure, Pascal
+    temperature: float
+        Temperature in Kelvin, default room temp
+    relative_humidity: float
+        Relative humidity, percent
+    log: bool
+        Plot intensities in log scale
+    save_fig: boolean (default: False)
+        Save an image if set to True. matplotlib uses the pyplot.save_fig()
+        while the plotly uses the pio.write_html() or pio.write_image().
+        The support format types should be provided in fig_type.
+    fig_type: string (default: 'png')
+        Image type to be saved, choose from:
+        jpg, png, svg, pdf and iframe. Delimiter is '+'.
+    filename: string (default: None)
+        Provide a filename or full path. If the extension is not provided
+        it is defaulted to png.
+    display: boolean (Default: False)
+        Set to True to display disgnostic plot.
+
+    Returns
+    -------
+    fig: matplotlib figure object
+
+    """
+
+    # the min_intensity and min_distance are set to 0.0 because the
+    # simulated spectrum would contain them. These arguments only
+    # affect the labelling.
+    (
+        element_list,
+        wavelength_list,
+        intensity_list,
+    ) = util.load_calibration_lines(
+        elements=elements,
+        linelist=linelist,
+        min_atlas_wavelength=min_atlas_wavelength,
+        max_atlas_wavelength=max_atlas_wavelength,
+        min_intensity=0.0,
+        min_distance=0.0,
+        brightest_n_lines=brightest_n_lines,
+        vacuum=vacuum,
+        pressure=pressure,
+        temperature=temperature,
+        relative_humidity=relative_humidity,
+    )
+
+    # Nyquist sampling rate (2.5) for CCD at seeing of 1 arcsec
+    sigma = pixel_scale * 2.5 * 1.0
+    x = np.arange(-100, 100.001, 0.001)
+    gaussian = util.gauss(x, a=1.0, x0=0.0, sigma=sigma)
+
+    # Generate the equally spaced-wavelength array, and the
+    # corresponding intensity
+    w = np.around(
+        np.arange(min_atlas_wavelength, max_atlas_wavelength + 0.001, 0.001),
+        decimals=3,
+    ).astype("float64")
+    i = np.zeros_like(w)
+
+    for e in elements:
+        i[
+            np.isin(
+                w, np.around(wavelength_list[element_list == e], decimals=3)
+            )
+        ] += intensity_list[element_list == e]
+    # Convolve to simulate the arc spectrum
+    model_spectrum = signal.convolve(i, gaussian, mode="same")
+
+    # now clean up by min_intensity and min_distance
+    intensity_mask = util.filter_intensity(
+        elements,
+        np.column_stack((element_list, wavelength_list, intensity_list)),
+        min_intensity=min_intensity,
+    )
+    wavelength_list = wavelength_list[intensity_mask]
+    intensity_list = intensity_list[intensity_mask]
+    element_list = element_list[intensity_mask]
+
+    distance_mask = util.filter_distance(
+        wavelength_list, min_distance=min_distance
+    )
+    wavelength_list = wavelength_list[distance_mask]
+    intensity_list = intensity_list[distance_mask]
+    element_list = element_list[distance_mask]
+
+    fig = plt.figure(**fig_kwarg)
+
+    for j, e in enumerate(elements):
+        e_mask = element_list == e
+        markerline, stemline, _ = plt.stem(
+            wavelength_list[e_mask],
+            intensity_list[e_mask],
+            label=e,
+            linefmt=f"C{j}-",
+        )
+        plt.setp(stemline, linewidth=2.0)
+        plt.setp(markerline, markersize=2.5, color=f"C{j}")
+
+        if label:
+
+            for _w in wavelength_list[e_mask]:
+
+                plt.text(
+                    _w,
+                    max(model_spectrum) * 1.05,
+                    s=f"{e}: {_w:1.2f}",
+                    rotation=90,
+                    bbox=dict(facecolor="white", alpha=1),
+                )
+
+            plt.vlines(
+                wavelength_list[e_mask],
+                intensity_list[e_mask],
+                max(model_spectrum) * 1.25,
+                linestyles="dashed",
+                lw=0.5,
+                color="grey",
+            )
+
+    plt.plot(w, model_spectrum, lw=1.0, c="k", label="Simulated Arc Spectrum")
+    if vacuum:
+        plt.xlabel("Vacuum Wavelength / A")
+    else:
+        plt.xlabel("Air Wavelength / A")
+    plt.ylabel("NIST intensity")
+    plt.grid()
+    plt.xlim(min(w), max(w))
+    plt.ylim(0, max(model_spectrum) * 1.25)
+    plt.legend()
+    plt.tight_layout()
+    if log:
+        plt.ylim(ymin=min_intensity * 0.75)
+        plt.yscale("log")
+
+    if save_fig:
+
+        fig_type = fig_type.split("+")
+
+        if filename is None:
+
+            filename_output = "rascal_arc"
+
+        else:
+
+            filename_output = filename
+
+        for t in fig_type:
+
+            if t in ["jpg", "png", "svg", "pdf"]:
+
+                plt.savefig(filename_output + "." + t, format=t)
+
+    if display:
+
+        plt.show()
+
+    return fig

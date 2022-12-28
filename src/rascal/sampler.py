@@ -1,9 +1,16 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+Configure the sampler
+
+"""
+
 import bisect
 import itertools
 import logging
 import random
-from functools import reduce
-from operator import mul
+from typing import Union
 
 import numpy as np
 import scipy
@@ -11,26 +18,39 @@ from tqdm.auto import tqdm
 
 
 class Sampler:
-    def __init__(self, x, y, sample_size, n_samples=-1):
-        """
+    """
+    Josh will write something here.
 
+    """
+
+    def __init__(
+        self,
+        x: Union[np.ndarray, list],
+        y: Union[np.ndarray, list],
+        sample_size: int,
+        n_samples: int = -1,
+    ):
+        """
         This is a base class for sampling functions for RANSAC. Users should
-        provide a list of x and y, of equal length. Within rascal, these lists
-        represent pairs (x_i, y_i) corresponding to potential peak and atlas
-        matches. Many-to-one relations e.g. a peak that might map to one of several
-        lines should be specified separately e.g. x=(1,1,2,3), y=(2,3,4,5).
+        provide a list of x and y, of equal length. Within rascal, these
+        lists represent pairs (x_i, y_i) corresponding to potential peak and
+        atlas matches. Many-to-one relations e.g. a peak that might map to
+        one of several lines should be specified separately
+        e.g. x=(1,1,2,3), y=(2,3,4,5).
 
         Parameters
         ----------
-            x: (list(float))
-                input x
-            y: (list(float))
-                input y
-            sample_size: int
-                size of sample to return
-            n_samples: int
-                number of samples to return
+        x: np.ndarray or list of float
+            input x
+        y: np.ndarray or list of float
+            input y
+        sample_size: int
+            size of sample to return
+        n_samples: int
+            number of samples to return
+
         """
+
         self.logger = logging.getLogger("sampler")
 
         self.x = np.array(x).reshape(-1)
@@ -57,17 +77,19 @@ class Sampler:
         self.sample_x_prob = None
         self._setup()
 
-    def _permutations_for_sample(self, x_sample):
-        """Return x/y permutations for a sample
+    def _permutations_for_sample(self, x_sample: Union[list, np.ndarray]):
+        """
+        Return x/y permutations for a sample
 
         Parameters
         ----------
-        sample
+        sample: list of x values
+
+        Returns
+        -------
+        x_sample: np.ndarray
             list of x values
 
-        Yields
-        ------
-            x_sample, y_sample: lists of x and y values
         """
 
         for y_sample in itertools.product(
@@ -89,7 +111,6 @@ class Sampler:
 
     def _setup(self):
         """
-
         Internal setup function, should be defined by sub-classes
 
         """
@@ -98,8 +119,14 @@ class Sampler:
         )
 
     def samples(self):
+        """
+        Josh will write something here.
+
+        """
+
         self.logger.info(
-            f"Generating samples of len {self.sample_size} from pool of {len(self.unique_x)} values"
+            f"Generating samples of len {self.sample_size} from pool of "
+            + f"{len(self.unique_x)} values"
         )
 
         if self.n_samples < 0:
@@ -109,7 +136,8 @@ class Sampler:
                         yield x
         else:
 
-            # Sample from the iterator since we know the max number of permutations
+            # Sample from the iterator since we know the max number of
+            # permutations
             _choices = random.sample(
                 range(self.maximum_samples), self.n_samples
             )
@@ -126,26 +154,34 @@ class Sampler:
 
     def __iter__(self):
         """
-
         Obtain the next sample. For non-random samplers, this is a
         lazy function.
 
-        Yields
-        ------
-            sample: tuple, tuple
-                sample of x and y values
+        Returns
+        -------
+        sample: tuple, tuple
+            sample of x and y values
         """
+
         yield from self.samples()
 
 
 class UniformRandomSampler(Sampler):
+    """
+    Josh will write something here.
+
+    """
+
     def get_sample(self):
-        """Simple random sample from population
+        """
+        Simple random sample from population
 
         Yields
         ------
             x_hat, y_hat: sample
+
         """
+
         resample = True
         retries = 5
 
@@ -199,13 +235,18 @@ class UniformRandomSampler(Sampler):
                     resample = False
 
     def samples(self):
+        """
+        Josh will write something here.
+
+        """
 
         # All unique variations of x with desired sample size
         if self.n_samples > 0:
             self.logger.info(
-                f"Generating {self.n_samples} samples of length {self.sample_size}"
+                f"Generating {self.n_samples} samples of length "
+                + f"{self.sample_size}."
             )
-            for i in range(self.n_samples):
+            for _ in range(self.n_samples):
                 yield from self.get_sample()
 
         # Brute force
@@ -215,7 +256,21 @@ class UniformRandomSampler(Sampler):
 
 
 class WeightedRandomSampler(UniformRandomSampler):
-    def _setup(self, max_bins=10):
+    """
+    Josh will write something here.
+
+    """
+
+    def _setup(self, max_bins: int = 10):
+        """
+        Josh will write something here.
+
+        Parameters
+        ----------
+        max_bins: int
+            ???
+
+        """
 
         n_bins = min(max_bins, len(self.unique_x))
         hist, bin_edges = np.histogram(self.unique_x, bins=n_bins)

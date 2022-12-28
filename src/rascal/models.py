@@ -1,18 +1,36 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+Model functions for spectral fitting
+
+"""
+
 import copy
+from typing import Union
 
 import numpy as np
 import scipy.optimize
 
-"""
-Model functions for spectral fitting
-"""
 
-
-def polynomial(a, degree=3):
+def polynomial(a: Union[list, np.ndarray], degree: int = 3):
     """
     Returns a lambda function which computes an nth order polynormal:
 
     f(x, a) = sum_i (a[degree-i] * x**i )
+
+    Parameters
+    ----------
+    a: list
+        Polynomial coefficients
+    degree: int
+        Polynomial degree
+
+    Returns
+    -------
+    poly: callable function
+        Polynomial function
+
     """
 
     assert len(a) == degree + 1
@@ -28,7 +46,12 @@ def polynomial(a, degree=3):
     return poly
 
 
-def poly_cost_function(a, x, y, degree):
+def poly_cost_function(
+    a: Union[list, np.ndarray],
+    x: Union[list, np.ndarray],
+    y: Union[list, np.ndarray],
+    degree: int,
+):
     """
     Polynomial cost function. Returns the absolute
     difference between the target value and
@@ -51,14 +74,24 @@ def poly_cost_function(a, x, y, degree):
         y - f(x)
 
     """
+
     f = polynomial(a, degree)
     return y - f(x)
 
 
 def normalise_input(x, y):
     """
-    Transforms inputs to have unit variance
+    Transforms inputs to have unit variance.
+
+    Parameters
+    ----------
+    x: list
+        list of values
+    y: list
+        list of values
+
     """
+
     x_scale = x.std()
     y_scale = y.std()
 
@@ -122,19 +155,3 @@ def robust_polyfit(x, y, degree=3, x0=None):
         p[i] /= x.std() ** (degree - i)
 
     return p[::-1]
-
-
-# What is this for?
-"""
-def pprint_coefficients(coeffs):
-    expr = "{} ".format(round(coeffs[0], 3))
-
-    if len(coeffs) > 1:
-        for i, c in enumerate(coeffs[1:]):
-            if i == 0:
-                expr += "+ {}*x".format(round(c, 3))
-            else:
-                expr += "+ {}*x^{}".format(round(c, 3), i + 1)
-
-    return expr
-"""

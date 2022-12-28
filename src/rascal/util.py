@@ -1,15 +1,21 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+Some uncategorised utility functions.
+
+"""
+
 import os
 from collections import defaultdict
+from typing import Union
 
 import numpy as np
 import pkg_resources
-from matplotlib import pyplot as plt
-from numpy import exp
-from scipy import signal
 from scipy.optimize import curve_fit
 
 
-def get_vapour_pressure(temperature):
+def get_vapour_pressure(temperature: float):
     """
     Appendix A.I of https://emtoolbox.nist.gov/Wavelength/Documentation.asp
 
@@ -42,7 +48,9 @@ def get_vapour_pressure(temperature):
     return vapour_pressure
 
 
-def get_vapour_partial_pressure(relative_humidity, vapour_pressure):
+def get_vapour_partial_pressure(
+    relative_humidity: float, vapour_pressure: float
+):
     """
     Appendix A.II of https://emtoolbox.nist.gov/Wavelength/Documentation.asp
 
@@ -64,7 +72,10 @@ def get_vapour_partial_pressure(relative_humidity, vapour_pressure):
 
 
 def edlen_refraction(
-    wavelengths, temperature, pressure, vapour_partial_pressure
+    wavelengths: float,
+    temperature: float,
+    pressure: float,
+    vapour_partial_pressure: float,
 ):
     """
     Appendix A.IV of https://emtoolbox.nist.gov/Wavelength/Documentation.asp
@@ -109,7 +120,10 @@ def edlen_refraction(
 
 
 def vacuum_to_air_wavelength(
-    wavelengths, temperature=273.15, pressure=101325, relative_humidity=0
+    wavelengths: Union[float, np.ndarray],
+    temperature: float = 273.15,
+    pressure: float = 101325.0,
+    relative_humidity: float = 0.0,
 ):
     """
 
@@ -154,7 +168,10 @@ def vacuum_to_air_wavelength(
 
 
 def air_to_vacuum_wavelength(
-    wavelengths, temperature=273.15, pressure=101325, relative_humidity=0
+    wavelengths: Union[float, np.ndarray],
+    temperature: float = 273.15,
+    pressure: float = 101325.0,
+    relative_humidity: float = 0.0,
 ):
     """
 
@@ -198,7 +215,11 @@ def air_to_vacuum_wavelength(
     )
 
 
-def filter_wavelengths(lines, min_atlas_wavelength, max_atlas_wavelength):
+def filter_wavelengths(
+    lines: Union[list, np.ndarray],
+    min_atlas_wavelength: float,
+    max_atlas_wavelength: float,
+):
     """
     Filters a wavelength list to a minimum and maximum range.
 
@@ -231,7 +252,7 @@ def filter_wavelengths(lines, min_atlas_wavelength, max_atlas_wavelength):
     return lines[index][wavelength_mask]
 
 
-def filter_distance(wavelengths, min_distance=0):
+def filter_distance(wavelengths: float, min_distance: float = 0.0):
     """
     Filters a wavelength list by a distance threshold.
 
@@ -265,7 +286,11 @@ def filter_distance(wavelengths, min_distance=0):
     return distance_mask
 
 
-def filter_intensity(elements, lines, min_intensity=None):
+def filter_intensity(
+    elements: Union[list, np.ndarray],
+    lines: Union[list, np.ndarray],
+    min_intensity: float = None,
+):
     """
     Filters a line list by an intensity threshold
 
@@ -303,9 +328,9 @@ def filter_intensity(elements, lines, min_intensity=None):
     elif isinstance(min_intensity, (list, np.ndarray)):
 
         assert len(min_intensity) == len(elements), (
-            "min_intensity has to be in, float of list/array "
-            "the same size as the elements. min_intensity is {}"
-            "and elements is {}.".format(min_intensity, elements)
+            "min_intensity has to be in, float of list/array the same "
+            + f"size as the elements. min_intensity is {min_intensity} and "
+            + f"elements is {elements}."
         )
 
         min_intensity_dict = {}
@@ -317,9 +342,9 @@ def filter_intensity(elements, lines, min_intensity=None):
     else:
 
         raise ValueError(
-            "min_intensity has to be in, float of list/array "
-            "the same size as the elements. min_intensity is {}"
-            "and elements is {}.".format(min_intensity, elements)
+            "min_intensity has to be in, float of list/array the same "
+            + f"size as the elements. min_intensity is {min_intensity} and "
+            + f"elements is {elements}."
         )
 
     out = []
@@ -338,16 +363,16 @@ def filter_intensity(elements, lines, min_intensity=None):
 
 def load_calibration_lines(
     elements=[],
-    linelist="nist",
-    min_atlas_wavelength=3000.0,
-    max_atlas_wavelength=15000.0,
-    min_intensity=5.0,
-    min_distance=0.0,
-    brightest_n_lines=None,
-    vacuum=False,
-    pressure=101325.0,
-    temperature=273.15,
-    relative_humidity=0.0,
+    linelist: str = "nist",
+    min_atlas_wavelength: float = 3000.0,
+    max_atlas_wavelength: float = 15000.0,
+    min_intensity: float = 5.0,
+    min_distance: float = 0.0,
+    brightest_n_lines: int = None,
+    vacuum: bool = False,
+    pressure: float = 101325.0,
+    temperature: float = 273.15,
+    relative_humidity: float = 0.0,
 ):
     """
     Get calibration lines from the standard NIST atlas to screen.
@@ -416,7 +441,7 @@ def load_calibration_lines(
             lines = np.loadtxt(linelist, delimiter=",", dtype=">U12")
         else:
             raise ValueError(
-                "Unknown string is provided as linelist: {}.".format(linelist)
+                "Unknown string is provided as linelist: {linelist}."
             )
     else:
         raise ValueError("Please provide a valid format of line list.")
@@ -477,17 +502,17 @@ def load_calibration_lines(
 
 
 def print_calibration_lines(
-    elements=[],
-    linelist="nist",
-    min_atlas_wavelength=3000.0,
-    max_atlas_wavelength=15000.0,
-    min_intensity=5.0,
-    min_distance=0.0,
-    brightest_n_lines=None,
-    vacuum=False,
-    pressure=101325.0,
-    temperature=273.15,
-    relative_humidity=0.0,
+    elements: Union[list, np.ndarray] = [],
+    linelist: str = "nist",
+    min_atlas_wavelength: float = 3000.0,
+    max_atlas_wavelength: float = 15000.0,
+    min_intensity: float = 5.0,
+    min_distance: float = 0.0,
+    brightest_n_lines: int = None,
+    vacuum: bool = False,
+    pressure: float = 101325.0,
+    temperature: float = 273.15,
+    relative_humidity: float = 0.0,
 ):
     """
     Print calibration lines from the standard NIST atlas to screen.
@@ -547,220 +572,23 @@ def print_calibration_lines(
     )
 
     output = ""
-    for e, l, i in zip(elements, lines, intensities):
+    for element, line, intensity in zip(elements, lines, intensities):
 
-        output += "Element: {} at {} Angstrom with intensity {}.{}".format(
-            e, l, i, os.linesep
+        output += (
+            f"Element: {element} at {line} Angstrom with intensity "
+            + f"{intensity}.{os.linesep}"
         )
 
     print(output)
 
 
-def plot_calibration_lines(
-    elements=[],
-    linelist="nist",
-    min_atlas_wavelength=3000.0,
-    max_atlas_wavelength=15000.0,
-    min_intensity=5.0,
-    min_distance=0.0,
-    brightest_n_lines=None,
-    pixel_scale=1.0,
-    vacuum=False,
-    pressure=101325.0,
-    temperature=273.15,
-    relative_humidity=0.0,
-    label=False,
-    log=False,
-    save_fig=False,
-    fig_type="png",
-    filename=None,
-    display=True,
-    fig_kwarg={"figsize": (12, 8)},
-):
-    """
-    Plot the expected arc spectrum.
-
-    Parameters
-    ----------
-    elements: list
-        List of short element names, e.g. He as per NIST
-    linelist: str
-        Either 'nist' to use the default lines or path to a linelist file.
-    min_atlas_wavelength: int
-        Minimum wavelength to search, Angstrom
-    max_atlas_wavelength: int
-        Maximum wavelength to search, Angstrom
-    min_intensity: int
-        Minimum intensity to search, per NIST
-    min_distance: int
-        All ines within this distance from other lines are treated
-        as unresolved, all of them get removed from the list.
-    brightest_n_lines: int
-        Only return the n brightest lines
-    vacuum: bool
-        Return vacuum wavelengths
-    pressure: float
-        Atmospheric pressure, Pascal
-    temperature: float
-        Temperature in Kelvin, default room temp
-    relative_humidity: float
-        Relative humidity, percent
-    log: bool
-        Plot intensities in log scale
-    save_fig: boolean (default: False)
-        Save an image if set to True. matplotlib uses the pyplot.save_fig()
-        while the plotly uses the pio.write_html() or pio.write_image().
-        The support format types should be provided in fig_type.
-    fig_type: string (default: 'png')
-        Image type to be saved, choose from:
-        jpg, png, svg, pdf and iframe. Delimiter is '+'.
-    filename: string (default: None)
-        Provide a filename or full path. If the extension is not provided
-        it is defaulted to png.
-    display: boolean (Default: False)
-        Set to True to display disgnostic plot.
-
-    Returns
-    -------
-    fig: matplotlib figure object
-
-    """
-
-    # the min_intensity and min_distance are set to 0.0 because the
-    # simulated spectrum would contain them. These arguments only
-    # affect the labelling.
-    element_list, wavelength_list, intensity_list = load_calibration_lines(
-        elements=elements,
-        linelist=linelist,
-        min_atlas_wavelength=min_atlas_wavelength,
-        max_atlas_wavelength=max_atlas_wavelength,
-        min_intensity=0.0,
-        min_distance=0.0,
-        brightest_n_lines=brightest_n_lines,
-        vacuum=vacuum,
-        pressure=pressure,
-        temperature=temperature,
-        relative_humidity=relative_humidity,
-    )
-
-    # Nyquist sampling rate (2.5) for CCD at seeing of 1 arcsec
-    sigma = pixel_scale * 2.5 * 1.0
-    x = np.arange(-100, 100.001, 0.001)
-    gaussian = gauss(x, a=1.0, x0=0.0, sigma=sigma)
-
-    # Generate the equally spaced-wavelength array, and the
-    # corresponding intensity
-    w = np.around(
-        np.arange(min_atlas_wavelength, max_atlas_wavelength + 0.001, 0.001),
-        decimals=3,
-    ).astype("float64")
-    i = np.zeros_like(w)
-
-    for e in elements:
-        i[
-            np.isin(
-                w, np.around(wavelength_list[element_list == e], decimals=3)
-            )
-        ] += intensity_list[element_list == e]
-    # Convolve to simulate the arc spectrum
-    model_spectrum = signal.convolve(i, gaussian, mode="same")
-
-    # now clean up by min_intensity and min_distance
-    intensity_mask = filter_intensity(
-        elements,
-        np.column_stack((element_list, wavelength_list, intensity_list)),
-        min_intensity=min_intensity,
-    )
-    wavelength_list = wavelength_list[intensity_mask]
-    intensity_list = intensity_list[intensity_mask]
-    element_list = element_list[intensity_mask]
-
-    distance_mask = filter_distance(wavelength_list, min_distance=min_distance)
-    wavelength_list = wavelength_list[distance_mask]
-    intensity_list = intensity_list[distance_mask]
-    element_list = element_list[distance_mask]
-
-    fig = plt.figure(**fig_kwarg)
-
-    for j, e in enumerate(elements):
-        e_mask = element_list == e
-        markerline, stemline, baseline = plt.stem(
-            wavelength_list[e_mask],
-            intensity_list[e_mask],
-            label=e,
-            linefmt="C{}-".format(j),
-        )
-        plt.setp(stemline, linewidth=2.0)
-        plt.setp(markerline, markersize=2.5, color="C{}".format(j))
-
-        if label:
-
-            for _w in wavelength_list[e_mask]:
-
-                plt.text(
-                    _w,
-                    max(model_spectrum) * 1.05,
-                    s="{}: {:1.2f}".format(e, _w),
-                    rotation=90,
-                    bbox=dict(facecolor="white", alpha=1),
-                )
-
-            plt.vlines(
-                wavelength_list[e_mask],
-                intensity_list[e_mask],
-                max(model_spectrum) * 1.25,
-                linestyles="dashed",
-                lw=0.5,
-                color="grey",
-            )
-
-    plt.plot(w, model_spectrum, lw=1.0, c="k", label="Simulated Arc Spectrum")
-    if vacuum:
-        plt.xlabel("Vacuum Wavelength / A")
-    else:
-        plt.xlabel("Air Wavelength / A")
-    plt.ylabel("NIST intensity")
-    plt.grid()
-    plt.xlim(min(w), max(w))
-    plt.ylim(0, max(model_spectrum) * 1.25)
-    plt.legend()
-    plt.tight_layout()
-    if log:
-        plt.ylim(ymin=min_intensity * 0.75)
-        plt.yscale("log")
-
-    if save_fig:
-
-        fig_type = fig_type.split("+")
-
-        if filename is None:
-
-            filename_output = "rascal_arc"
-
-        else:
-
-            filename_output = filename
-
-        for t in fig_type:
-
-            if t in ["jpg", "png", "svg", "pdf"]:
-
-                plt.savefig(filename_output + "." + t, format=t)
-
-    if display:
-
-        plt.show()
-
-    return fig
-
-
-def gauss(x, a, x0, sigma):
+def gauss(x: Union[float, np.ndarray], a: float, x0: float, sigma: float):
     """
     1D Gaussian
 
     Parameters
     ----------
-    x:
+    x: float, np.ndarray
         value or values to evaluate the Gaussian at
     a: float
         Magnitude
@@ -775,10 +603,14 @@ def gauss(x, a, x0, sigma):
         The Gaussian function evaluated at provided x
     """
 
-    return a * exp(-((x - x0) ** 2) / (2 * sigma**2 + 1e-9))
+    return a * np.exp(-((x - x0) ** 2) / (2 * sigma**2 + 1e-16))
 
 
-def refine_peaks(spectrum, peaks, window_width=10, distance=None):
+def refine_peaks(
+    spectrum: Union[list, np.ndarray],
+    peaks: Union[list, np.ndarray],
+    window_width: float = 10.0,
+):
     """
     Refine peak locations in a spectrum from a set of initial estimates.
 
@@ -857,7 +689,7 @@ def refine_peaks(spectrum, peaks, window_width=10, distance=None):
     return refined_peaks[mask & ~distance_mask]
 
 
-def _derivative(p):
+def _derivative(p: Union[list, np.ndarray]):
     """
     Compute the derivative of a polynomial function.
 
@@ -879,7 +711,7 @@ def _derivative(p):
     return derv
 
 
-def get_duplicate_indices(x):
+def get_duplicate_indices(x: Union[list, np.ndarray]):
     """
     Return the duplicate indices of the input list, x
 
@@ -896,8 +728,8 @@ def get_duplicate_indices(x):
 
     dic = defaultdict(list)
 
-    for idx, el in enumerate(x):
-        dic[tuple(el)].append(idx)
+    for idx, element in enumerate(x):
+        dic[tuple(element)].append(idx)
 
     indices = []
     for key in dic:
@@ -907,7 +739,7 @@ def get_duplicate_indices(x):
     return indices
 
 
-def _clean_matches(x, user_lines=[]):
+def _clean_matches(x: list, user_lines: list = []):
     """
     Clean a list of atlas match groups given the following
     constraints:
@@ -937,8 +769,8 @@ def _clean_matches(x, user_lines=[]):
     for value in user_lines:
         val_idx = -1
         count = 0
-        for idx, el in enumerate(x):
-            if value in el:
+        for idx, element in enumerate(x):
+            if value in element:
                 if count > 0:
                     count = 0
                     break
@@ -957,7 +789,7 @@ def _clean_matches(x, user_lines=[]):
     return [set(i) for i in x]
 
 
-def _make_unique_permutation(x, empty_val=-1):
+def _make_unique_permutation(x: list, empty_val: Union[int, float] = -1):
     """
     Return all permutations of the list of inputs, subject
     to the constraint that all permutations only contain

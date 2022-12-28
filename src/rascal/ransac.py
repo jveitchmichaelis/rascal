@@ -1,5 +1,14 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+Configure the ransac for the calibrator
+
+"""
+
 import copy
 import logging
+from typing import Union
 
 import numpy as np
 from dotmap import DotMap
@@ -9,12 +18,6 @@ from tqdm.auto import tqdm
 from . import models
 from .sampler import UniformRandomSampler, WeightedRandomSampler
 from .util import _derivative
-
-"""
-
-Ransac_properties
-
-"""
 
 _default_config = {
     "sample_size": 5,
@@ -35,7 +38,24 @@ _default_config = {
 
 
 class SolveResult:
-    def __init__(self, fit_coeffs=None, cost=1e9, x=[], y=[], residual=[]):
+    """
+    Josh will write something here.
+
+    """
+
+    def __init__(
+        self,
+        fit_coeffs: Union[list, np.ndarray] = [],
+        cost: float = 1e9,
+        x: Union[list, np.ndarray] = [],
+        y: Union[list, np.ndarray] = [],
+        residual: Union[list, np.ndarray] = [],
+    ):
+        """
+        Josh will write something here.
+
+        """
+
         self.fit_coeffs = fit_coeffs
         self.x = x
         self.y = y
@@ -47,7 +67,21 @@ class SolveResult:
 
 
 class RansacSolver:
-    def __init__(self, x, y, config=None):
+    """
+    Josh will write something here.
+
+    """
+
+    def __init__(
+        self,
+        x: Union[list, np.ndarray],
+        y: Union[list, np.ndarray],
+        config: dict = None,
+    ):
+        """
+        Josh will write something here.
+
+        """
 
         if config is None:
             config = _default_config
@@ -60,7 +94,17 @@ class RansacSolver:
 
         self.setup()
 
+        self.should_stop = False
+
+        # Reset/init best params
+        self.valid_solution = False
+        self.best_result = SolveResult()
+
     def setup(self):
+        """
+        Josh will write something here.
+
+        """
 
         self.logger = logging.getLogger("ransac")
 
@@ -74,7 +118,7 @@ class RansacSolver:
         self._fit_valid = self.config.fit_valid_fn
 
         if self.config == "weight_samples":
-            self.logger.debug(f"Using weighted random sampler")
+            self.logger.debug("Using weighted random sampler")
             self.sampler = WeightedRandomSampler(
                 self.x,
                 self.y,
@@ -82,7 +126,7 @@ class RansacSolver:
                 n_samples=self.config.max_tries,
             )
         else:
-            self.logger.debug(f"Using uniform random sampler")
+            self.logger.debug("Using uniform random sampler")
             self.sampler = UniformRandomSampler(
                 self.x,
                 self.y,
@@ -92,12 +136,13 @@ class RansacSolver:
 
         if self.config.filter_close:
             self.logger.debug(
-                f"Filtering close x-values with tolerance {self.config.fit_tolerance}"
+                "Filtering close x-values with tolerance "
+                + f"{self.config.fit_tolerance}"
             )
             self._filter_close()
 
         if self.config.hough is not None:
-            self.logger.debug(f"Using hough weighting")
+            self.logger.debug("Using hough weighting")
             ht = self.config.hough
 
             xbin_size = (ht.xedges[1] - ht.xedges[0]) / 2.0
@@ -115,6 +160,10 @@ class RansacSolver:
             self.twoditp = None
 
     def _filter_close(self):
+        """
+        Josh will write something here.
+
+        """
 
         unique_y = np.unique(self.y)
 
@@ -127,12 +176,10 @@ class RansacSolver:
         self.x = self.x[separation_mask].flatten()
 
     def solve(self):
+        """
+        Josh will write something here.
 
-        self.should_stop = False
-
-        # Reset/init best params
-        self.valid_solution = False
-        self.best_result = SolveResult()
+        """
 
         sample_iter = self.sampler
 
@@ -169,23 +216,22 @@ class RansacSolver:
             if self.config.progress:
                 if self.valid_solution:
                     sample_iter.set_description(
-                        "Most inliers: {:d}, "
-                        "best error: {:1.4f}".format(
-                            len(self.best_result.x),
-                            self.best_result.rms_residual,
-                        )
+                        f"Most inliers: {len(self.best_result.x):d} "
+                        + f"best error: {self.best_result.rms_residual:1.4f}"
                     )
 
         if self.valid_solution:
-            self.logger.info(
-                "Found {} inliers".format(len(self.best_result.x))
-            )
+            self.logger.info(f"Found {len(self.best_result.x)} inliers")
 
         return self.valid_solution
 
-    def _match_bijective(self, y_for_x, x, fit_coeff):
+    def _match_bijective(
+        self,
+        y_for_x: Union[list, np.ndarray],
+        x: Union[list, np.ndarray],
+        fit_coeff: Union[list, np.ndarray],
+    ):
         """
-
         Internal function used to return a list of inliers with a
         one-to-one relationship between peaks and wavelengths. This
         is critical as often we have several potential candidate lines
@@ -196,12 +242,10 @@ class RansacSolver:
 
         parameters
         ----------
-        candidates: dict
-            match candidates, internal to ransac
-
-        peaks: list
+        y_for_x: list, np.ndarray
             list of peaks [px]
-
+        x: list, np.ndarray
+            list of wavelengths
         fit_coeff: list
             polynomial fit coefficients
 
@@ -250,12 +294,35 @@ class RansacSolver:
 
         return err, matched_x, matched_y
 
-    def _fit_sample(self, x_hat, y_hat):
+    def _fit_sample(
+        self, x_hat: Union[list, np.ndarray], y_hat: Union[list, np.ndarray]
+    ):
+        """
+        Fit for a polynomial.
+
+        Parameters
+        ----------
+        x_hat: list, np.ndarray
+            abscissa values
+        y_hat: list, np.ndarray
+            ordinate values
+
+        """
+
         # Try to fit the data.
         # This doesn't need to be robust, it's an exact fit.
         return self.polyfit(x_hat, y_hat, self.config.fit_deg)
 
-    def _cost(self, result):
+    def _cost(self, result: SolveResult):
+        """
+        Josh will write something here.
+
+        Parameters
+        ----------
+        results: SolveResult
+            ?
+
+        """
 
         # modified cost function weighted by the Hough space density
         if (self.config.hough is not None) & (self.twoditp is not None):
@@ -280,17 +347,28 @@ class RansacSolver:
             ] = self.config.fit_tolerance
 
             cost = (
-                sum(result.residual)
+                (sum(result.residual) + 1e-16)
                 / (len(result.residual) - len(result.fit_coeffs) + 1)
                 / (weight + 1e-16)
             )
         else:
 
-            cost = sum(result.residual > self.config.fit_tolerance) + 1e-16
+            cost = 1.0 / (
+                sum(result.residual < self.config.fit_tolerance) + 1e-16
+            )
 
         return cost
 
-    def _update_best(self, result):
+    def _update_best(self, result: SolveResult):
+        """
+        Josh will write something here.
+
+        Parameters
+        ----------
+        results: SolveResult
+            ?
+
+        """
 
         if result.cost <= self.best_result.cost:
 
@@ -336,11 +414,9 @@ class RansacSolver:
                     and rms_residual > self.best_result.rms_residual
                 ):
                     self.logger.info(
-                        "Match has same number of inliers, "
-                        "but fit error is worse "
-                        "({:1.2f} > {:1.2f}) %.".format(
-                            rms_residual, self.best_result.rms_residual
-                        )
+                        "Match has same number of inliers, but fit error is "
+                        + f"worse ({rms_residual} > "
+                        + f"{self.best_result.rms_residual})."
                     )
                     return
 

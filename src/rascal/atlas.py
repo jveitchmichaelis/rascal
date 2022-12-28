@@ -1,6 +1,15 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+Atlas class for handling arc lines.
+
+"""
+
 import os
 import time
 from collections import Counter
+from typing import Union
 
 import numpy as np
 import yaml
@@ -9,7 +18,18 @@ from .util import load_calibration_lines, vacuum_to_air_wavelength
 
 
 class AtlasLine:
-    def __init__(self, wavelength, element=None, intensity=None, source=None):
+    """
+    For storing information of an atlas line
+
+    """
+
+    def __init__(
+        self,
+        wavelength: float,
+        element: str = None,
+        intensity: str = None,
+        source: str = None,
+    ):
         self.wavelength = wavelength
         self.element = element
         self.intensity = intensity
@@ -17,20 +37,25 @@ class AtlasLine:
 
 
 class Atlas:
+    """
+    The class that handles the set of atlas lines for the calibrator.
+
+    """
+
     def __init__(
         self,
-        elements=None,
-        linelist="nist",
-        min_atlas_wavelength=3000.0,
-        max_atlas_wavelength=5000.0,
-        range_tolerance=500,
-        min_intensity=10.0,
-        min_distance=10.0,
-        brightest_n_lines=None,
-        vacuum=False,
-        pressure=101325.0,
-        temperature=273.15,
-        relative_humidity=0.0,
+        elements: Union[str, list] = None,
+        linelist: str = "nist",
+        min_atlas_wavelength: float = 3000.0,
+        max_atlas_wavelength: float = 5000.0,
+        range_tolerance: float = 500.0,
+        min_intensity: float = 10.0,
+        min_distance: float = 10.0,
+        brightest_n_lines: int = 100,
+        vacuum: bool = False,
+        pressure: float = 101325.0,
+        temperature: float = 273.15,
+        relative_humidity: float = 0.0,
     ):
         """
         Creates an atlas of arc lines.
@@ -96,23 +121,23 @@ class Atlas:
         self.temperature = temperature
         self.relative_humidity = relative_humidity
 
-        if elements is not None:
-            self.elements = elements
-            self.add(
-                elements=elements,
-                linelist=linelist,
-                min_atlas_wavelength=min_atlas_wavelength,
-                max_atlas_wavelength=max_atlas_wavelength,
-                min_intensity=min_intensity,
-                min_distance=min_distance,
-                brightest_n_lines=brightest_n_lines,
-                vacuum=vacuum,
-                pressure=pressure,
-                temperature=temperature,
-                relative_humidity=relative_humidity,
-            )
+        self.add(
+            elements=elements,
+            linelist=linelist,
+            min_atlas_wavelength=min_atlas_wavelength,
+            max_atlas_wavelength=max_atlas_wavelength,
+            min_intensity=min_intensity,
+            min_distance=min_distance,
+            brightest_n_lines=brightest_n_lines,
+            vacuum=vacuum,
+            pressure=pressure,
+            temperature=temperature,
+            relative_humidity=relative_humidity,
+        )
 
-    def load_config(self, yaml_config, y_type="filepath"):
+    def load_config(
+        self, yaml_config: Union[str, dict], y_type: str = "filepath"
+    ):
         """
         Load a yaml configuration file to populate an Atlas object.
 
@@ -129,7 +154,7 @@ class Atlas:
         # Load from file
         if y_type == "filepath":
 
-            with open(yaml_config, "r") as stream:
+            with open(yaml_config, "r", encoding="ascii") as stream:
 
                 config = yaml.safe_load(stream)
 
@@ -141,8 +166,8 @@ class Atlas:
         else:
 
             raise ValueError(
-                "Unknown y_type: {}. Please choose from "
-                "'filepath' or 'stream'".format(y_type)
+                f"Unknown y_type: {y_type}. Please choose from "
+                "'filepath' or 'stream'"
             )
 
         # This loads the Atlas setting to get lines by using
@@ -180,11 +205,20 @@ class Atlas:
         else:
 
             raise ValueError(
-                "Unknown linelist type: {}. Please choose from "
-                "'nist' or 'user'.".format(config["linelist"])
+                f"Unknown linelist type: {config['linelist']}. Please choose "
+                "from 'nist' or 'user'."
             )
 
-    def save_config(self, filename):
+    def save_config(self, filename: str):
+        """
+        Save the atlas config as a YAML file.
+
+        Parameters
+        ----------
+        filename : str
+            Path to save the config file.
+
+        """
 
         output_data = {
             "linelist": str(self.linelist),
@@ -203,23 +237,23 @@ class Atlas:
             "intensity_list": list(self.get_intensities()),
         }
 
-        with open(filename, "w+") as f:
+        with open(filename, "w+", encoding="ascii") as config_file:
 
-            yaml.dump(output_data, f, default_flow_style=False)
+            yaml.dump(output_data, config_file, default_flow_style=False)
 
     def add(
         self,
-        elements=None,
-        linelist="nist",
-        min_atlas_wavelength=None,
-        max_atlas_wavelength=None,
-        min_intensity=10.0,
-        min_distance=10.0,
-        brightest_n_lines=1000,
-        vacuum=False,
-        pressure=101325.0,
-        temperature=273.15,
-        relative_humidity=0.0,
+        elements: Union[str, list] = None,
+        linelist: str = "nist",
+        min_atlas_wavelength: float = None,
+        max_atlas_wavelength: float = None,
+        min_intensity: float = 10.0,
+        min_distance: float = 10.0,
+        brightest_n_lines: int = 100,
+        vacuum: bool = False,
+        pressure: float = 101325.0,
+        temperature: float = 273.15,
+        relative_humidity: float = 0.0,
     ):
         """
         Adds arc lines to the atlas
@@ -281,14 +315,14 @@ class Atlas:
 
             raise ValueError(
                 "min_atlas_wavelength has to be finite or None. "
-                "{} is given.".format(min_atlas_wavelength)
+                + f"{min_atlas_wavelength} is given."
             )
 
         if not np.isfinite(max_atlas_wavelength):
 
             raise ValueError(
                 "max_atlas_wavelength has to be finite or None. "
-                "{} is given.".format(max_atlas_wavelength)
+                + f"{max_atlas_wavelength} is given."
             )
 
         if isinstance(elements, str):
@@ -338,13 +372,13 @@ class Atlas:
 
     def add_user_atlas(
         self,
-        elements,
-        wavelengths,
-        intensities=None,
-        vacuum=False,
-        pressure=101325.0,
-        temperature=273.15,
-        relative_humidity=0.0,
+        elements: Union[str, list],
+        wavelengths: Union[float, list],
+        intensities: Union[float, list] = None,
+        vacuum: bool = False,
+        pressure: float = 101325.0,
+        temperature: float = 273.15,
+        relative_humidity: float = 0.0,
     ):
         """
         Add a single or list of arc lines. Each arc line should have an
@@ -477,7 +511,7 @@ class Atlas:
 
         return source_list
 
-    def summary(self, mode="executive", return_string=False):
+    def summary(self, mode: str = "short", return_string: bool = False):
         """
         Return a summary of the content of the Atlas object. The executive
         mode only return basic info. The full mode list items in details.
@@ -485,15 +519,15 @@ class Atlas:
         Parameters
         ----------
         mode : str
-            Mode of summery, choose from "executive" and "full".
-            (Default: "executive")
+            Mode of summery, choose from "short" and "full".
+            (Default: "short")
         return_string: bool
             Set to True to return the output string.
 
         """
 
         n_lines = len(self.atlas_lines)
-        output = "Number of lines in Atlas: {}.{}".format(n_lines, os.linesep)
+        output = f"Number of lines in Atlas: {n_lines}.{os.linesep}"
 
         lines = np.array(self.get_lines())
         elements = np.array(self.get_elements())
@@ -510,11 +544,12 @@ class Atlas:
 
         for i in elements_count:
 
-            output += "--> Number of {} lines: {}.{}".format(
-                i, elements_count[i], os.linesep
+            output += (
+                f"--> Number of {i} lines: {elements_count[i]}."
+                + "{os.linesep}"
             )
 
-        if mode == "executive":
+        if mode == "short":
 
             print(output)
 
@@ -523,12 +558,14 @@ class Atlas:
             output += os.linesep
             output2 = ""
             output2_max_width = 0
-            for e, l, i, s in zip(elements, lines, intensities, sources):
+            for element, line, intensity, source in zip(
+                elements, lines, intensities, sources
+            ):
 
                 output2_temp = (
-                    "Element: {} at {} Angstrom with intensity {}. "
-                    "Added from: {}.{}"
-                ).format(e, l, i, s, os.linesep)
+                    f"Element: {element} at {line} Angstrom with intensity "
+                    + f"{intensity}. Added from: {source}.{os.linesep}"
+                )
                 if len(output2_temp) > output2_max_width:
                     output2_max_width = len(output2_temp)
                 output2 += output2_temp
@@ -542,7 +579,7 @@ class Atlas:
 
             return output
 
-    def save_summary(self, mode="full", filename=None):
+    def save_summary(self, mode: str = "full", filename: str = None):
         """
         Save the summary of the Atlas object, see `summary` for more detail.
 
@@ -559,18 +596,19 @@ class Atlas:
 
         if filename is None:
 
-            filename = "atlas_{}_summary_{}.txt".format(
-                mode, time.strftime("%Y%m%d_%H%M%S", time.gmtime())
-            )
+            time_str = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
+            filename = f"atlas_{mode}_summary_{time_str}.txt"
 
         summary = self.summary(mode=mode, return_string=True)
 
-        with open(filename, "w+") as f:
-            f.write(summary)
+        with open(filename, "w+", encoding="ascii") as summary_file:
+            summary_file.write(summary)
 
         return filename
 
-    def remove_atlas_lines_range(self, wavelength, tolerance=10):
+    def remove_atlas_lines_range(
+        self, wavelength: float, tolerance: float = 10.0
+    ):
         """
         Remove arc lines within a certain wavelength range.
 

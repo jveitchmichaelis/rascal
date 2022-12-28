@@ -1,28 +1,53 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+This is for generating synthetic arcs to enable testing.
+
+"""
+
+from typing import Union
+
 import numpy as np
 
 from . import models
 
 
 class SyntheticSpectrum:
+    """
+    Creates a synthetic spectrum generator which, given a suitable model,
+    outputs the expected pixel locations of input wavelengths. This should be
+    mainly for testing.
+
+    """
+
     def __init__(
-        self, coefficients=None, min_wavelength=200.0, max_wavelength=1200.0
+        self,
+        coefficients: Union[list, np.ndarray] = None,
+        min_wavelength: float = 200.0,
+        max_wavelength: float = 1200.0,
     ):
         """
-        Creates a synthetic spectrum generator which, given a suitable model,
-        outputs the expected pixel locations of input wavelengths.  It is
-        expected that this will be used mainly for model testing.
 
         Parameters
         ----------
         coefficients: list
-            coefficients for the model
+            Coefficients for the model
+        min_wavelength: float
+            Minimum wavelength limit
+        max_wavelength: float
+            Maximum wavelength limit
 
         """
+
+        self.min_wavelength = min_wavelength
+        self.max_wavelength = max_wavelength
 
         # Default is approx. range of Silicon
         self.set_wavelength_limit(min_wavelength, max_wavelength)
 
         if coefficients is not None:
+
             self.coefficients = coefficients
             self.set_model(self.coefficients)
 
@@ -31,23 +56,26 @@ class SyntheticSpectrum:
             self.model = None
             self.degree = None
 
-    def set_model(self, coefficients):
+    def set_model(self, coefficients: Union[list, np.ndarray]):
         """
         Set the model to fit
+
+        Parameters
+        ----------
+        coefficients: list, np.ndarray
+            polynomial coefficients, from the lowest to the highest order.
+
         """
 
-        if isinstance(coefficients, (list, np.ndarray)):
+        self.degree = len(coefficients) - 1
+        self.model = models.polynomial(a=coefficients, degree=self.degree)
 
-            self.degree = len(coefficients) - 1
-            self.model = models.polynomial(a=coefficients, degree=self.degree)
-
-        else:
-
-            raise TypeError("Please provide a list or an numpy array.")
-
-    def set_wavelength_limit(self, min_wavelength=None, max_wavelength=None):
+    def set_wavelength_limit(
+        self, min_wavelength: float = None, max_wavelength: float = None
+    ):
         """
         Set a wavelength filter for the 'get_pixels' function.
+
         """
 
         if (
@@ -103,9 +131,10 @@ class SyntheticSpectrum:
                 "the maximum wavelength."
             )
 
-    def get_pixels(self, wavelengths):
+    def get_pixels(self, wavelengths: Union[list, np.ndarray]):
         """
         Returns a list of pixel locations for the wavelengths provided
+
         """
 
         if not isinstance(wavelengths, (list, np.ndarray)):
@@ -125,41 +154,9 @@ class SyntheticSpectrum:
             pixels = (wavelengths - self.coefficients[0]) / self.coefficients[
                 1
             ]
+        # High order polynomials
         else:
-            p = np.poly1d(self.coefficients)
-            pixels = [(p - w).roots for w in wavelengths]
+            _p = np.poly1d(self.coefficients)
+            pixels = [(_p - w).roots for w in wavelengths]
 
         return pixels, wavelengths
-
-
-"""
-class RandomSyntheticSpectrum(SyntheticSpectrum):
-    def __init__(self,
-                 min_wavelength=400,
-                 max_wavelength=800,
-                 dispersion=0.5,
-                 model_type='poly',
-                 degree=5):
-
-        x0 = min_wavelength
-        x1 = dispersion
-        x2 = 0.1 * random.random()
-
-        coefficients = [x0, x1, x2]
-
-        super().__init__(coefficients, model_type, degree)
-
-    def add_atlas(elements, n_lines=30, min_intensity=10, min_distance=10):
-        lines = load_calibration_lines(
-            elements,
-            min_atlas_wavelength=self.min_wavelength,
-            max_atlas_wavelength=self.max_wavelength,
-            min_intensity=min_intensity,
-            min_distance=min_distance,
-            vacuum=False,
-            pressure=101325.,
-            temperature=273.15,
-            relative_humidity=0.)
-
-        self.lines = random.choose(lines, n_lines)
-"""
