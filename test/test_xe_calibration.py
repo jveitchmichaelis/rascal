@@ -4,6 +4,7 @@ from functools import partialmethod
 
 import numpy as np
 import pkg_resources
+import pytest
 from astropy.io import fits
 from scipy.signal import find_peaks
 
@@ -169,6 +170,7 @@ def test_sprat_calibration():
         assert len(res["fit_coeff"]) == (i + 1)
 
 
+@pytest.mark.timeout(240)
 def test_sprat_calibration_multirun():
 
     logger.info("Test the repeatability of LT/SPRAT Xe calibration.")

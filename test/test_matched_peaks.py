@@ -1,9 +1,6 @@
 import os
-from functools import partialmethod
 
 import numpy as np
-
-# Suppress tqdm output
 import pytest
 from astropy.io import fits
 from scipy.signal import find_peaks
