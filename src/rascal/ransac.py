@@ -33,7 +33,7 @@ _default_config = {
     "fit_deg": 4,
     "use_msac": True,
     "candidate_weighted": True,
-    "sampler": "probabilistic",
+    "sampler": "weighted",
     "progress": False,
     "polyfit_fn": np.polynomial.polynomial.polyfit,
     "polyval_fn": np.polynomial.polynomial.polyval,
@@ -275,7 +275,7 @@ class RansacSolver:
             fit = self.polyval(x_i, fit_coeff)
 
             # Get closest match for this peak
-            errs = np.abs(fit - y_for_x[x_i])
+            errs = (fit - y_for_x[x_i]) ** 2
             idx = np.argmin(errs)
 
             err.append(errs[idx])
@@ -357,15 +357,15 @@ class RansacSolver:
         if self.config.use_msac:
 
             # M-SAC Estimator (Torr and Zisserman, 1996)
-            result.residual[
-                result.residual > self.config.fit_tolerance
-            ] = self.config.fit_tolerance
 
-            cost = (
-                (sum(result.residual) + 1e-16)
-                / (len(result.residual) - len(result.fit_coeffs) + 1)
-                / (weight + 1e-16)
-            )
+            tolerance = 1.96 * result.residual.std()
+
+            result.residual[result.residual > tolerance] = tolerance
+
+            # Remove for now: / (len(result.residual) - len(result.fit_coeffs) + 1)
+            # / (weight + 1e-16)
+
+            cost = sum(result.residual) + 1e-16
         else:
 
             cost = 1.0 / (

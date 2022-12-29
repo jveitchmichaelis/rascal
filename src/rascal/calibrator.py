@@ -1202,7 +1202,7 @@ class Calibrator:
         if sampler is not None:
             self.sampler = sampler
         else:
-            self.sampler = "probabilistic"
+            self.sampler = "weighted"
 
         # Set top_n_candidate
         if top_n_candidate is not None:
