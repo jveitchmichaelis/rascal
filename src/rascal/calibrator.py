@@ -360,7 +360,7 @@ class Calibrator:
             diff = np.abs(predicted - actual)
             mask = diff <= candidate_tolerance
 
-            if sum(mask) == 0:
+            if not np.any(mask):
                 continue
 
             # Match the range_tolerance to 1.1775 s.d. to match the FWHM
