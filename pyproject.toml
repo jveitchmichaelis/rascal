@@ -9,7 +9,7 @@ line-length = 79
 profile = "black"
 
 [tool.pytest.ini_options]
-addopts = "-s -x --timeout 600"
+addopts = "-s -x --timeout 120 --disable-warnings -p no:warnings test"
 testpaths = [
     "test"
 ]
