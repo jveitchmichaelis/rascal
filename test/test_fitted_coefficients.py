@@ -105,7 +105,7 @@ def test_gmos_fit():
     peaks, _ = find_peaks(
         spectrum, height=1000, prominence=500, distance=5, threshold=None
     )
-    peaks = util.refine_peaks(spectrum, peaks, window_width=5)
+    peaks = util.refine_peaks(spectrum, peaks, window_width=3)
     peaks_shifted = rawpix_to_pix_itp(peaks)
 
     # Initialise the calibrator
@@ -119,7 +119,9 @@ def test_gmos_fit():
         min_wavelength=5000.0,
         max_wavelength=9500.0,
     )
-    c.set_ransac_properties(sample_size=8, top_n_candidate=10)
+    c.set_ransac_properties(
+        sample_size=5, top_n_candidate=10, minimum_matches=18
+    )
     # Vacuum wavelengths
     # blend: 5143.21509, 5146.74143
     # something weird near there, so not used: 8008.359, 8016.990
@@ -173,7 +175,18 @@ def test_gmos_fit():
 
     element = ["CuAr"] * len(gmos_atlas_lines)
 
-    atlas = Atlas(range_tolerance=500.0)
+    atlas = Atlas(
+        range_tolerance=500.0,
+        min_intensity=25,
+        min_distance=5,
+        vacuum=True,
+        pressure=61700.0,
+        temperature=276.55,
+        relative_humidity=4.0,
+        min_atlas_wavelength=5000.0,
+        max_atlas_wavelength=9500.0,
+    )
+
     atlas.add_user_atlas(
         elements=element,
         wavelengths=gmos_atlas_lines,
