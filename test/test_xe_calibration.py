@@ -6,14 +6,13 @@ import numpy as np
 import pkg_resources
 import pytest
 from astropy.io import fits
+from rascal import util
+from rascal.atlas import Atlas
+from rascal.calibrator import Calibrator
 from scipy.signal import find_peaks
 
 # Suppress tqdm output
 from tqdm import tqdm
-
-from rascal import util
-from rascal.atlas import Atlas
-from rascal.calibrator import Calibrator
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger()
@@ -58,25 +57,25 @@ wavelengths = [
 ]
 elements = ["Xe"] * len(wavelengths)
 
+# Load the LT SPRAT data
+base_dir = os.path.dirname(__file__)
+spectrum2D = fits.open(
+    os.path.join(
+        base_dir, "..", "examples/data_lt_sprat/v_a_20190516_57_1_0_1.fits"
+    )
+)[0].data
+
+# Collapse into 1D spectrum between row 110 and 120
+spectrum = np.median(spectrum2D[110:120], axis=0)
+
+# Identify the peaks
+peaks, _ = find_peaks(
+    spectrum, height=300, prominence=150, distance=5, threshold=None
+)
+peaks = util.refine_peaks(spectrum, peaks, window_width=5)
+
 
 def run_sprat_calibration(fit_deg):
-
-    # Load the LT SPRAT data
-    base_dir = os.path.dirname(__file__)
-    spectrum2D = fits.open(
-        os.path.join(
-            base_dir, "..", "examples/data_lt_sprat/v_a_20190516_57_1_0_1.fits"
-        )
-    )[0].data
-
-    # Collapse into 1D spectrum between row 110 and 120
-    spectrum = np.median(spectrum2D[110:120], axis=0)
-
-    # Identify the peaks
-    peaks, _ = find_peaks(
-        spectrum, height=300, prominence=150, distance=5, threshold=None
-    )
-    peaks = util.refine_peaks(spectrum, peaks, window_width=5)
 
     # Initialise the calibrator
     c = Calibrator(peaks)
@@ -116,23 +115,6 @@ def run_sprat_calibration(fit_deg):
 
 def test_run_sprat_calibration_with_manual_linelist_file():
 
-    # Load the LT SPRAT data
-    base_dir = os.path.dirname(__file__)
-    spectrum2D = fits.open(
-        os.path.join(
-            base_dir, "..", "examples/data_lt_sprat/v_a_20190516_57_1_0_1.fits"
-        )
-    )[0].data
-
-    # Collapse into 1D spectrum between row 110 and 120
-    spectrum = np.median(spectrum2D[110:120], axis=0)
-
-    # Identify the peaks
-    peaks, _ = find_peaks(
-        spectrum, height=300, prominence=150, distance=5, threshold=None
-    )
-    peaks = util.refine_peaks(spectrum, peaks, window_width=5)
-
     # Initialise the calibrator
     c = Calibrator(peaks)
     a = Atlas()
@@ -158,6 +140,7 @@ def test_run_sprat_calibration_with_manual_linelist_file():
     assert res
 
 
+@pytest.mark.timeout(180)
 def test_sprat_calibration():
 
     logger.info(
