@@ -430,7 +430,7 @@ class Calibrator:
             diff = np.abs(actual - predicted)
             mask = diff < candidate_tolerance
 
-            if np.sum(mask) > 0:
+            if np.any(mask):
 
                 weight = gauss(
                     actual[mask], 1.0, predicted[mask], self.range_tolerance
