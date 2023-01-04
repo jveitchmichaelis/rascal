@@ -7,7 +7,7 @@ num_pix: ~
 effective_pixel: ~
 plotting_library: 'matplotlib'
 seed: ~
-logger: ~
+logger_name: ~
 log_level: 'info'
 hide_progress: false
 

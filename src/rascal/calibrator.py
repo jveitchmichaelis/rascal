@@ -49,7 +49,8 @@ class Calibrator:
 
         """
 
-        self.logger = logging.getLogger()
+        self.logger = logging.getLogger(logger_name)
+        self.logger_name = logger_name
         self.log_level = log_level
 
         self.matplotlib_imported = False
@@ -552,7 +553,7 @@ class Calibrator:
 
         # update logger properties
         self.set_logger(
-            logger_name=config["logger"],
+            logger_name=config["logger_name"],
             log_level=config["log_level"],
         )
 
@@ -729,7 +730,7 @@ class Calibrator:
             "effective_pixel": self.effective_pixel,
             "plotting_library": self.plotting_library,
             "seed": self.seed,
-            "logger": self.logger,
+            "logger_name": self.logger_name,
             "log_level": self.log_level,
             "hide_progress": self.hide_progress,
             "candidate_tolerance": self.candidate_tolerance,
