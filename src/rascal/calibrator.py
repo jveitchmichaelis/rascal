@@ -1438,19 +1438,36 @@ class Calibrator:
 
             max_atlas_wavelength = self.max_wavelength + self.range_tolerance
 
-        new_atlas = Atlas(
-            elements,
-            min_atlas_wavelength=min_atlas_wavelength,
-            max_atlas_wavelength=max_atlas_wavelength,
-            min_intensity=min_intensity,
-            min_distance=min_distance,
-            range_tolerance=self.range_tolerance,
-            vacuum=vacuum,
-            pressure=pressure,
-            temperature=temperature,
-            relative_humidity=relative_humidity,
-        )
-        self.atlas = new_atlas
+        if self.atlas is None:
+
+            new_atlas = Atlas(
+                elements,
+                min_atlas_wavelength=min_atlas_wavelength,
+                max_atlas_wavelength=max_atlas_wavelength,
+                min_intensity=min_intensity,
+                min_distance=min_distance,
+                range_tolerance=self.range_tolerance,
+                vacuum=vacuum,
+                pressure=pressure,
+                temperature=temperature,
+                relative_humidity=relative_humidity,
+            )
+            self.atlas = new_atlas
+
+        else:
+
+            self.atlas.add(
+                elements,
+                min_atlas_wavelength=min_atlas_wavelength,
+                max_atlas_wavelength=max_atlas_wavelength,
+                min_intensity=min_intensity,
+                min_distance=min_distance,
+                vacuum=vacuum,
+                pressure=pressure,
+                temperature=temperature,
+                relative_humidity=relative_humidity,
+            )
+
         self.candidate_tolerance = candidate_tolerance
         self.constrain_poly = constrain_poly
 
