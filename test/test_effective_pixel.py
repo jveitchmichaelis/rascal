@@ -44,7 +44,7 @@ def test_providing_effective_pixel_not_affecting_fit(mock_show):
         range_tolerance=100.0, min_wavelength=100.0, max_wavelength=1300.0
     )
 
-    c.set_ransac_properties(linear=False, minimum_fit_error=1e-12)
+    c.set_ransac_properties(linear=False, minimum_fit_error=1e-14)
 
     # Add our fake lines as the atlas
     a.add_user_atlas(elements=["Test"] * len(waves), wavelengths=waves)
