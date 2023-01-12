@@ -1,3 +1,13 @@
+Version 0.3.9
+-------------
+
+:Date: 12 Jan 2023
+
+* `@cylammarco <https://github.com/cylammarco>`__:
+
+  * Fixed atlas overwriting when provided sequentially
+  * Capping the numpy version to 1.23.X
+
 Version 0.3.8
 -------------
 
@@ -5,7 +15,7 @@ Version 0.3.8
 
 * `@cylammarco <https://github.com/cylammarco>`__:
 
-  * Fix wrong MANIFEST path
+  * Fixed wrong MANIFEST path
 
 Version 0.3.7
 -------------

@@ -23,11 +23,12 @@ More background information can be referred to this [arXiv article](https://ui.a
 
 
 ## Dependencies
-* python >= 3.6
-* numpy
-* scipy
-* pynverse
-* matplotlib
+* python >= 3.7
+* numpy>=1.16,<1.24
+* scipy>=1.3.3
+* pynverse>=0.1.4
+* matplotlib>=3.0.3
+* tqdm>=4.48.0
 
 ## Optional Dependencies
 * [plotly](https://github.com/plotly/plotly.py) >= 4.0
