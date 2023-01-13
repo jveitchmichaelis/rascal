@@ -5,12 +5,11 @@ from itertools import combinations
 
 import numpy as np
 import pytest
+from rascal.atlas import Atlas
+from rascal.calibrator import Calibrator
 
 # Suppress tqdm output
 from tqdm import tqdm
-
-from rascal.atlas import Atlas
-from rascal.calibrator import Calibrator
 
 tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 

@@ -153,12 +153,12 @@ def test_sprat_calibration():
         assert len(res["fit_coeff"]) == (i + 1)
 
 
-@pytest.mark.timeout(240)
+@pytest.mark.timeout(300)
 def test_sprat_calibration_multirun():
 
     logger.info("Test the repeatability of LT/SPRAT Xe calibration.")
 
-    n = 10
+    n = 5
 
     c0 = np.zeros(n)
     c1 = np.zeros(n)

@@ -15,6 +15,7 @@ from typing import Union
 
 import numpy as np
 import yaml
+from scipy import interpolate
 from scipy.optimize import minimize
 from scipy.spatial import Delaunay
 
@@ -73,6 +74,7 @@ class Calibrator:
 
         self.peaks = None
         self.spectrum = None
+        self.peaks_effective = None
         self.seed = None
         self.hide_progress = None
         self.candidate_tolerance = None
@@ -206,7 +208,9 @@ class Calibrator:
 
         pairs = [
             pair
-            for pair in itertools.product(self.peaks, self.atlas.get_lines())
+            for pair in itertools.product(
+                self.peaks_effective, self.atlas.get_lines()
+            )
         ]
 
         if self.constrain_poly:
@@ -422,7 +426,7 @@ class Calibrator:
         for _d in delta:
 
             # predicted wavelength
-            predicted = self.polyval(self.peaks, self.fit_coeff) + _d
+            predicted = self.polyval(self.peaks_effective, self.fit_coeff) + _d
             diff = np.abs(actual - predicted)
             mask = diff < candidate_tolerance
 
@@ -432,7 +436,7 @@ class Calibrator:
                     actual[mask], 1.0, predicted[mask], self.range_tolerance
                 )
                 self.candidates.append(
-                    [self.peaks[mask], actual[mask], weight]
+                    [self.peaks_effective[mask], actual[mask], weight]
                 )
 
     def _adjust_polyfit(
@@ -477,7 +481,7 @@ class Calibrator:
 
             fit_new[i] += _d
 
-        for _p in self.peaks:
+        for _p in self.peaks_effective:
 
             _x = self.polyval(_p, fit_new)
             diff = atlas_lines - _x
@@ -498,7 +502,7 @@ class Calibrator:
 
             return np.inf
 
-        if len(x_matched) < len(self.peaks) * min_frac:
+        if len(x_matched) < len(self.peaks_effective) * min_frac:
 
             return np.inf
 
@@ -560,7 +564,8 @@ class Calibrator:
         # Add data to the calibrator
         self.peaks = config["peaks"]
         self.spectrum = config["spectrum"]
-        self.add_data(self.peaks, self.spectrum)
+        self.peaks_effective = config["peaks_effective"]
+        self.add_data(self.peaks_effective, self.spectrum)
 
         # Calibrator Properties
         self.num_pix = config["num_pix"]
@@ -725,6 +730,7 @@ class Calibrator:
 
         output_data = {
             "peaks": self.peaks,
+            "peaks_effective": self.peaks_effective,
             "spectrum": self.spectrum,
             "num_pix": self.num_pix,
             "effective_pixel": self.effective_pixel,
@@ -876,11 +882,34 @@ class Calibrator:
 
             self.effective_pixel = np.arange(self.num_pix)
 
+        elif self.effective_pixel is None and self.spectrum is not None:
+
+            self.effective_pixel = np.arange(max(self.spectrum))
+
+        elif self.effective_pixel is None and self.peaks is not None:
+
+            self.effective_pixel = np.arange(max(self.peaks))
+
         else:
 
             pass
 
+        # set the num_pix again in case num_pix is None and effective_pixel is
+        # not None
+        if num_pix is None:
+
+            self.set_num_pix(None)
+
         self.logger.info(f"effective_pixel is set to {effective_pixel}.")
+
+        # convert peaks and spectrum to effective pixel coordinates here
+        if self.effective_pixel is not None:
+            pix_to_epix_itp = interpolate.interp1d(
+                np.arange(len(self.effective_pixel)),
+                self.effective_pixel,
+                fill_value="extrapolate",
+            )
+            self.peaks_effective = pix_to_epix_itp(self.peaks)
 
         if seed is not None:
             np.random.seed(seed)
@@ -931,39 +960,32 @@ class Calibrator:
         if num_pix is not None:
 
             self.num_pix = num_pix
-            self.effective_pixel = np.arange(self.num_pix)
-
-        elif self.num_pix is None:
-
-            try:
-
-                self.num_pix = len(self.spectrum)
-                self.effective_pixel = np.arange(self.num_pix)
-
-            except Exception as e:
-
-                self.logger.warning(e)
-                self.logger.warning(
-                    "Neither num_pix nor spectrum is given, "
-                    "it uses 1.1 times max(peaks) as the "
-                    "maximum pixel value."
-                )
-                try:
-
-                    self.num_pix = 1.1 * max(self.peaks)
-                    self.effective_pixel = np.arange(self.num_pix)
-
-                except Exception as e2:
-
-                    self.logger.warning(e2)
-                    self.logger.warning(
-                        "num_pix cannot be set, please provide a num_pix, "
-                        "or the peaks, so that we can guess the num_pix."
-                    )
 
         else:
 
-            pass
+            if self.effective_pixel is not None:
+
+                self.num_pix = np.max(self.effective_pixel)
+
+            elif self.spectrum is not None:
+
+                self.num_pix = len(self.spectrum)
+
+            elif self.peaks_effective is not None:
+
+                self.num_pix = 1.1 * max(self.peaks_effective)
+
+            elif self.peaks is not None:
+
+                self.num_pix = 1.1 * max(self.peaks)
+
+            else:
+
+                pass
+
+        if self.effective_pixel is None and self.num_pix is not None:
+
+            self.effective_pixel = np.arange(self.num_pix)
 
         self.logger.info(f"num_pix is set to {num_pix}.")
 
@@ -1384,7 +1406,7 @@ class Calibrator:
 
         # Create a list of all possible pairs of detected peaks and lines
         # from atlas
-        if self.peaks is not None:
+        if self.peaks_effective is not None:
 
             self._generate_pairs()
 
@@ -1690,13 +1712,13 @@ class Calibrator:
             )
             self.minimum_matches = len(self.atlas)
 
-        if self.minimum_matches > len(self.peaks):
+        if self.minimum_matches > len(self.peaks_effective):
             self.logger.warning(
                 "Requested minimum matches is greater than the number of "
                 + "peaks detected, which has a size of "
-                + f"size = {len(self.peaks)}."
+                + f"size = {len(self.peaks_effective)}."
             )
-            self.minimum_matches = len(self.peaks)
+            self.minimum_matches = len(self.peaks_effective)
 
         if self.linear:
 
@@ -1747,10 +1769,12 @@ class Calibrator:
 
             result = solver.best_result
 
-            peak_utilisation = len(result.x) / len(self.peaks)
-            atlas_utilisation = len(result.y) / len(self.atlas)
-            self.matched_peaks = result.x
-            self.matched_atlas = result.y
+            peak_utilisation = len(result.inliers_x) / len(
+                self.peaks_effective
+            )
+            atlas_utilisation = len(result.inliers_y) / len(self.atlas)
+            self.matched_peaks = result.inliers_x
+            self.matched_atlas = result.inliers_y
 
             if result.rms_residual > self.fit_tolerance:
 
@@ -1804,14 +1828,15 @@ class Calibrator:
 
         # Check monotonicity.
         # Note, this could be pre-calculated
-        pix_min = self.peaks[0] - np.ptp(self.peaks) * 0.2
-        num_pix = self.peaks[-1] + np.ptp(self.peaks) * 0.2
+        pix_min = self.peaks_effective[0] - np.ptp(self.peaks_effective) * 0.2
+        num_pix = self.peaks_effective[-1] + np.ptp(self.peaks_effective) * 0.2
         self.logger.debug(f"pix_min: {pix_min}, num_pix: {num_pix}")
 
         if not np.all(
             np.diff(
                 self.polyval(
-                    np.arange(result.x[0], num_pix, 1), result.fit_coeffs
+                    np.arange(result.inliers_x[0], num_pix, 1),
+                    result.fit_coeffs,
                 )
             )
             > 0
@@ -1870,7 +1895,7 @@ class Calibrator:
 
         # Check that we have enough inliers based on user specified
         # constraints
-        n_inliers = len(result.x)
+        n_inliers = len(result.inliers_x)
         if n_inliers < self.minimum_matches:
 
             self.logger.debug(
@@ -1879,7 +1904,9 @@ class Calibrator:
             )
             return False
 
-        if n_inliers < self.minimum_peak_utilisation * len(self.peaks):
+        if n_inliers < self.minimum_peak_utilisation * len(
+            self.peaks_effective
+        ):
 
             self.logger.debug(
                 "Not enough matched peaks for valid solution, user specified "
@@ -2024,7 +2051,7 @@ class Calibrator:
         atlas_lines = self.atlas.get_lines()
 
         # Find all Atlas peaks within tolerance
-        for _p in self.peaks:
+        for _p in self.peaks_effective:
 
             _x = self.polyval(_p, fit_coeff)
             diff = atlas_lines - _x
@@ -2096,7 +2123,9 @@ class Calibrator:
             np.nansum(self.residuals**2.0) / len(self.residuals)
         )
 
-        self.peak_utilisation = len(self.matched_peaks) / len(self.peaks)
+        self.peak_utilisation = len(self.matched_peaks) / len(
+            self.peaks_effective
+        )
         self.atlas_utilisation = len(self.matched_atlas) / len(self.atlas)
 
         self.res = {
@@ -2380,7 +2409,9 @@ class Calibrator:
             np.nansum(self.residuals**2.0) / len(self.residuals)
         )
 
-        self.peak_utilisation = len(self.matched_peaks) / len(self.peaks)
+        self.peak_utilisation = len(self.matched_peaks) / len(
+            self.peaks_effective
+        )
         self.atlas_utilisation = len(self.matched_atlas) / len(self.atlas)
         self.success = True
 
@@ -2426,7 +2457,6 @@ class Calibrator:
 
     def plot_arc(
         self,
-        effective_pixel: Union[list, np.ndarray] = None,
         log_spectrum: bool = False,
         save_fig: bool = False,
         fig_type: str = "png",
@@ -2440,9 +2470,6 @@ class Calibrator:
 
         parameters
         ----------
-        effective_pixel: np.ndarray (default: None)
-            pixel value of the of the spectrum, this is only needed if the
-            spectrum spans multiple detector arrays.
         log_spectrum: boolean (default: False)
             Set to true to display the wavelength calibrated arc spectrum in
             logarithmic space.
@@ -2474,7 +2501,7 @@ class Calibrator:
 
         return plotting.plot_arc(
             self,
-            effective_pixel=effective_pixel,
+            effective_pixel=self.effective_pixel,
             log_spectrum=log_spectrum,
             save_fig=save_fig,
             fig_type=fig_type,
@@ -2604,7 +2631,7 @@ class Calibrator:
 
         if fit_coeff is None:
 
-            fit_coeff = self.fit_coeff
+            fit_coeff = self.res["fit_coeff"]
 
         return plotting.plot_fit(
             self,

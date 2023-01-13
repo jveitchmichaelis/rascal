@@ -1,12 +1,11 @@
 from functools import partialmethod
 
 import numpy as np
+from rascal.atlas import Atlas
+from rascal.calibrator import Calibrator
 
 # Suppress tqdm output
 from tqdm import tqdm
-
-from rascal.atlas import Atlas
-from rascal.calibrator import Calibrator
 
 tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 
@@ -34,7 +33,7 @@ def test_linear_fit():
     c.set_calibrator_properties(num_pix=1000)
     c.set_hough_properties(
         num_slopes=1000,
-        range_tolerance=500.0,
+        range_tolerance=200.0,
         xbins=200,
         ybins=200,
         min_wavelength=3000.0,
@@ -42,11 +41,12 @@ def test_linear_fit():
     )
     a.add_user_atlas(elements=elements_linear, wavelengths=wavelengths_linear)
     c.set_atlas(a)
-    c.set_ransac_properties(minimum_matches=20, minimum_fit_error=1e-12)
+    c.set_ransac_properties(minimum_matches=20, minimum_fit_error=1e-25)
     c.do_hough_transform(brute_force=False)
 
     # Run the wavelength calibration
     res = c.fit(max_tries=500, fit_deg=1)
+    print(res)
     # Refine solution
     res = c.match_peaks(res["fit_coeff"], refine=False, robust_refit=True)
 
@@ -74,7 +74,7 @@ def test_manual_refit():
     )
     a.add_user_atlas(elements=elements_linear, wavelengths=wavelengths_linear)
     c.set_atlas(a)
-    c.set_ransac_properties(minimum_matches=25, minimum_fit_error=1e-12)
+    c.set_ransac_properties(minimum_matches=25, minimum_fit_error=1e-25)
     c.do_hough_transform(brute_force=False)
 
     # Run the wavelength calibration
@@ -103,7 +103,7 @@ def test_manual_refit_remove_points():
     )
     a.add_user_atlas(elements=elements_linear, wavelengths=wavelengths_linear)
     c.set_atlas(a)
-    c.set_ransac_properties(minimum_matches=25, minimum_fit_error=1e-12)
+    c.set_ransac_properties(minimum_matches=25, minimum_fit_error=1e-25)
     c.do_hough_transform(brute_force=False)
 
     # Run the wavelength calibration
@@ -135,7 +135,7 @@ def test_manual_refit_add_points():
     )
     a.add_user_atlas(elements=elements_linear, wavelengths=wavelengths_linear)
     c.set_atlas(a)
-    c.set_ransac_properties(minimum_matches=25, minimum_fit_error=1e-12)
+    c.set_ransac_properties(minimum_matches=25, minimum_fit_error=1e-25)
     c.do_hough_transform(brute_force=False)
 
     # Run the wavelength calibration
@@ -168,7 +168,7 @@ def test_quadratic_fit():
         elements=elements_quadratic, wavelengths=wavelengths_quadratic
     )
     c.set_atlas(a)
-    c.set_ransac_properties(minimum_matches=20, minimum_fit_error=1e-12)
+    c.set_ransac_properties(minimum_matches=20, minimum_fit_error=1e-25)
     c.do_hough_transform(brute_force=False)
 
     # Run the wavelength calibration
@@ -206,7 +206,7 @@ def test_quadratic_fit_legendre():
     )
     c.set_atlas(a)
     c.set_ransac_properties(
-        sample_size=4, minimum_matches=18, minimum_fit_error=1e-18
+        sample_size=4, minimum_matches=18, minimum_fit_error=1e-25
     )
     c.do_hough_transform(brute_force=False)
 
@@ -246,7 +246,7 @@ def test_quadratic_fit_chebyshev():
     )
     c.set_atlas(a)
     c.set_ransac_properties(
-        sample_size=4, minimum_matches=18, minimum_fit_error=1e-18
+        sample_size=4, minimum_matches=18, minimum_fit_error=1e-25
     )
     c.do_hough_transform(brute_force=False)
 

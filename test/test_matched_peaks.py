@@ -3,11 +3,10 @@ import os
 import numpy as np
 import pytest
 from astropy.io import fits
-from scipy.signal import find_peaks
-
 from rascal import util
 from rascal.atlas import Atlas
 from rascal.calibrator import Calibrator
+from scipy.signal import find_peaks
 
 
 @pytest.fixture(scope="session")

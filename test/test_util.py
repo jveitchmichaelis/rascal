@@ -5,11 +5,10 @@ from unittest.mock import patch
 import numpy as np
 import pkg_resources
 import pytest
+from rascal import plotting, util
 
 # Suppress tqdm output
 from tqdm import tqdm
-
-from rascal import plotting, util
 
 tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 

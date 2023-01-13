@@ -3,11 +3,10 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 from astropy.io import fits
-from scipy.signal import find_peaks
-
 from rascal.atlas import Atlas
 from rascal.calibrator import Calibrator
 from rascal.util import refine_peaks
+from scipy.signal import find_peaks
 
 atlas_lines = [
     3650.153,

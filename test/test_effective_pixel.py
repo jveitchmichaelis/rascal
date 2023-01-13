@@ -2,36 +2,35 @@ from functools import partialmethod
 
 import numpy as np
 import pytest
-
-# Suppress tqdm output
-from tqdm import tqdm
-
 from rascal.atlas import Atlas
 from rascal.calibrator import Calibrator
 from rascal.synthetic import SyntheticSpectrum
 
+# Suppress tqdm output
+from tqdm import tqdm
+
 tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
+
+# Create a test spectrum with a simple linear relationship
+# between pixels/wavelengths. The intercept is set to
+# 100 nm and the gradient is set to 2.
+intercept = 100
+gradient = 2.0
+best_p = [intercept, gradient]
+s = SyntheticSpectrum(coefficients=best_p)
+
+# We add a bunch of wavelegnths between 200-1200 nm
+peaks, waves = s.get_pixels(np.linspace(200, 1200, num=25))
+
+effective_pixel = np.arange(987).astype("int")
+effective_pixel[len(effective_pixel) // 2 :] = (
+    effective_pixel[len(effective_pixel) // 2 :] + 53.37
+)
+
+assert len(peaks) > 0
 
 
 def test_effective_pixel_not_affecting_fit_int_peaks():
-
-    # Create a test spectrum with a simple linear relationship
-    # between pixels/wavelengths. The intercept is set to
-    # 100 nm and the gradient is set to 2.
-    intercept = 100
-    gradient = 2.0
-    best_p = [intercept, gradient]
-    s = SyntheticSpectrum(coefficients=best_p)
-
-    # We add a bunch of wavelegnths between 200-1200 nm
-    peaks, waves = s.get_pixels(np.linspace(200, 1200, num=25))
-
-    effective_pixel = np.arange(987).astype("int")
-    effective_pixel[len(effective_pixel) // 2 :] = (
-        effective_pixel[len(effective_pixel) // 2 :] + 53.37
-    )
-
-    assert len(peaks) > 0
 
     # Set up the calibrator with the pixel values of our
     # wavelengths
@@ -47,7 +46,7 @@ def test_effective_pixel_not_affecting_fit_int_peaks():
         range_tolerance=100.0, min_wavelength=100.0, max_wavelength=1300.0
     )
 
-    c.set_ransac_properties(linear=False, minimum_fit_error=1e-12)
+    c.set_ransac_properties(minimum_fit_error=1e-25)
 
     # Add our fake lines as the atlas
     a.add_user_atlas(elements=["Test"] * len(waves), wavelengths=waves)
@@ -55,7 +54,7 @@ def test_effective_pixel_not_affecting_fit_int_peaks():
     assert len(c.atlas.atlas_lines) > 0
 
     # And let's try and fit...
-    res = c.fit(max_tries=2000, fit_coeff=best_p)
+    res = c.fit(max_tries=2000, fit_deg=3)
 
     assert res
 
@@ -83,27 +82,9 @@ def test_effective_pixel_not_affecting_fit_int_peaks():
 
 def test_effective_pixel_not_affecting_fit_perfect_peaks():
 
-    # Create a test spectrum with a simple linear relationship
-    # between pixels/wavelengths. The intercept is set to
-    # 100 nm and the gradient is set to 2.
-    intercept = 100
-    gradient = 2.0
-    best_p = [intercept, gradient]
-    s = SyntheticSpectrum(coefficients=best_p)
-
-    # We add a bunch of wavelegnths between 200-1200 nm
-    peaks, waves = s.get_pixels(np.linspace(200, 1200, num=25))
-
-    effective_pixel = np.arange(987).astype("int")
-    effective_pixel[len(effective_pixel) // 2 :] = (
-        effective_pixel[len(effective_pixel) // 2 :] + 53.37
-    )
-
-    assert len(peaks) > 0
-
     # Set up the calibrator with the pixel values of our
     # wavelengths
-    c = Calibrator(peaks=peaks.astype("int"))
+    c = Calibrator(peaks=peaks)
     a = Atlas()
 
     # Arbitrarily we'll set the number of pixels to 768 (i.e.
@@ -115,7 +96,7 @@ def test_effective_pixel_not_affecting_fit_perfect_peaks():
         range_tolerance=100.0, min_wavelength=100.0, max_wavelength=1300.0
     )
 
-    c.set_ransac_properties(linear=False, minimum_fit_error=1e-12)
+    c.set_ransac_properties(minimum_fit_error=1e-25)
 
     # Add our fake lines as the atlas
     a.add_user_atlas(elements=["Test"] * len(waves), wavelengths=waves)
@@ -123,7 +104,7 @@ def test_effective_pixel_not_affecting_fit_perfect_peaks():
     assert len(c.atlas.atlas_lines) > 0
 
     # And let's try and fit...
-    res = c.fit(max_tries=2000, fit_coeff=best_p)
+    res = c.fit(max_tries=2000, fit_deg=3)
 
     assert res
 

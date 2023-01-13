@@ -5,11 +5,10 @@ import numpy as np
 import pkg_resources
 import pytest
 import yaml
+from rascal import calibrator
 
 # Suppress tqdm output
 from tqdm import tqdm
-
-from rascal import calibrator
 
 tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 

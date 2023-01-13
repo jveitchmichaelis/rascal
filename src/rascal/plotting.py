@@ -261,8 +261,8 @@ def plot_search_space(
             calibrator.max_wavelength + calibrator.range_tolerance,
         )
 
-        plt.xlabel("Wavelength / A")
-        plt.ylabel("Pixel")
+        plt.ylabel("Wavelength / A")
+        plt.xlabel("Pixel")
         plt.legend()
         plt.grid()
         plt.tight_layout()
@@ -449,7 +449,7 @@ def plot_search_space(
         fig.update_layout(
             autosize=True,
             yaxis=dict(
-                title="Pixel",
+                title="Wavelength / A",
                 range=[
                     calibrator.min_wavelength
                     - calibrator.range_tolerance * 1.1,
@@ -459,7 +459,7 @@ def plot_search_space(
                 showgrid=True,
             ),
             xaxis=dict(
-                title="Wavelength / A",
+                title="Pixel",
                 zeroline=False,
                 range=[0.0, calibrator.effective_pixel.max()],
                 showgrid=True,
@@ -594,7 +594,22 @@ def plot_fit(
 
     wave = calibrator.polyval(calibrator.effective_pixel, fit_coeff)
 
+    fitted_diff = []
+
+    for p, x in zip(calibrator.matched_peaks, calibrator.matched_atlas):
+
+        diff = calibrator.atlas.get_lines() - calibrator.polyval(p, fit_coeff)
+        idx = np.argmin(np.abs(diff))
+
+        calibrator.logger.info(f"Peak at: {x} A")
+
+        fitted_diff.append(diff[idx])
+        calibrator.logger.info(
+            f"- matched to {calibrator.atlas.get_lines()[idx]} A"
+        )
+
     if calibrator.plot_with_matplotlib:
+
         _import_matplotlib()
 
         fig, (ax1, ax2, ax3) = plt.subplots(
@@ -607,7 +622,7 @@ def plot_fit(
 
             ax1.plot(wave, spectrum, label="Arc Spectrum")
             ax1.vlines(
-                calibrator.polyval(calibrator.peaks, fit_coeff),
+                calibrator.polyval(calibrator.peaks_effective, fit_coeff),
                 np.array(spectrum)[calibrator.peaks.astype("int")],
                 vline_max,
                 linestyles="dashed",
@@ -629,21 +644,11 @@ def plot_fit(
                 label="Given Lines",
             )
 
-        fitted_peaks = []
-        fitted_diff = []
-
         first_one = True
         for p, x in zip(calibrator.matched_peaks, calibrator.matched_atlas):
 
-            diff = calibrator.atlas.get_lines() - x
-            idx = np.argmin(np.abs(diff))
-
-            calibrator.logger.info(f"Peak at: {x} A")
-
-            fitted_peaks.append(p)
-            fitted_diff.append(diff[idx])
-            calibrator.logger.info(
-                f"- matched to {calibrator.atlas.get_lines()[idx]} A"
+            p_idx = int(
+                calibrator.peaks[np.where(calibrator.peaks_effective == p)[0]]
             )
 
             if spectrum is not None:
@@ -651,7 +656,7 @@ def plot_fit(
                 if first_one:
                     ax1.vlines(
                         calibrator.polyval(p, fit_coeff),
-                        spectrum[p.astype("int")],
+                        spectrum[p_idx],
                         vline_max,
                         colors="C1",
                         label="Fitted Peaks",
@@ -661,7 +666,7 @@ def plot_fit(
                 else:
                     ax1.vlines(
                         calibrator.polyval(p, fit_coeff),
-                        spectrum[p.astype("int")],
+                        spectrum[p_idx],
                         vline_max,
                         colors="C1",
                     )
@@ -696,7 +701,7 @@ def plot_fit(
 
         # Plot the residuals
         ax2.scatter(
-            calibrator.polyval(fitted_peaks, fit_coeff),
+            calibrator.polyval(calibrator.matched_peaks, fit_coeff),
             fitted_diff,
             marker="+",
             color="C1",
@@ -719,8 +724,8 @@ def plot_fit(
 
         # Plot the polynomial
         ax3.scatter(
-            calibrator.polyval(fitted_peaks, fit_coeff),
-            fitted_peaks,
+            calibrator.polyval(calibrator.matched_peaks, fit_coeff),
+            calibrator.matched_peaks,
             marker="+",
             color="C1",
             label="Fitted Peaks",
@@ -732,8 +737,8 @@ def plot_fit(
         ax3.set_xlabel("Wavelength / A")
         ax3.set_ylabel("Pixel")
         ax3.legend(loc="lower right")
-        w_min = calibrator.polyval(min(fitted_peaks), fit_coeff)
-        w_max = calibrator.polyval(max(fitted_peaks), fit_coeff)
+        w_min = calibrator.polyval(min(calibrator.matched_peaks), fit_coeff)
+        w_max = calibrator.polyval(max(calibrator.matched_peaks), fit_coeff)
         ax3.set_xlim(w_min * 0.95, w_max * 1.05)
 
         plt.tight_layout()
@@ -763,6 +768,7 @@ def plot_fit(
         return fig
 
     elif calibrator.plot_with_plotly:
+
         _import_plotly()
 
         fig = go.Figure()
@@ -785,13 +791,15 @@ def plot_fit(
 
             spec_max = vline_max
 
-        fitted_peaks = []
-        fitted_peaks_adu = []
-        fitted_diff = []
+        y_fitted = []
 
-        for p in calibrator.peaks:
+        for p in calibrator.peaks_effective:
 
             x = calibrator.polyval(p, fit_coeff)
+
+            p_idx = int(
+                calibrator.peaks[np.where(calibrator.peaks_effective == p)[0]]
+            )
 
             # Add vlines
             fig.add_shape(
@@ -799,7 +807,7 @@ def plot_fit(
                 xref="x",
                 yref="y3",
                 x0=x,
-                y0=0,
+                y0=spectrum[p_idx],
                 x1=x,
                 y1=spec_max,
                 line=dict(color=pio_color[1], width=1),
@@ -807,24 +815,14 @@ def plot_fit(
 
             if p in calibrator.matched_peaks:
 
-                idx = np.argwhere(p == calibrator.matched_peaks)[0][0]
-                diff = calibrator.matched_atlas[idx] - x
-                fitted_peaks.append(p)
-                fitted_diff.append(diff)
+                y_fitted.append(spectrum[p_idx])
 
-                if spectrum is not None:
-                    fitted_peaks_adu.append(spectrum[int(p)])
-
-                calibrator.logger.info(
-                    f"- matched to {calibrator.matched_atlas[idx]} A"
-                )
-
-        x_fitted = calibrator.polyval(fitted_peaks, fit_coeff)
+        x_fitted = calibrator.polyval(calibrator.matched_peaks, fit_coeff)
 
         fig.add_trace(
             go.Scatter(
                 x=x_fitted,
-                y=fitted_peaks_adu,
+                y=y_fitted,
                 mode="markers",
                 marker=dict(color=pio_color[1]),
                 yaxis="y3",
@@ -879,7 +877,7 @@ def plot_fit(
         fig.add_trace(
             go.Scatter(
                 x=x_fitted,
-                y=fitted_peaks,
+                y=calibrator.matched_peaks,
                 mode="markers",
                 marker=dict(color=pio_color[1]),
                 yaxis="y1",
@@ -944,8 +942,14 @@ def plot_fit(
                 title="Wavelength / A",
                 zeroline=False,
                 range=[
-                    calibrator.polyval(min(fitted_peaks), fit_coeff) * 0.95,
-                    calibrator.polyval(max(fitted_peaks), fit_coeff) * 1.05,
+                    calibrator.polyval(
+                        min(calibrator.matched_peaks), fit_coeff
+                    )
+                    * 0.95,
+                    calibrator.polyval(
+                        max(calibrator.matched_peaks), fit_coeff
+                    )
+                    * 1.05,
                 ],
                 showgrid=True,
             ),
@@ -1051,9 +1055,10 @@ def plot_arc(
 
     if effective_pixel is None:
 
-        effective_pixel = np.arange(len(calibrator.spectrum))
+        effective_pixel = calibrator.effective_pixel
 
     if calibrator.plot_with_matplotlib:
+
         _import_matplotlib()
 
         fig = plt.figure(figsize=(18, 5))
@@ -1066,7 +1071,11 @@ def plot_arc(
                     label="Arc Spectrum",
                 )
                 plt.vlines(
-                    calibrator.peaks, -2, 0, label="Detected Peaks", color="C1"
+                    calibrator.peaks_effective,
+                    -2,
+                    0,
+                    label="Detected Peaks",
+                    color="C1",
                 )
                 plt.ylabel("log(Normalised Count)")
                 plt.ylim(-2, 0)
@@ -1078,7 +1087,7 @@ def plot_arc(
                 )
                 plt.ylabel("Normalised Count")
                 plt.vlines(
-                    calibrator.peaks,
+                    calibrator.peaks_effective,
                     0,
                     1.05,
                     label="Detected Peaks",
@@ -1090,7 +1099,7 @@ def plot_arc(
 
         else:
 
-            plt.xlim(0, max(calibrator.peaks))
+            plt.xlim(0, max(calibrator.peaks_effective))
 
         plt.xlabel("Pixel (Spectral Direction)")
         plt.grid()
@@ -1163,7 +1172,7 @@ def plot_arc(
             xmax = max(calibrator.spectrum / calibrator.spectrum.max())
 
         # Add vlines
-        for i in calibrator.peaks:
+        for i in calibrator.peaks_effective:
             fig.add_shape(
                 type="line",
                 xref="x",
@@ -1259,7 +1268,7 @@ def plot_calibration_lines(
     fig_kwarg: dict = {"figsize": (12, 8)},
 ):
     """
-    Plot the expected arc spectrum.
+    Plot the expected arc spectrum. Currently only available with matplotlib.
 
     Parameters
     ----------
@@ -1306,6 +1315,8 @@ def plot_calibration_lines(
     fig: matplotlib figure object
 
     """
+
+    _import_matplotlib()
 
     # the min_intensity and min_distance are set to 0.0 because the
     # simulated spectrum would contain them. These arguments only

@@ -51,24 +51,35 @@ class SolveResult:
     def __init__(
         self,
         fit_coeffs: Union[list, np.ndarray] = [],
-        cost: float = 1e9,
+        cost: float = 1.0e9,
         x: Union[list, np.ndarray] = [],
         y: Union[list, np.ndarray] = [],
         residual: Union[list, np.ndarray] = [],
+        fit_tolerance: float = 5.0,
     ):
         """
         Josh will write something here.
 
         """
 
-        self.fit_coeffs = fit_coeffs
-        self.x = x
-        self.y = y
+        self.fit_coeffs = np.asarray(fit_coeffs)
+        self.x = np.asarray(x)
+        self.y = np.asarray(y)
         self.cost = cost
+        self.residual = np.asarray(residual)
+        self.rms_residual = None
+        self.fit_tolerance = fit_tolerance
+        self.n_inliers = None
+        self.inliers_x = None
+        self.inliers_y = None
 
         if len(residual) > 0:
-            self.residual = residual
+
             self.rms_residual = np.sqrt(np.mean(self.residual**2))
+            mask = self.residual < self.fit_tolerance
+            self.n_inliers = np.count_nonzero(mask)
+            self.inliers_x = self.x[mask]
+            self.inliers_y = self.y[mask]
 
 
 class RansacSolver:
@@ -220,6 +231,7 @@ class RansacSolver:
                 residual=residual,
                 x=matched_x,
                 y=matched_y,
+                fit_tolerance=self.config.fit_tolerance,
             )
 
             result.cost = self._cost(result)
@@ -229,13 +241,16 @@ class RansacSolver:
             self._update_best(result)
 
             if self.config.progress:
+
                 if self.valid_solution:
+
                     sample_iter.set_description(
                         f"Most inliers: {len(self.best_result.x):d} "
                         + f"best error: {self.best_result.rms_residual:1.4f}"
                     )
 
         if self.valid_solution:
+
             self.logger.info(f"Found {len(self.best_result.x)} inliers")
 
         return self.valid_solution
@@ -346,13 +361,14 @@ class RansacSolver:
             gradient = self.polyval(self.x, _derivative(result.fit_coeffs))
             intercept = wave - gradient
 
-            weight = self.config.hough_weight * np.sum(
-                self.twoditp(intercept, gradient, grid=False)
-            )
+            # weight = self.config.hough_weight * np.sum(
+            #    self.twoditp(intercept, gradient, grid=False)
+            # )
 
         else:
 
-            weight = 1.0
+            # weight = 1.0
+            pass
 
         if self.config.use_msac:
 
@@ -366,6 +382,7 @@ class RansacSolver:
             # / (weight + 1e-16)
 
             cost = sum(result.residual) + 1e-16
+
         else:
 
             cost = 1.0 / (
@@ -395,11 +412,14 @@ class RansacSolver:
             if len(inliers_x) <= self.config.fit_deg:
 
                 self.logger.debug("Too few good candidates for fitting.")
-                return
+
+                return False
 
             # Now we do a robust fit
             if self.config.fit_type == "poly":
+
                 try:
+
                     coeffs = models.robust_polyfit(
                         inliers_x, inliers_y, self.config.fit_deg
                     )
@@ -407,8 +427,10 @@ class RansacSolver:
                 except np.linalg.LinAlgError:
 
                     self.logger.warning("Linear algebra error in robust fit")
-                    return
+                    return False
+
             else:
+
                 coeffs = self.polyfit(
                     inliers_x, inliers_y, self.config.fit_deg
                 )
@@ -433,11 +455,11 @@ class RansacSolver:
                         + f"worse ({rms_residual} > "
                         + f"{self.best_result.rms_residual})."
                     )
-                    return
+                    return False
 
                 # Overfit
                 if n_inliers <= self.config.fit_deg + 1:
-                    return
+                    return False
 
                 # Sanity check that matching peaks/atlas lines are 1:1
                 assert len(np.unique(inliers_x)) == len(inliers_x)
@@ -455,9 +477,11 @@ class RansacSolver:
                     residual=residual,
                     x=list(copy.deepcopy(inliers_x)),
                     y=list(copy.deepcopy(inliers_y)),
+                    fit_tolerance=self.config.fit_tolerance,
                 )
 
                 if n_inliers == len(self.x):
+
                     self.should_stop = True
 
                 self.valid_solution = True

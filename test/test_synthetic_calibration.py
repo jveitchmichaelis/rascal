@@ -1,13 +1,12 @@
 from functools import partialmethod
 
 import numpy as np
-
-# Suppress tqdm output
-from tqdm import tqdm
-
 from rascal.atlas import Atlas
 from rascal.calibrator import Calibrator
 from rascal.synthetic import SyntheticSpectrum
+
+# Suppress tqdm output
+from tqdm import tqdm
 
 tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 
@@ -46,7 +45,7 @@ def test_default():
 
     # Add our fake lines as the atlas
     a.add_user_atlas(elements=["Test"] * len(waves), wavelengths=waves)
-    c.set_ransac_properties(minimum_fit_error=1e-18)
+    c.set_ransac_properties(minimum_fit_error=1e-25)
     c.set_atlas(a)
     assert len(c.atlas.atlas_lines) > 0
 
