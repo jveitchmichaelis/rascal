@@ -7,6 +7,8 @@ from rascal.ransac import RansacSolver, _default_config
 # Suppress tqdm output
 from tqdm import tqdm
 
+from rascal.ransac import RansacSolver
+
 tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 
 
@@ -15,8 +17,7 @@ def test_ransac():
     x = np.arange(10)
     y = x**2
 
-    config = _default_config
-    config["max_tries"] = 100
+    config = {"max_tries": 100}
 
     solver = RansacSolver(x, y, config=config)
 

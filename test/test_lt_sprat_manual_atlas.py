@@ -3,13 +3,14 @@ from functools import partialmethod
 
 import numpy as np
 from astropy.io import fits
-from rascal import util
-from rascal.atlas import Atlas
-from rascal.calibrator import Calibrator
 from scipy.signal import find_peaks
 
 # Suppress tqdm output
 from tqdm import tqdm
+
+from rascal import util
+from rascal.atlas import Atlas
+from rascal.calibrator import Calibrator
 
 tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 
@@ -25,6 +26,18 @@ fits_file = fits.open(
         "v_a_20190516_57_1_0_1.fits",
     )
 )[0]
+
+config = {
+    "hough": {
+        "num_slopes": 2000,
+        "range_tolerance": 200.0,
+        "xbins": 100,
+        "ybins": 100,
+        "min_wavelength": 3600.0,
+        "max_wavelength": 8000.0,
+    },
+    "ransac": {"sample_size": 5, "top_n_candidate": 10, "filter_close": True},
+}
 
 spectrum2D = fits_file.data
 
@@ -42,17 +55,9 @@ peaks, _ = find_peaks(
 peaks = util.refine_peaks(spectrum, peaks, window_width=3)
 
 # Initialise the calibrator
-c = Calibrator(peaks, spectrum=spectrum)
+c = Calibrator(peaks, config=config, spectrum=spectrum)
 atlas = Atlas()
 
-c.set_hough_properties(
-    num_slopes=2000,
-    range_tolerance=200.0,
-    xbins=100,
-    ybins=100,
-    min_wavelength=3600.0,
-    max_wavelength=8000.0,
-)
 # blend: 4829.71, 4844.33
 # blend: 5566.62, 5581.88
 # blend: 6261.212, 6265.302
@@ -106,9 +111,6 @@ atlas.add_user_atlas(
     relative_humidity=relative_humidity,
 )
 c.set_atlas(atlas)
-
-c.set_ransac_properties(sample_size=5, top_n_candidate=10, filter_close=True)
-
 c.do_hough_transform(brute_force=True)
 
 

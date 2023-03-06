@@ -17,7 +17,7 @@ base_dir = os.path.dirname(__file__)
 
 def test_load_atlas_from_yaml_file():
     atlas = Atlas()
-    atlas.load_config(
+    atlas.add_config(
         yaml_config=pkg_resources.resource_filename(
             "rascal", "../../atlas_yaml_template.yaml"
         )
@@ -33,7 +33,7 @@ def test_load_atlas_from_pyyaml_object():
     ) as stream:
         yaml_object = yaml.safe_load(stream)
         atlas = Atlas()
-        atlas.load_config(yaml_config=yaml_object, y_type="object")
+        atlas.add_config(config=yaml_object, y_type="object")
 
 
 def test_load_atlas_config_user_linelist():
@@ -48,7 +48,7 @@ def test_load_atlas_config_user_linelist():
         yaml_object["element_list"] = np.array(["Xe"] * 10)
         yaml_object["wavelength_list"] = np.arange(10)
         atlas = Atlas()
-        atlas.load_config(yaml_config=yaml_object, y_type="object")
+        atlas.load_config(config=yaml_object)
 
 
 @pytest.mark.xfail()

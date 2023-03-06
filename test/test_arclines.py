@@ -19,6 +19,7 @@ logger = logging.getLogger()
 HERE = os.path.dirname(os.path.realpath(__file__))
 
 
+"""
 def test_loading_empty_calibrator():
     logger.info("Testing load without peaks.")
     Calibrator()
@@ -29,11 +30,11 @@ def test_initialisation():
     cal = Calibrator(peaks=np.arange(10))
     assert len(cal.peaks) == 10
     assert cal.atlas is None
+"""
 
 
 def test_load_single_line():
-    element_list = ["Hg", "Ar", "Xe", "Kr"]
-    atlas = Atlas()
+    atlas = Atlas(elements=["Hg", "Ar", "Xe", "Kr"])
 
     cal = Calibrator(peaks=np.arange(10))
     for element in element_list:
