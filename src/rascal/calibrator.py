@@ -67,12 +67,14 @@ class Calibrator:
                 user_config = OmegaConf.load(config)
             elif isinstance(config, list) or isinstance(config, dict):
                 user_config = OmegaConf.create(config)
+            elif isinstance(config, CalibratorConfig):
+                user_config = config
             else:
                 raise NotImplementedError(
                     f"This config format {type(config)} is not supported yet."
                 )
 
-            OmegaConf.merge(self.config, user_config)
+            self.config = OmegaConf.merge(self.config, user_config)
 
         # Finally overrides from CLI
         # cli_conf = OmegaConf.from_cli()
@@ -1439,7 +1441,9 @@ class Calibrator:
         )
 
         self.peak_utilisation = len(self.matched_peaks) / len(self.peaks)
-        self.atlas_utilisation = len(self.matched_atlas) / n_lines
+        self.atlas_utilisation = len(self.matched_atlas) / len(
+            self.atlas_lines
+        )
 
         self.res = {
             "fit_coeff": self.fit_coeff,

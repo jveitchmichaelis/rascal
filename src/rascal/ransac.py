@@ -40,7 +40,7 @@ class SolveResult:
         x: Union[list, np.ndarray] = [],
         y: Union[list, np.ndarray] = [],
         residual: Union[list, np.ndarray] = [],
-        fit_tolerance: float = 5.0,
+        rms_tolerance: float = 5.0,
     ):
         """
         Josh will write something here.
@@ -53,7 +53,7 @@ class SolveResult:
         self.cost = cost
         self.residual = np.asarray(residual)
         self.rms_residual = None
-        self.fit_tolerance = fit_tolerance
+        self.rms_tolerance = rms_tolerance
         self.n_inliers = None
         self.inliers_x = None
         self.inliers_y = None
@@ -61,7 +61,7 @@ class SolveResult:
         if len(residual) > 0:
 
             self.rms_residual = np.sqrt(np.mean(self.residual**2))
-            mask = self.residual < self.fit_tolerance
+            mask = self.residual < self.rms_tolerance
             self.n_inliers = np.count_nonzero(mask)
             self.inliers_x = self.x[mask]
             self.inliers_y = self.y[mask]
@@ -122,7 +122,7 @@ class RansacSolver:
 
         if len(np.unique(self.x)) <= self.config.degree:
             raise ValueError(
-                "Fit degree is greater than the provided number of points"
+                f"Fit degree ({self.config.degree}) is greater than the provided number of points ({len(np.unique(self.x))})"
             )
 
         if self.config.sampler == "weighted":
@@ -225,7 +225,7 @@ class RansacSolver:
                 residual=residual,
                 x=matched_x,
                 y=matched_y,
-                fit_tolerance=self.config.fit_tolerance,
+                rms_tolerance=self.config.rms_tolerance,
             )
 
             result.cost = self._cost(result)
@@ -467,7 +467,7 @@ class RansacSolver:
                     residual=residual,
                     x=list(copy.deepcopy(inliers_x)),
                     y=list(copy.deepcopy(inliers_y)),
-                    fit_tolerance=self.config.fit_tolerance,
+                    rms_tolerance=self.config.rms_tolerance,
                 )
 
                 if n_inliers == len(self.x):
