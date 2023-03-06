@@ -6,468 +6,207 @@ Atlas class for handling arc lines.
 
 """
 
+import logging
 import os
 import time
 from collections import Counter
-from typing import Union
+from dataclasses import MISSING, dataclass, field, fields
+from pprint import pprint
+from typing import List, Optional, Union
 
 import numpy as np
 import yaml
+from omegaconf import OmegaConf
 
+logger = logging.getLogger(__name__)
 from .util import load_calibration_lines, vacuum_to_air_wavelength
 
 
+@dataclass(kw_only=True)
 class AtlasLine:
     """
     For storing information of an atlas line
 
     """
 
-    def __init__(
-        self,
-        wavelength: float,
-        element: str = None,
-        intensity: str = None,
-        source: str = None,
-    ):
-        self.wavelength = wavelength
-        self.element = element
-        self.intensity = intensity
-        self.source = source
+    wavelength: float
+    element: str
+    intensity: float
+    source: str
 
 
+@dataclass(kw_only=True)
+class AtlasLine:
+    """
+    For storing basic information of an atlas line
+
+    """
+
+    wavelength: float
+    element: str
+    intensity: float = 0
+    source: str
+
+    def __repr__(self):
+        if self.intensity > 0:
+            return f"{self.element} ({self.source}): {self.wavelength} Å, {self.intensity}"
+        else:
+            return f"{self.element} ({self.source}): {self.wavelength} Å"
+
+
+@dataclass(kw_only=True)
 class Atlas:
     """
-    The class that handles the set of atlas lines for the calibrator.
+    Creates an atlas of arc lines.
+
+    Arc lines are taken from a general list of NIST lines and can be
+    filtered using the minimum relative intensity (note this may not be
+    accurate due to instrumental effects such as detector response,
+    dichroics, etc) and minimum line separation.
+
+    Lines are filtered first by relative intensity, then by separation.
+    This is to improve robustness in the case where there is a strong
+    line very close to a weak line (which is within the separation limit).
+
+    The vacuum to air wavelength conversion is deafult to False because
+    observatories usually provide the line lists in the respective air
+    wavelength, as the corrections from temperature and humidity are
+    small. See https://emtoolbox.nist.gov/Wavelength/Documentation.asp
 
     """
 
-    def __init__(
-        self,
-        elements: Union[str, list] = None,
-        linelist: str = "nist",
-        min_atlas_wavelength: float = 3000.0,
-        max_atlas_wavelength: float = 5000.0,
-        range_tolerance: float = 500.0,
-        min_intensity: float = 10.0,
-        min_distance: float = 10.0,
-        brightest_n_lines: int = 100,
-        vacuum: bool = False,
-        pressure: float = 101325.0,
-        temperature: float = 273.15,
-        relative_humidity: float = 0.0,
-    ):
-        """
-        Creates an atlas of arc lines.
+    line_list: str = "nist"
+    min_wavelength: float = MISSING
+    max_wavelength: float = MISSING
+    range_tolerance: float = 500.0
+    min_intensity: float = 10.0
+    min_distance: float = 10.0
+    brightest_n_lines: int = 100
+    vacuum: bool = False
+    pressure: float = 101325.0
+    temperature: float = 273.15
+    relative_humidity: float = 0.0
+    elements: Optional[List[str]] = MISSING
 
-        Arc lines are taken from a general list of NIST lines and can be
-        filtered using the minimum relative intensity (note this may not be
-        accurate due to instrumental effects such as detector response,
-        dichroics, etc) and minimum line separation.
+    wavelengths: Optional[List[float]] = field(default=None)
+    intensities: Optional[List[float]] = field(default=None)
 
-        Lines are filtered first by relative intensity, then by separation.
-        This is to improve robustness in the case where there is a strong
-        line very close to a weak line (which is within the separation limit).
+    def __post_init__(self):
 
-        The vacuum to air wavelength conversion is deafult to False because
-        observatories usually provide the line lists in the respective air
-        wavelength, as the corrections from temperature and humidity are
-        small. See https://emtoolbox.nist.gov/Wavelength/Documentation.asp
-
-        Parameters
-        ----------
-        elements: string or list of strings
-            Chemical symbol, case insensitive
-        linelist: str
-            Either 'nist' to use the default lines or path to a linelist file.
-        min_atlas_wavelength: float (default: None)
-            Minimum wavelength of the arc lines.
-        max_atlas_wavelength: float (default: None)
-            Maximum wavelength of the arc lines.
-        range_tolerance: float (default 500.)
-            Range tolerance to add to min/max wavelengths
-        min_intensity: float (default: None)
-            Minimum intensity of the arc lines. Refer to NIST for the
-            intensity.
-        min_distance: float (default: None)
-            Minimum separation between neighbouring arc lines.
-        brightest_n_lines: int
-            Only return the n brightest lines
-        vacuum: boolean
-            Set to True if the light path from the arc lamb to the detector
-            plane is entirely in vacuum.
-        pressure: float
-            Pressure when the observation took place, in Pascal.
-            If it is not known, we suggest you to assume 10% decrement per
-            1000 meter altitude.
-        temperature: float
-            Temperature when the observation took place, in Kelvin.
-        relative_humidity: float
-            In percentage.
-
-        """
+        if isinstance(self.elements, str):
+            self.elements = [self.elements]
 
         self.atlas_lines = []
-        self.elements = elements
-        self.linelist = linelist
-        self.min_atlas_wavelength = min_atlas_wavelength
-        self.max_atlas_wavelength = max_atlas_wavelength
-        self.min_intensity = min_intensity
-        self.min_distance = min_distance
-        self.range_tolerance = range_tolerance
-        self.brightest_n_lines = brightest_n_lines
-        self.vacuum = vacuum
-        self.pressure = pressure
-        self.temperature = temperature
-        self.relative_humidity = relative_humidity
 
-        self.add(
-            elements=elements,
-            linelist=linelist,
-            min_atlas_wavelength=min_atlas_wavelength,
-            max_atlas_wavelength=max_atlas_wavelength,
-            min_intensity=min_intensity,
-            min_distance=min_distance,
-            brightest_n_lines=brightest_n_lines,
-            vacuum=vacuum,
-            pressure=pressure,
-            temperature=temperature,
-            relative_humidity=relative_humidity,
-        )
-
-    def load_config(
-        self, yaml_config: Union[str, dict], y_type: str = "filepath"
-    ):
-        """
-        Load a yaml configuration file to populate an Atlas object.
-
-        Parameters
-        ----------
-        yaml_config : str or pyyaml object
-            Filepath or a pyyaml object
-        y_type: str
-            Specify 'yaml' for loading from file or 'object' to take a pyyaml
-            object.
-
-        """
-
-        # Load from file
-        if y_type == "filepath":
-
-            with open(yaml_config, "r", encoding="ascii") as stream:
-
-                config = yaml.safe_load(stream)
-
-        # Load from a pyyaml object
-        elif y_type == "object":
-
-            config = yaml_config
-
+        if self.line_list == "manual":
+            self.add_manual()
+        elif self.line_list == "nist":
+            self.add_list(self.line_list)
         else:
+            raise NotImplementedError
 
-            raise ValueError(
-                f"Unknown y_type: {y_type}. Please choose from "
-                "'filepath' or 'stream'"
-            )
+    def add_manual(self):
 
-        # This loads the Atlas setting to get lines by using
-        # util.load_calibration_lines
-        if config["linelist"] == "nist":
+        # Case when we have a single wavelength
+        if not isinstance(self.wavelengths, list):
+            self.wavelengths = list(self.wavelengths)
 
-            self.add(
-                elements=config["elements"],
-                linelist=config["linelist"],
-                min_atlas_wavelength=config["min_atlas_wavelength"],
-                max_atlas_wavelength=config["max_atlas_wavelength"],
-                min_intensity=config["min_intensity"],
-                min_distance=config["min_distance"],
-                brightest_n_lines=config["brightest_n_lines"],
-                vacuum=config["vacuum"],
-                pressure=config["pressure"],
-                temperature=config["temperature"],
-                relative_humidity=config["relative_humidity"],
-            )
+        # If a single element is provided, assume that
+        # all lines are from this element
+        if len(self.elements) == 1:
+            self.elements = self.elements * len(self.wavelengths)
 
-        # This loads the lines directly
-        elif config["linelist"] == "user":
+        # Empty intensity
+        if self.intensities is None:
+            self.intensities = [0] * len(self.wavelengths)
+        elif not isinstance(self.intensities, list):
+            self.intensities = list(self.intensities)
 
-            self.add_user_atlas(
-                elements=config["element_list"],
-                wavelengths=config["wavelength_list"],
-                intensities=config["intensity_list"],
-                vacuum=config["vacuum"],
-                pressure=config["pressure"],
-                temperature=config["temperature"],
-                relative_humidity=config["relative_humidity"],
-            )
-
-        # Unknown mode
-        else:
-
-            raise ValueError(
-                f"Unknown linelist type: {config['linelist']}. Please choose "
-                "from 'nist' or 'user'."
-            )
-
-    def save_config(self, filename: str):
-        """
-        Save the atlas config as a YAML file.
-
-        Parameters
-        ----------
-        filename : str
-            Path to save the config file.
-
-        """
-
-        output_data = {
-            "linelist": str(self.linelist),
-            "vacuum": bool(self.vacuum),
-            "pressure": float(self.pressure),
-            "temperature": float(self.temperature),
-            "relative_humidity": float(self.relative_humidity),
-            "elements": list(self.elements),
-            "min_atlas_wavelength": float(self.min_atlas_wavelength),
-            "max_atlas_wavelength": float(self.max_atlas_wavelength),
-            "min_intensity": float(self.min_intensity),
-            "min_distance": float(self.min_distance),
-            "brightest_n_lines": int(self.brightest_n_lines),
-            "element_list": list(self.get_elements()),
-            "wavelength_list": list(self.get_lines()),
-            "intensity_list": list(self.get_intensities()),
-        }
-
-        with open(filename, "w+", encoding="ascii") as config_file:
-
-            yaml.dump(output_data, config_file, default_flow_style=False)
-
-    def add(
-        self,
-        elements: Union[str, list] = None,
-        linelist: str = "nist",
-        min_atlas_wavelength: float = None,
-        max_atlas_wavelength: float = None,
-        min_intensity: float = 10.0,
-        min_distance: float = 10.0,
-        brightest_n_lines: int = 100,
-        vacuum: bool = False,
-        pressure: float = 101325.0,
-        temperature: float = 273.15,
-        relative_humidity: float = 0.0,
-    ):
-        """
-        Adds arc lines to the atlas
-
-        Arc lines are taken from a general list of NIST lines and can be
-        filtered using the minimum relative intensity (note this may not be
-        accurate due to instrumental effects such as detector response,
-        dichroics, etc) and minimum line separation.
-
-        Lines are filtered first by relative intensity, then by separation.
-        This is to improve robustness in the case where there is a strong
-        line very close to a weak line (which is within the separation limit).
-
-        The vacuum to air wavelength conversion is deafult to False because
-        observatories usually provide the line lists in the respective air
-        wavelength, as the corrections from temperature and humidity are
-        small. See https://emtoolbox.nist.gov/Wavelength/Documentation.asp
-
-        Parameters
-        ----------
-        elements: string or list of strings
-            Chemical symbol, case insensitive
-        min_atlas_wavelength: float (default: None)
-            Minimum wavelength of the arc lines.
-        max_atlas_wavelength: float (default: None)
-            Maximum wavelength of the arc lines.
-        min_intensity: float (default: None)
-            Minimum intensity of the arc lines. Refer to NIST for the
-            intensity.
-        min_distance: float (default: None)
-            Minimum separation between neighbouring arc lines.
-        vacuum: boolean
-            Set to True if the light path from the arc lamb to the detector
-            plane is entirely in vacuum.
-        pressure: float
-            Pressure when the observation took place, in Pascal.
-            If it is not known, we suggest you to assume 10% decrement per
-            1000 meter altitude.
-        temperature: float
-            Temperature when the observation took place, in Kelvin.
-        relative_humidity: float
-            In percentage.
-
-        """
-
-        if min_atlas_wavelength is None:
-
-            min_atlas_wavelength = (
-                self.min_atlas_wavelength - self.range_tolerance
-            )
-
-        if max_atlas_wavelength is None:
-
-            max_atlas_wavelength = (
-                self.max_atlas_wavelength + self.range_tolerance
-            )
-
-        if not np.isfinite(min_atlas_wavelength):
-
-            raise ValueError(
-                "min_atlas_wavelength has to be finite or None. "
-                + f"{min_atlas_wavelength} is given."
-            )
-
-        if not np.isfinite(max_atlas_wavelength):
-
-            raise ValueError(
-                "max_atlas_wavelength has to be finite or None. "
-                + f"{max_atlas_wavelength} is given."
-            )
-
-        if isinstance(elements, str):
-
-            elements = [elements]
-
-        self.elements = elements
-        self.linelist = linelist
-        self.min_atlas_wavelength = min_atlas_wavelength
-        self.max_atlas_wavelength = max_atlas_wavelength
-        self.min_intensity = min_intensity
-        self.min_distance = min_distance
-        self.brightest_n_lines = brightest_n_lines
-        self.vacuum = vacuum
-        self.pressure = pressure
-        self.temperature = temperature
-        self.relative_humidity = relative_humidity
-
-        if elements is not None:
-
-            for element in elements:
-
-                (
-                    atlas_elements_tmp,
-                    atlas_tmp,
-                    atlas_intensities_tmp,
-                ) = load_calibration_lines(
-                    elements=element,
-                    linelist=linelist,
-                    min_atlas_wavelength=min_atlas_wavelength,
-                    max_atlas_wavelength=max_atlas_wavelength,
-                    min_intensity=min_intensity,
-                    min_distance=min_distance,
-                    brightest_n_lines=brightest_n_lines,
-                    vacuum=vacuum,
-                    pressure=pressure,
-                    temperature=temperature,
-                    relative_humidity=relative_humidity,
-                )
-
-                for element, line, intensity in list(
-                    zip(atlas_elements_tmp, atlas_tmp, atlas_intensities_tmp)
-                ):
-                    self.atlas_lines.append(
-                        AtlasLine(line, element, intensity, "NIST")
-                    )
-
-    def add_user_atlas(
-        self,
-        elements: Union[str, list],
-        wavelengths: Union[float, list],
-        intensities: Union[float, list] = None,
-        vacuum: bool = False,
-        pressure: float = 101325.0,
-        temperature: float = 273.15,
-        relative_humidity: float = 0.0,
-    ):
-        """
-        Add a single or list of arc lines. Each arc line should have an
-        element label associated with it. It is recommended that you use
-        a standard periodic table abbreviation (e.g. 'Hg'), but it makes
-        no difference to the fitting process.
-
-        The vacuum to air wavelength conversion is deafult to False because
-        observatories usually provide the line lists in the respective air
-        wavelength, as the corrections from temperature and humidity are
-        small. See https://emtoolbox.nist.gov/Wavelength/Documentation.asp
-
-        Parameters
-        ----------
-        elements: list/str
-            Elements (required). Preferably a standard (i.e. periodic table)
-            name for convenience with built-in atlases
-        wavelengths: list/float
-            Wavelengths to add (Angstrom)
-        intensities: list/float
-            Relative line intensities (NIST value)
-        vacuum: boolean
-            Set to true to convert the input wavelength to air-wavelengths
-            based on the given pressure, temperature and humidity.
-        pressure: float
-            Pressure when the observation took place, in Pascal.
-            If it is not known, assume 10% decrement per 1000 meter altitude
-        temperature: float
-            Temperature when the observation took place, in Kelvin.
-        relative_humidity: float
-            In percentage.
-
-        """
-
-        if isinstance(elements, str):
-
-            elements = [elements] * len(wavelengths)
-
-        if not isinstance(elements, list):
-
-            elements = list(elements)
-
-        if not isinstance(wavelengths, list):
-
-            wavelengths = list(wavelengths)
-
-        if intensities is None:
-
-            intensities = [0] * len(wavelengths)
-
-        else:
-
-            if not isinstance(intensities, list):
-
-                intensities = list(intensities)
-
-        assert len(elements) == len(wavelengths), ValueError(
+        assert len(self.elements) == len(self.wavelengths), ValueError(
             "Input elements and wavelengths have different length."
         )
-        assert len(elements) == len(intensities), ValueError(
+        assert len(self.elements) == len(self.intensities), ValueError(
             "Input elements and intensities have different length."
         )
 
-        if vacuum:
+        if self.vacuum:
 
-            wavelengths = vacuum_to_air_wavelength(
-                wavelengths, temperature, pressure, relative_humidity
+            self.wavelengths = vacuum_to_air_wavelength(
+                self.wavelengths,
+                self.temperature,
+                self.pressure,
+                self.relative_humidity,
             )
 
-        self.min_atlas_wavelength = min(wavelengths)
-        self.max_atlas_wavelength = max(wavelengths)
-
-        for element, line, intensity in list(
-            zip(elements, wavelengths, intensities)
+        for element, wavelength, intensity in list(
+            zip(self.elements, self.wavelengths, self.intensities)
         ):
+            if wavelength < (self.min_wavelength - self.range_tolerance):
+                logger.warning(
+                    f"User-supplied wavelength {wavelength} is below the minimum atlas wavelength of {self.min_wavelength} with a tolerance of {self.range_tolerance}, will not use."
+                )
+                continue
+
+            if wavelength > (self.max_wavelength + self.range_tolerance):
+                logger.warning(
+                    f"User-supplied wavelength {wavelength} is above the maximum atlas wavelength of {self.max_wavelength} with a tolerance of {self.range_tolerance}, will not use."
+                )
+                continue
+
             self.atlas_lines.append(
-                AtlasLine(line, element, intensity, "User")
+                AtlasLine(
+                    wavelength=wavelength,
+                    element=element,
+                    intensity=intensity,
+                    source="user",
+                )
             )
 
-    def get_lines(self):
-        """
-        Returns a list of line wavelengths in the atlas
+    def add_list(self, line_list):
+        min_atlas_wavelength = self.min_wavelength - self.range_tolerance
 
-        Returns
-        -------
-        wavelength_list: list
+        max_atlas_wavelength = self.max_wavelength + self.range_tolerance
 
-        """
-        return [line.wavelength for line in self.atlas_lines]
+        for element in self.elements:
+
+            (
+                atlas_elements_tmp,
+                atlas_tmp,
+                atlas_intensities_tmp,
+            ) = load_calibration_lines(
+                elements=element,
+                linelist=line_list,
+                min_atlas_wavelength=min_atlas_wavelength,
+                max_atlas_wavelength=max_atlas_wavelength,
+                min_intensity=self.min_intensity,
+                min_distance=self.min_distance,
+                brightest_n_lines=self.brightest_n_lines,
+                vacuum=self.vacuum,
+                pressure=self.pressure,
+                temperature=self.temperature,
+                relative_humidity=self.relative_humidity,
+            )
+
+            for element, wavelength, intensity in list(
+                zip(atlas_elements_tmp, atlas_tmp, atlas_intensities_tmp)
+            ):
+                self.atlas_lines.append(
+                    AtlasLine(
+                        wavelength=wavelength,
+                        element=element,
+                        intensity=intensity,
+                        source=self.line_list,
+                    )
+                )
+
+    @classmethod
+    def from_config(cls, config):
+        if isinstance(config, str):
+            return cls(OmegaConf.load(config))
+        elif isinstance(config, dict):
+            return cls(OmegaConf.create(config))
+        else:
+            raise NotImplementedError
 
     def get_elements(self):
         """
@@ -482,6 +221,17 @@ class Atlas:
         element_list = [line.element for line in self.atlas_lines]
 
         return element_list
+
+    def get_lines(self):
+        """
+        Returns a list of line wavelengths in the atlas
+
+        Returns
+        -------
+        wavelength_list: list
+
+        """
+        return [line.wavelength for line in self.atlas_lines]
 
     def get_intensities(self):
         """
@@ -511,146 +261,47 @@ class Atlas:
 
         return source_list
 
-    def summary(self, mode: str = "short", return_string: bool = False):
-        """
-        Return a summary of the content of the Atlas object. The executive
-        mode only return basic info. The full mode list items in details.
-
-        Parameters
-        ----------
-        mode : str
-            Mode of summery, choose from "short" and "full".
-            (Default: "short")
-        return_string: bool
-            Set to True to return the output string.
-
-        """
-
-        n_lines = len(self.atlas_lines)
-        output = f"Number of lines in Atlas: {n_lines}.{os.linesep}"
-
-        lines = np.array(self.get_lines())
-        elements = np.array(self.get_elements())
-        intensities = np.array(self.get_intensities())
-        sources = np.array(self.get_sources())
-
-        order_arg = np.argsort(lines)
-        lines = lines[order_arg]
-        elements = elements[order_arg]
-        intensities = intensities[order_arg]
-        sources = sources[order_arg]
-
-        elements_count = Counter(elements)
-
-        for i in elements_count:
-
-            output += (
-                f"--> Number of {i} lines: {elements_count[i]}."
-                + "{os.linesep}"
-            )
-
-        if mode == "short":
-
-            print(output)
-
-        else:
-
-            output += os.linesep
-            output2 = ""
-            output2_max_width = 0
-            for element, line, intensity, source in zip(
-                elements, lines, intensities, sources
-            ):
-
-                output2_temp = (
-                    f"Element: {element} at {line} Angstrom with intensity "
-                    + f"{intensity}. Added from: {source}.{os.linesep}"
-                )
-                if len(output2_temp) > output2_max_width:
-                    output2_max_width = len(output2_temp)
-                output2 += output2_temp
-
-            output += "+" * (output2_max_width - len(os.linesep)) + os.linesep
-            output += output2
-
-            print(output)
-
-        if return_string:
-
-            return output
-
-    def save_summary(self, mode: str = "full", filename: str = None):
-        """
-        Save the summary of the Atlas object, see `summary` for more detail.
-
-        Parameters
-        ----------
-        mode : str, optional
-            Mode of summery, choose from "executive" and "full".
-            (Default: "full")
-        filename : str, optional
-            The export destination path, None will return with filename
-            "atlas_summary_YYMMDD_HHMMSS"  (Default: None)
-
-        """
-
-        if filename is None:
-
-            time_str = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
-            filename = f"atlas_{mode}_summary_{time_str}.txt"
-
-        summary = self.summary(mode=mode, return_string=True)
-
-        with open(filename, "w+", encoding="ascii") as summary_file:
-            summary_file.write(summary)
-
-        return filename
-
-    def remove_atlas_lines_range(
-        self, wavelength: float, tolerance: float = 10.0
-    ):
-        """
-        Remove arc lines within a certain wavelength range.
-
-        Parameters
-        ----------
-        wavelength: float
-            Wavelength to remove (Angstrom)
-        tolerance: float
-            Tolerance around this wavelength where atlas lines will be removed
-
-        """
-
-        for atlas_line in self.atlas_lines:
-
-            if abs(atlas_line.wavelength - wavelength) < tolerance:
-
-                self.atlas_lines.remove(atlas_line)
-
-    def list(self):
-        """
-        List all the lines loaded to the Calibrator.
-
-        """
-
-        for line in self.atlas_lines:
-
-            print(
-                "Element "
-                + str(line.element)
-                + " at "
-                + str(line.wavelength)
-                + " with intensity "
-                + str(line.intensity)
-            )
-
-    def clear(self):
-        """
-        Remove all the lines loaded to the Calibrator.
-
-        """
-
-        self.atlas_lines.clear()
-
     def __len__(self):
         return len(self.atlas_lines)
+
+
+@dataclass
+class AtlasCollection:
+    atlases: List[Atlas] = MISSING
+    exclude_wavelengths: List[float] = field(default_factory=list)
+    exclude_elements: List[str] = field(default_factory=list)
+    exclude_tolerance: float = 10.0
+    min_wavelength: Optional[float] = 0
+    max_wavelength: Optional[float] = 1e9
+
+    @classmethod
+    def from_config(self, config):
+        return self(OmegaConf.load(config).atlases)
+
+    def __post_init__(self):
+        self.atlases = [Atlas(**config) for config in self.atlases]
+
+    def line_valid(self, line):
+        if line.wavelength < self.min_wavelength:
+            return False
+        elif line.wavelength > self.max_wavelength:
+            return False
+        elif line.element in self.exclude_elements:
+            return False
+
+        for wavelength in self.exclude_wavelengths:
+            if abs(line.wavelength - wavelength) < self.exclude_tolerance:
+                return False
+
+        return True
+
+    @property
+    def atlas_lines(self):
+        lines = []
+
+        for atlas in self.atlases:
+            lines.extend(atlas.atlas_lines)
+
+        lines = list(filter(self.line_valid, lines))
+
+        return sorted(lines, key=lambda x: x.wavelength)

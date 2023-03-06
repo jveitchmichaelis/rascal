@@ -10,16 +10,19 @@ import copy
 import itertools
 import logging
 import os
+import random
 import time
-from typing import Union
+from pathlib import Path
+from typing import List, Union
 
 import numpy as np
-import yaml
-from scipy import interpolate
+from omegaconf import OmegaConf
 from scipy.optimize import minimize
 from scipy.spatial import Delaunay
 
-from . import atlas, models, plotting, sampler
+from . import atlas, models, plotting
+from .atlas import Atlas, AtlasCollection, AtlasLine
+from .config import CalibratorConfig
 from .houghtransform import HoughTransform
 from .ransac import RansacSolver, SolveResult
 from .util import _clean_matches, _make_unique_permutation, gauss
@@ -33,10 +36,10 @@ class Calibrator:
 
     def __init__(
         self,
-        peaks: Union[list, np.ndarray] = None,
+        peaks: List[float],
+        atlas_lines: List[AtlasLine],
+        config: Union[str, list, dict] = None,
         spectrum: Union[list, np.ndarray] = None,
-        logger_name: str = "Calibrator",
-        log_level: str = "warning",
     ):
         """
         Initialise the calibrator object.
@@ -44,21 +47,44 @@ class Calibrator:
         Parameters
         ----------
         peaks: list
-            List of identified arc line pixel values.
+            List of identified arc line pixel values, required.
+        atlas_lines: list
+            List of atlas lines, required.
+        config: str, dict, list
+            Configuration override, optional.
         spectrum: list
-            The spectral intensity as a function of pixel.
+            The spectral intensity as a function of pixel, optional.
 
         """
 
-        self.logger = logging.getLogger(logger_name)
-        self.logger_name = logger_name
-        self.log_level = log_level
+        # Default calibrator_properties
+        self.config = OmegaConf.structured(CalibratorConfig)
+
+        # Merge from user-supplied file, dict, etc.
+        if config is not None:
+            # Path to YAML
+            if isinstance(config, str) or isinstance(config, Path):
+                user_config = OmegaConf.load(config)
+            elif isinstance(config, list) or isinstance(config, dict):
+                user_config = OmegaConf.create(config)
+            else:
+                raise NotImplementedError(
+                    f"This config format {type(config)} is not supported yet."
+                )
+
+            OmegaConf.merge(self.config, user_config)
+
+        # Finally overrides from CLI
+        # cli_conf = OmegaConf.from_cli()
+        # OmegaConf.merge(self.config, cli_conf)
 
         self.matplotlib_imported = False
         self.plotly_imported = False
         self.plot_with_matplotlib = False
         self.plot_with_plotly = False
-        self.atlas = None
+
+        self.atlas_lines = atlas_lines
+
         self.pix_known = None
         self.wave_known = None
         self.hough_lines = None
@@ -66,31 +92,10 @@ class Calibrator:
         self.pairs = None
         self.hough_transformer = HoughTransform()
 
-        # calibrator_properties
-        self.num_pix = None
-        self.effective_pixel = None
-        self.plotting_library = None
-        self.constrain_poly = None
-
-        self.peaks = None
-        self.spectrum = None
-        self.peaks_effective = None
-        self.seed = None
-        self.hide_progress = None
-        self.candidate_tolerance = None
-        self.atlas_config = None
-
         # fitting properties
-        self.max_tries = None
-        self.fit_deg = None
-        self.fit_tolerance = None
-        self.fit_type = None
-        self.brute_force = None
         self.progress = None
-        self.use_msac = None
         self.polyfit = None
         self.polyval = None
-
         self.candidates = None
         self.candidate_peak = None
         self.candidate_arc = None
@@ -103,8 +108,9 @@ class Calibrator:
         self.residuals = None
         self.peak_utilisation = None
         self.atlas_utilisation = None
-
         self.success = False
+
+        # Result dict
         self.res = {
             "fit_coeff": None,
             "matched_peaks": None,
@@ -116,41 +122,72 @@ class Calibrator:
             "success": False,
         }
 
-        self.set_logger(logger_name, log_level)
-        self.add_data(peaks, spectrum)
-        self.set_calibrator_properties()
+        self.set_logger(self.config.logger_name, self.config.log_level)
 
-        # hough_properties
-        self.num_slopes = None
-        self.xbins = None
-        self.ybins = None
-        self.min_wavelength = None
-        self.max_wavelength = None
-        self.range_tolerance = None
-        self.linearity_tolerance = None
-        self.set_hough_properties()
+        # General calibrator setup
+        self._set_calibrator_properties()
 
-        # ransac_properties
-        self.sample_size = None
-        self.top_n_candidate = None
-        self.linear = None
-        self.filter_close = None
-        self.ransac_tolerance = None
-        self.candidate_weighted = None
-        self.hough_weight = None
-        self.minimum_matches = None
-        self.minimum_peak_utilisation = None
-        self.minimum_fit_error = None
-        self.set_ransac_properties()
+        # Spectral data input, modifies the config
+        self.peaks = None
+        self.spectrum = None
+        self._set_data(peaks, spectrum)
 
-    def add_data(
+        # Pixel setup
+        self._set_num_pix()
+
+        # Hough Transform setup
+        self._set_hough_properties()
+
+        self._generate_pairs()
+
+        # RANSAC Properties
+        self._check_ransac_properties()
+
+        # Freeze the configuration for this experiment.
+        OmegaConf.set_readonly(self.config, True)
+
+    def _set_calibrator_properties(
         self,
-        peaks: Union[list, np.ndarray] = None,
-        spectrum: Union[list, np.ndarray] = None,
+    ):
+        """
+        Initialise general properties
+
+        """
+
+        if self.config.seed is not None:
+            self.config.seed = random.randint(0, 1000000)
+
+        np.random.seed(self.config.seed)
+        random.seed(self.config.seed)
+        self.logger.info(f"Seeded RNG with: {self.config.seed}.")
+
+        # check the choice of plotting library is available and used.
+        if self.config.plotting_library == "matplotlib":
+
+            self.use_matplotlib()
+            self.logger.info("Plotting with matplotlib.")
+
+        elif self.config.plotting_library == "plotly":
+
+            self.use_plotly()
+            self.logger.info("Plotting with plotly.")
+
+        else:
+
+            self.logger.warning(
+                "Unknown plotting_library, please choose from "
+                "matplotlib or plotly. Execute use_matplotlib() or "
+                "use_plotly() to manually select the library."
+            )
+
+    def _set_data(
+        self,
+        peaks: list = None,
+        spectrum: list = None,
     ):
         """
         Add the peaks to be solved for wavelength solution. The arc spectrum
-        is optional but it would be a useful for visualisation/diagnostics.
+        is optional but it can be useful for visualisation/diagnostics.
 
         peaks: list
             List of identified arc line pixel values.
@@ -159,11 +196,68 @@ class Calibrator:
 
         """
         self.peaks = copy.deepcopy(peaks)
-        self.spectrum = copy.deepcopy(spectrum)
 
-        if self.num_pix is None:
+        if spectrum is not None:
+            self.spectrum = copy.deepcopy(spectrum)
 
-            self.set_num_pix(None)
+    def _set_num_pix(self):
+        """
+        Josh will write something here.
+
+        """
+
+        # We're given a spectrum
+        if self.spectrum is not None:
+            if self.config.data.num_pix is None:
+                self.config.data.num_pix = len(self.spectrum)
+            else:
+                # Assume that if number of pixels *and* spectrum
+                # are provided, they should be the same length
+                assert (
+                    len(self.spectrum) == self.config.data.num_pix
+                ), "The length of the provided spectrum should match the num_pix"
+
+        # No spectrum provided and num_pix not provided
+        elif self.config.data.num_pix is None:
+
+            if len(self.peaks) > 0:
+                self.config.data.num_pix = int(round(1.1 * max(self.peaks)))
+                self.logger.warning(
+                    "Neither num_pix nor spectrum is given, "
+                    "it uses 1.1 times max(peaks) as the "
+                    "maximum pixel value."
+                )
+            else:
+                self.logger.warning(
+                    "num_pix cannot be set, please provide a num_pix, "
+                    "or the peaks, so that we can guess the num_pix."
+                )
+        # Only user-provided num pixels, so just check that it's
+        # greater than the peak with the highest index
+        else:
+            assert self.config.data.num_pix >= max(self.peaks)
+
+        self.logger.info(f"num_pix is set to {self.config.data.num_pix}.")
+
+        # Default 1:1 mapping between pixel location and effective pixel location
+        if self.config.data.effective_pixel is None:
+
+            self.config.data.effective_pixel = list(
+                range(self.config.data.num_pix)
+            )
+
+        # Otherwise assert the effective pixel array is the same as the number
+        # of pixels in the spectrum
+        else:
+
+            assert (
+                len(self.config.data.effective_pixel)
+                == self.config.data.num_pix
+            ), "The length of the effective pixel array should match num_pix"
+
+        self.logger.debug(
+            f"effective_pixel is set to {self.config.data.effective_pixel}."
+        )
 
     def set_logger(self, logger_name: str, log_level: str):
         """
@@ -209,28 +303,36 @@ class Calibrator:
         pairs = [
             pair
             for pair in itertools.product(
-                self.peaks_effective, self.atlas.get_lines()
+                self.peaks, [line.wavelength for line in self.atlas_lines]
             )
         ]
 
-        if self.constrain_poly:
+        if self.config.hough.constrain_poly:
 
             # Remove pairs outside polygon
             valid_area = Delaunay(
                 [
-                    (0, self.max_intercept + self.candidate_tolerance),
-                    (0, self.min_intercept - self.candidate_tolerance),
                     (
-                        self.effective_pixel.max(),
-                        self.max_wavelength
-                        - self.range_tolerance
-                        - self.candidate_tolerance,
+                        0,
+                        self.max_intercept
+                        + self.config.hough.linearity_tolerance,
+                    ),
+                    (
+                        0,
+                        self.min_intercept
+                        - self.config.hough.linearity_tolerance,
                     ),
                     (
                         self.effective_pixel.max(),
                         self.max_wavelength
-                        + self.range_tolerance
-                        + self.candidate_tolerance,
+                        - self.config.hough.range_tolerance
+                        - self.config.hough.linearity_tolerance,
+                    ),
+                    (
+                        self.effective_pixel.max(),
+                        self.max_wavelength
+                        + self.config.hough.range_tolerance
+                        + self.config.hough.linearity_tolerance,
                     ),
                 ]
             )
@@ -241,6 +343,88 @@ class Calibrator:
         else:
 
             self.pairs = np.array(pairs)
+
+    def _check_ransac_properties(
+        self,
+    ):
+        """
+        Check that RANSAC properties are within limits.
+        """
+
+        assert self.config.ransac.sample_size > self.config.ransac.degree
+        assert self.config.ransac.top_n_candidate > 1
+        assert self.config.ransac.inlier_tolerance > 0
+        assert self.config.ransac.minimum_matches > 0
+        assert self.config.ransac.hough_weight >= 0
+        assert self.config.ransac.sampler in [
+            "probabilistic",
+            "weighted",
+            "uniform",
+        ]
+        assert self.config.ransac.minimum_peak_utilisation >= 0
+        assert self.config.ransac.minimum_peak_utilisation <= 1.0
+        assert self.config.ransac.minimum_fit_error >= 0
+
+    def _set_hough_properties(self):
+        """
+        Internal function which calculates Hough transform
+        parameters based on the existing configuration.
+
+        This includes the minimum and maximum intercepts, which
+        are defined by the min wavelength and the range
+        tolerances given.
+
+        We then calculate the min and max slope, based on the
+        intercepts, the maximum wavelength and the linearity
+        tolerance.
+
+        """
+
+        effective_pixel = self.config.data.effective_pixel
+
+        # Start wavelength in the spectrum, +/- some tolerance
+        self.config.hough.min_intercept = float(
+            self.config.data.detector_min_wave
+            - self.config.hough.range_tolerance
+        )
+        self.config.hough.max_intercept = float(
+            self.config.data.detector_min_wave
+            + self.config.hough.range_tolerance
+        )
+
+        if self.config.data.effective_pixel is not None:
+
+            self.config.hough.min_slope = float(
+                (
+                    (
+                        self.config.data.detector_max_wave
+                        - self.config.hough.range_tolerance
+                        - self.config.hough.linearity_tolerance
+                    )
+                    - (
+                        self.config.hough.min_intercept
+                        + self.config.hough.range_tolerance
+                        + self.config.hough.linearity_tolerance
+                    )
+                )
+                / np.ptp(effective_pixel)
+            )
+
+            self.config.hough.max_slope = float(
+                (
+                    (
+                        self.config.data.detector_max_wave
+                        + self.config.hough.range_tolerance
+                        + self.config.hough.linearity_tolerance
+                    )
+                    - (
+                        self.config.hough.min_intercept
+                        - self.config.hough.range_tolerance
+                        - self.config.hough.linearity_tolerance
+                    )
+                )
+                / np.ptp(effective_pixel)
+            )
 
     def _merge_candidates(self, candidates: Union[list, np.ndarray]):
         """
@@ -375,7 +559,11 @@ class Calibrator:
                 actual[mask],
                 1.0,
                 predicted[mask],
-                (self.range_tolerance + self.linearity_tolerance) * 1.1775,
+                (
+                    self.config.hough.range_tolerance
+                    + self.config.hough.linearity_tolerance
+                )
+                * 1.1775,
             )
 
             self.candidates.append(
@@ -519,280 +707,22 @@ class Calibrator:
 
         return lsq
 
-    def load_config(
-        self, yaml_config: Union[str, dict], y_type: str = "filepath"
-    ):
+    def save_config(self, filename: str):
         """
-        Load a yaml configuration file to populate a Calibrator object
-        and optionally an Atlas object.
+        Save the current configuration to a YAML file. Will create
+        intermediate directory structure if necessary.
 
         Parameters
         ----------
-        yaml_config : str or pyyaml object
-            Filepath or a pyyaml object
-        y_type: str
-            Specify 'yaml' for loading from file or 'object' to take a pyyaml
-            object.
+        filename: str
+            Output filename
 
         """
 
-        # Load from file
-        if y_type == "filepath":
+        os.makedirs(os.path.dirname(filename), exist_ok=True)
 
-            with open(yaml_config, "r", encoding="ascii") as stream:
-
-                config = yaml.safe_load(stream)
-
-        # Load from a pyyaml object
-        elif y_type == "object":
-
-            config = yaml_config
-
-        else:
-
-            raise ValueError(
-                f"Unknown y_type: {y_type}. Please choose from "
-                + "'filepath' or 'stream'"
-            )
-
-        # update logger properties
-        self.set_logger(
-            logger_name=config["logger_name"],
-            log_level=config["log_level"],
-        )
-
-        # Add data to the calibrator
-        self.peaks = config["peaks"]
-        self.spectrum = config["spectrum"]
-        self.peaks_effective = config["peaks_effective"]
-        self.add_data(self.peaks_effective, self.spectrum)
-
-        # Calibrator Properties
-        self.num_pix = config["num_pix"]
-        self.effective_pixel = config["effective_pixel"]
-        self.plotting_library = config["plotting_library"]
-        self.seed = config["seed"]
-        self.hide_progress = config["hide_progress"]
-        self.set_calibrator_properties(
-            num_pix=self.num_pix,
-            effective_pixel=self.effective_pixel,
-            plotting_library=self.plotting_library,
-            seed=self.seed,
-            hide_progress=self.hide_progress,
-        )
-
-        self.candidate_tolerance = config["candidate_tolerance"]
-        self.constrain_poly = config["constrain_poly"]
-
-        # Atlas Properties
-        # config["atlas"]:
-        #   False - skip this step
-        #   True - read from that rascal config
-        #   string - treated as a path to an Atlas config file
-        self.atlas_config = config["atlas"]
-        if not self.atlas_config["config"]:
-
-            self.logger.info("Atlas is not generated from the rascal yaml.")
-
-        elif self.atlas_config["config"]:
-
-            if self.atlas_config["linelist"] == "nist":
-
-                als = atlas.Atlas()
-                als.add(
-                    elements=self.atlas_config["elements"],
-                    linelist=self.atlas_config["linelist"],
-                    min_atlas_wavelength=self.atlas_config[
-                        "min_atlas_wavelength"
-                    ],
-                    max_atlas_wavelength=self.atlas_config[
-                        "max_atlas_wavelength"
-                    ],
-                    min_intensity=self.atlas_config["min_intensity"],
-                    min_distance=self.atlas_config["min_distance"],
-                    brightest_n_lines=self.atlas_config["brightest_n_lines"],
-                    vacuum=self.atlas_config["vacuum"],
-                    pressure=self.atlas_config["pressure"],
-                    temperature=self.atlas_config["temperature"],
-                    relative_humidity=self.atlas_config["relative_humidity"],
-                )
-                self.logger.info(
-                    "Atlas is generated from the rascal yaml using Nist lines."
-                )
-
-            # This loads the lines directly
-            elif self.atlas_config["linelist"] == "user":
-
-                als = atlas.Atlas()
-                als.add_user_atlas(
-                    elements=self.atlas_config["element_list"],
-                    wavelengths=self.atlas_config["wavelength_list"],
-                    intensities=self.atlas_config["intensity_list"],
-                    vacuum=self.atlas_config["vacuum"],
-                    pressure=self.atlas_config["pressure"],
-                    temperature=self.atlas_config["temperature"],
-                    relative_humidity=self.atlas_config["relative_humidity"],
-                )
-                self.logger.info(
-                    "Atlas is generated from the rascal yaml using user lines."
-                )
-
-            # Unknown mode
-            else:
-
-                raise ValueError(
-                    "Unknown linelist type: {self.atlas_config['linelist']}. "
-                    + "Please choose from 'nist' or 'user'."
-                )
-
-        elif isinstance(self.atlas_config["config"], str):
-
-            als = atlas.Atlas()
-            als.load_config(self.atlas_config["config"], y_type="filepath")
-
-        else:
-
-            raise ValueError(
-                f"Unknown atlas config type: {self.atlas_config['config']}. "
-                + "Please choose from 'true', 'false' or a valid path to an "
-                + "Atlas config."
-            )
-
-        # Only add the atlas to the Calibrator if it were set to True
-        if self.atlas_config["config"]:
-
-            self.set_atlas(als, self.candidate_tolerance, self.constrain_poly)
-
-        # Hough transform properties
-        hough_config = config["hough_transform"]
-
-        self.num_slopes = hough_config["num_slopes"]
-        self.xbins = hough_config["xbins"]
-        self.ybins = hough_config["ybins"]
-        self.min_wavelength = hough_config["min_wavelength"]
-        self.max_wavelength = hough_config["max_wavelength"]
-        self.range_tolerance = hough_config["range_tolerance"]
-        self.linearity_tolerance = hough_config["linearity_tolerance"]
-
-        self.set_hough_properties(
-            num_slopes=self.num_slopes,
-            xbins=self.xbins,
-            ybins=self.ybins,
-            min_wavelength=self.min_wavelength,
-            max_wavelength=self.max_wavelength,
-            range_tolerance=self.range_tolerance,
-            linearity_tolerance=self.linearity_tolerance,
-        )
-
-        # RANSAC properties
-        ransac_config = config["ransac"]
-
-        self.sample_size = ransac_config["sample_size"]
-        self.sampler = ransac_config["sampler"]
-        self.top_n_candidate = ransac_config["top_n_candidate"]
-        self.linear = ransac_config["linear"]
-        self.filter_close = ransac_config["filter_close"]
-        self.ransac_tolerance = ransac_config["ransac_tolerance"]
-        self.candidate_weighted = ransac_config["candidate_weighted"]
-        self.hough_weight = ransac_config["hough_weight"]
-        self.minimum_matches = ransac_config["minimum_matches"]
-        self.minimum_peak_utilisation = ransac_config[
-            "minimum_peak_utilisation"
-        ]
-        self.minimum_fit_error = ransac_config["minimum_fit_error"]
-
-        self.set_ransac_properties(
-            sample_size=self.sample_size,
-            top_n_candidate=self.top_n_candidate,
-            linear=self.linear,
-            filter_close=self.filter_close,
-            ransac_tolerance=self.ransac_tolerance,
-            candidate_weighted=self.candidate_weighted,
-            hough_weight=self.hough_weight,
-            minimum_matches=self.minimum_matches,
-            minimum_peak_utilisation=self.minimum_peak_utilisation,
-            minimum_fit_error=self.minimum_fit_error,
-            sampler=self.sampler,
-        )
-
-        # Results
-        result_config = config["results"]
-
-        self.matched_peaks = result_config["matched_peaks"]
-        self.matched_atlas = result_config["matched_atlas"]
-        self.fit_coeff = result_config["fit_coeff"]
-
-    def save_config(self, filename: str):
-        """
-        Josh will write something here.
-
-        """
-
-        output_data = {
-            "peaks": self.peaks,
-            "peaks_effective": self.peaks_effective,
-            "spectrum": self.spectrum,
-            "num_pix": self.num_pix,
-            "effective_pixel": self.effective_pixel,
-            "plotting_library": self.plotting_library,
-            "seed": self.seed,
-            "logger_name": self.logger_name,
-            "log_level": self.log_level,
-            "hide_progress": self.hide_progress,
-            "candidate_tolerance": self.candidate_tolerance,
-            "constrain_poly": self.constrain_poly,
-            "atlas": {
-                "config": self.atlas_config,
-                "linelist": self.atlas_config["linelist"],
-                "vacuum": self.atlas_config["vacuum"],
-                "pressure": self.atlas_config["pressure"],
-                "temperature": self.atlas_config["temperature"],
-                "relative_humidity": self.atlas_config["relative_humidity"],
-                "elements": self.atlas_config["elements"],
-                "min_atlas_wavelength": self.atlas_config[
-                    "min_atlas_wavelength"
-                ],
-                "max_atlas_wavelength": self.atlas_config[
-                    "max_atlas_wavelength"
-                ],
-                "min_intensity": self.atlas_config["min_intensity"],
-                "min_distance": self.atlas_config["min_distance"],
-                "brightest_n_lines": self.atlas_config["brightest_n_lines"],
-                "element_list": self.atlas_config["element_list"],
-                "wavelength_list": self.atlas_config["wavelength_list"],
-                "intensity_list": self.atlas_config["intensity_list"],
-            },
-            "hough_transform": {
-                "num_slopes": self.num_slopes,
-                "xbins": self.xbins,
-                "ybins": self.ybins,
-                "min_wavelength": self.min_wavelength,
-                "max_wavelength": self.max_wavelength,
-                "range_tolerance": self.range_tolerance,
-                "linearity_tolerance": self.linearity_tolerance,
-            },
-            "ransac": {
-                "sample_size": self.sample_size,
-                "top_n_candidate": self.top_n_candidate,
-                "linear": self.linear,
-                "filter_close": self.filter_close,
-                "ransac_tolerance": self.ransac_tolerance,
-                "candidate_weighted": self.candidate_weighted,
-                "hough_weight": self.hough_weight,
-                "minimum_matches": self.minimum_matches,
-                "minimum_peak_utilisation": self.minimum_peak_utilisation,
-                "minimum_fit_error": self.minimum_fit_error,
-            },
-            "results": {
-                "matched_peaks": self.matched_peaks,
-                "matched_atlas": self.matched_atlas,
-                "fit_coeff": self.fit_coeff,
-            },
-        }
-
-        with open(filename, "w+", encoding="ascii") as config_file:
-
-            yaml.dump(output_data, config_file, default_flow_style=False)
+        with open(filename, "w") as fp:
+            OmegaConf.save(config=self.confiog, f=fp)
 
     def which_plotting_library(self):
         """
@@ -834,620 +764,6 @@ class Calibrator:
         self.plot_with_plotly = True
         self.plot_with_matplotlib = False
 
-    def set_calibrator_properties(
-        self,
-        num_pix: int = None,
-        effective_pixel: Union[list, np.ndarray] = None,
-        plotting_library: str = None,
-        seed: int = None,
-        hide_progress: bool = False,
-    ):
-        """
-        Initialise the calibrator object.
-
-        Parameters
-        ----------
-        num_pix: int
-            Number of pixels in the spectral axis.
-        effective_pixel: list
-            pixel value of the of the spectrum, this is only needed if the
-            spectrum spans multiple detector arrays.
-        plotting_library: string (default: 'matplotlib')
-            Choose between matplotlib and plotly.
-        seed: int
-            Set an optional seed for random number generators. If used,
-            this parameter must be set prior to calling RANSAC. Useful
-            for deterministic debugging.
-        logger_name: string (default: 'Calibrator')
-            The name of the logger. It can use an existing logger if a
-            matching name is provided.
-        log_level: string (default: 'info')
-            Choose {critical, error, warning, info, debug, notset}.
-        hide_progress: bool (default: False)
-            Set to hide tdqm progress bar.
-
-        """
-
-        self.hide_progress = hide_progress
-
-        # set the num_pix
-        self.set_num_pix(num_pix)
-
-        # set the effective_pixel
-        if effective_pixel is not None:
-
-            self.effective_pixel = np.asarray(effective_pixel)
-
-        elif self.effective_pixel is None and self.num_pix is not None:
-
-            self.effective_pixel = np.arange(self.num_pix)
-
-        elif self.effective_pixel is None and self.spectrum is not None:
-
-            self.effective_pixel = np.arange(max(self.spectrum))
-
-        elif self.effective_pixel is None and self.peaks is not None:
-
-            self.effective_pixel = np.arange(max(self.peaks))
-
-        else:
-
-            pass
-
-        # set the num_pix again in case num_pix is None and effective_pixel is
-        # not None
-        if num_pix is None:
-
-            self.set_num_pix(None)
-
-        self.logger.info(f"effective_pixel is set to {effective_pixel}.")
-
-        # convert peaks and spectrum to effective pixel coordinates here
-        if self.effective_pixel is not None:
-            pix_to_epix_itp = interpolate.interp1d(
-                np.arange(len(self.effective_pixel)),
-                self.effective_pixel,
-                fill_value="extrapolate",
-            )
-            self.peaks_effective = pix_to_epix_itp(self.peaks)
-
-        if seed is not None:
-            np.random.seed(seed)
-            self.seed = seed
-
-        # if the plotting library is supplied
-        if plotting_library is not None:
-
-            # set the plotting library
-            self.plotting_library = plotting_library
-
-        # if the plotting library is not supplied but the calibrator does not
-        # know which library to use yet.
-        elif self.plotting_library is None:
-
-            self.plotting_library = "matplotlib"
-
-        # everything is good
-        else:
-
-            pass
-
-        # check the choice of plotting library is available and used.
-        if self.plotting_library == "matplotlib":
-
-            self.use_matplotlib()
-            self.logger.info("Plotting with matplotlib.")
-
-        elif self.plotting_library == "plotly":
-
-            self.use_plotly()
-            self.logger.info("Plotting with plotly.")
-
-        else:
-
-            self.logger.warning(
-                "Unknown plotting_library, please choose from "
-                "matplotlib or plotly. Execute use_matplotlib() or "
-                "use_plotly() to manually select the library."
-            )
-
-    def set_num_pix(self, num_pix: int):
-        """
-        Josh will write something here.
-
-        """
-
-        if num_pix is not None:
-
-            self.num_pix = num_pix
-
-        else:
-
-            if self.effective_pixel is not None:
-
-                self.num_pix = np.max(self.effective_pixel)
-
-            elif self.spectrum is not None:
-
-                self.num_pix = len(self.spectrum)
-
-            elif self.peaks_effective is not None:
-
-                self.num_pix = 1.1 * max(self.peaks_effective)
-
-            elif self.peaks is not None:
-
-                self.num_pix = 1.1 * max(self.peaks)
-
-            else:
-
-                pass
-
-        if self.effective_pixel is None and self.num_pix is not None:
-
-            self.effective_pixel = np.arange(self.num_pix)
-
-        self.logger.info(f"num_pix is set to {num_pix}.")
-
-    def set_hough_properties(
-        self,
-        num_slopes: int = None,
-        xbins: int = None,
-        ybins: int = None,
-        min_wavelength: float = None,
-        max_wavelength: float = None,
-        range_tolerance: float = None,
-        linearity_tolerance: float = None,
-    ):
-        """
-        parameters
-        ----------
-        num_slopes: int (default: 2000)
-            Number of slopes to consider during Hough transform
-        xbins: int (default: 50)
-            Number of bins for Hough accumulation
-        ybins: int (default: 50)
-            Number of bins for Hough accumulation
-        min_wavelength: float (default: 3000)
-            Minimum wavelength of the spectrum.
-        max_wavelength: float (default: 9000)
-            Maximum wavelength of the spectrum.
-        range_tolerance: float (default: 500)
-            Estimation of the error on the provided spectral range
-            e.g. 3000-5000 with tolerance 500 will search for
-            solutions that may satisfy 2500-5500
-        linearity_tolerance: float (default: 100)
-            A toleranceold (Ansgtroms) which defines some padding around the
-            range tolerance to allow for non-linearity. This should be the
-            maximum expected excursion from linearity.
-
-        """
-
-        # set the num_slopes
-        if num_slopes is not None:
-
-            self.num_slopes = int(num_slopes)
-
-        elif self.num_slopes is None:
-
-            self.num_slopes = 2000
-
-        else:
-
-            pass
-
-        # set the xbins
-        if xbins is not None:
-
-            self.xbins = xbins
-
-        elif self.xbins is None:
-
-            self.xbins = 100
-
-        else:
-
-            pass
-
-        # set the ybins
-        if ybins is not None:
-
-            self.ybins = ybins
-
-        elif self.ybins is None:
-
-            self.ybins = 100
-
-        else:
-
-            pass
-
-        # set the min_wavelength
-        if min_wavelength is not None:
-
-            self.min_wavelength = min_wavelength
-
-        elif self.min_wavelength is None:
-
-            self.min_wavelength = 3000.0
-
-        else:
-
-            pass
-
-        # set the max_wavelength
-        if max_wavelength is not None:
-
-            self.max_wavelength = max_wavelength
-
-        elif self.max_wavelength is None:
-
-            self.max_wavelength = 9000.0
-
-        else:
-
-            pass
-
-        # Set the range_tolerance
-        if range_tolerance is not None:
-
-            self.range_tolerance = range_tolerance
-
-        elif self.range_tolerance is None:
-
-            self.range_tolerance = 500
-
-        else:
-
-            pass
-
-        # Set the linearity_tolerance
-        if linearity_tolerance is not None:
-
-            self.linearity_tolerance = linearity_tolerance
-
-        elif self.linearity_tolerance is None:
-
-            self.linearity_tolerance = 100
-
-        else:
-
-            pass
-
-        # Start wavelength in the spectrum, +/- some tolerance
-        self.min_intercept = self.min_wavelength - self.range_tolerance
-        self.max_intercept = self.min_wavelength + self.range_tolerance
-
-        if self.effective_pixel is not None:
-
-            self.min_slope = (
-                (
-                    self.max_wavelength
-                    - self.range_tolerance
-                    - self.linearity_tolerance
-                )
-                - (
-                    self.min_intercept
-                    + self.range_tolerance
-                    + self.linearity_tolerance
-                )
-            ) / np.ptp(self.effective_pixel)
-
-            self.max_slope = (
-                (
-                    self.max_wavelength
-                    + self.range_tolerance
-                    + self.linearity_tolerance
-                )
-                - (
-                    self.min_intercept
-                    - self.range_tolerance
-                    - self.linearity_tolerance
-                )
-            ) / np.ptp(self.effective_pixel)
-
-        if self.atlas is not None and self.pairs is not None:
-
-            self._generate_pairs()
-
-    def set_ransac_properties(
-        self,
-        sample_size: int = None,
-        top_n_candidate: int = None,
-        linear: bool = None,
-        filter_close: bool = None,
-        ransac_tolerance: float = None,
-        candidate_weighted: bool = None,
-        hough_weight: float = None,
-        minimum_matches: int = None,
-        minimum_peak_utilisation: float = None,
-        minimum_fit_error: float = None,
-        sampler: "sampler.Sampler" = None,
-    ):
-        """
-        Configure the Calibrator. This may require some manual twiddling before
-        the calibrator can work efficiently. However, in theory, a large
-        max_tries in fit() should provide a good solution in the expense of
-        performance (minutes instead of seconds).
-
-        Parameters
-        ----------
-        sample_size: int (default: 5)
-            Number of samples used for fitting, this is automatically
-            set to the polynomial degree + 1, but a larger value can
-            be specified here.
-        top_n_candidate: int (default: 5)
-            Top ranked lines to be fitted.
-        linear: boolean (default: True)
-            True to use the hough transformed gradient, otherwise, use the
-            known polynomial.
-        filter_close: boolean (default: False)
-            Remove the pairs that are out of bounds in the hough space.
-        ransac_tolerance: float (default: 5)
-            The distance criteria  (Angstroms) to be considered an inlier to a
-            fit. This should be close to the size of the expected residuals on
-            the final fit (e.g. 1A is typical)
-        candidate_weighted: boolean (default: True)
-            Set to True to down-weight pairs that are far from the fit.
-        hough_weight: float or None (default: 1.0)
-            Set to use the hough space to weigh the fit. The theoretical
-            optimal weighting is unclear. The larger the value, the heavily it
-            relies on the overdensity in the hough space for a good fit.
-        minimum_matches: int or None (default: 3)
-            Set to only accept fit solutions with a minimum number of
-            matches. Setting this will prevent the fitting function from
-            accepting spurious low-error fits.
-        minimum_peak_utilisation: int or None (default: 0.0)
-            Set to only accept fit solutions with a fraction of matches. This
-            option is convenient if you don't want to specify an absolute
-            number of atlas lines. Range is 0 - 1 inclusive.
-        minimum_fit_error: float or None (default: 1e-4)
-            Set to only accept fits with a minimum error. This avoids
-            accepting "perfect" fit solutions with zero errors. However
-            if you have an extremely good system, you may want to set this
-            tolerance lower.
-
-        """
-
-        # Setting the sample_size
-        if sample_size is not None:
-
-            self.sample_size = sample_size
-
-        elif self.sample_size is None:
-
-            self.sample_size = 5
-
-        else:
-
-            pass
-
-        if sampler is not None:
-            self.sampler = sampler
-        else:
-            self.sampler = "weighted"
-
-        # Set top_n_candidate
-        if top_n_candidate is not None:
-
-            self.top_n_candidate = top_n_candidate
-
-        elif self.top_n_candidate is None:
-
-            self.top_n_candidate = 5
-
-        else:
-
-            pass
-
-        # Set linear
-        if linear is not None:
-
-            self.linear = linear
-
-        elif self.linear is None:
-
-            self.linear = True
-
-        else:
-
-            pass
-
-        # Set to filter closely spaced lines
-        if filter_close is not None:
-
-            self.filter_close = filter_close
-
-        elif self.filter_close is None:
-
-            self.filter_close = False
-
-        else:
-
-            pass
-
-        # Set the ransac_tolerance
-        if ransac_tolerance is not None:
-
-            self.ransac_tolerance = ransac_tolerance
-
-        elif self.ransac_tolerance is None:
-
-            self.ransac_tolerance = 5
-
-        else:
-
-            pass
-
-        # Set to weigh the candidate pairs by the density (pixel)
-        if candidate_weighted is not None:
-
-            self.candidate_weighted = candidate_weighted
-
-        elif self.candidate_weighted is None:
-
-            self.candidate_weighted = True
-
-        else:
-
-            pass
-
-        # Set the multiplier of the weight of the hough density
-        if hough_weight is not None:
-
-            self.hough_weight = hough_weight
-
-        elif self.hough_weight is None:
-
-            self.hough_weight = 1.0
-
-        else:
-
-            pass
-
-        # Set the minimum number of desired matches
-        if minimum_matches is not None:
-
-            assert minimum_matches > 0
-            self.minimum_matches = minimum_matches
-
-        elif self.minimum_matches is None:
-
-            self.minimum_matches = 3
-
-        else:
-
-            pass
-
-        # Set the minimum utilisation required
-        if minimum_peak_utilisation is not None:
-
-            assert (
-                minimum_peak_utilisation >= 0
-                and minimum_peak_utilisation <= 1.0
-            )
-            self.minimum_peak_utilisation = minimum_peak_utilisation
-
-        elif self.minimum_peak_utilisation is None:
-
-            self.minimum_peak_utilisation = 0
-
-        else:
-
-            pass
-
-        # Set the minimum fit error
-        if minimum_fit_error is not None:
-
-            assert minimum_fit_error >= 0
-            self.minimum_fit_error = minimum_fit_error
-
-        elif self.minimum_fit_error is None:
-
-            self.minimum_fit_error = 1e-4
-
-        else:
-
-            pass
-
-    def remove_atlas_lines_range(
-        self, wavelength: float, tolerance: float = 10.0
-    ):
-        """
-        Remove arc lines within a certain wavelength range.
-
-        """
-
-        self.atlas.remove_atlas_lines_range(wavelength, tolerance)
-
-    def list_atlas(self):
-        """
-        List all the lines loaded to the Calibrator.
-
-        """
-
-        self.atlas.list()
-
-    def clear_atlas(self):
-        """
-        Remove all the lines loaded to the Calibrator.
-
-        """
-
-        self.atlas.clear()
-
-    def set_atlas(
-        self,
-        atlas: "atlas.Atlas",
-        candidate_tolerance: float = 10.0,
-        constrain_poly: bool = False,
-    ):
-        """
-        Adds an atlas of arc lines to the calibrator
-
-        Parameters
-        ----------
-        atlas: rascal.atlas.Atlas
-            Chemical symbol, case insensitive
-        candidate_tolerance: float (default: 10)
-            toleranceold  (Angstroms) for considering a point to be an inlier
-            during candidate peak/line selection. This should be reasonable
-            small as we want to search for candidate points which are
-            *locally* linear.
-        constrain_poly: boolean
-            Apply a polygonal constraint on possible peak/atlas pairs
-
-        """
-
-        self.atlas = atlas
-
-        self.candidate_tolerance = candidate_tolerance
-        self.constrain_poly = constrain_poly
-
-        # Create a list of all possible pairs of detected peaks and lines
-        # from atlas
-        if self.peaks_effective is not None:
-
-            self._generate_pairs()
-
-    def atlas_summary(self, mode: str = "short", return_string: bool = False):
-        """
-        Return a summary of the content of the Atlas object. The short
-        mode only return basic info. The full mode list items in details.
-
-        Parameters
-        ----------
-        mode : str, optional
-            Mode of summery, choose from "short" and "full".
-            (Default: "short")
-
-        """
-
-        summary = self.atlas.summary(mode=mode, return_string=return_string)
-
-        if return_string:
-
-            return summary
-
-    def save_atlas_summary(self, mode: str = "full", filename: str = None):
-        """
-        Save the summary of the Atlas object, see `summary` for more detail.
-
-        Parameters
-        ----------
-        mode : str, optional
-            Mode of summery, choose from "short" and "full".
-            (Default: "full")
-        filename : str, optional
-            The export destination path, None will return with filename
-            "atlas_summary_YYMMDD_HHMMSS"  (Default: None)
-
-        """
-
-        output_path = self.atlas.save_summary(mode=mode, filename=filename)
-
-        return output_path
-
     def do_hough_transform(self, brute_force: bool = False):
         """
         Josh will write something here.
@@ -1465,10 +781,10 @@ class Calibrator:
 
         # Generate the hough_points from the pairs
         self.hough_transformer.set_constraints(
-            self.min_slope,
-            self.max_slope,
-            self.min_intercept,
-            self.max_intercept,
+            self.config.hough.min_slope,
+            self.config.hough.max_slope,
+            self.config.hough.min_intercept,
+            self.config.hough.max_intercept,
         )
 
         if brute_force:
@@ -1477,10 +793,14 @@ class Calibrator:
             )
         else:
             self.hough_transformer.generate_hough_points(
-                self.pairs[:, 0], self.pairs[:, 1], num_slopes=self.num_slopes
+                self.pairs[:, 0],
+                self.pairs[:, 1],
+                num_slopes=self.config.hough.num_slopes,
             )
 
-        self.hough_transformer.bin_hough_points(self.xbins, self.ybins)
+        self.hough_transformer.bin_hough_points(
+            self.config.hough.xbins, self.config.hough.ybins
+        )
         self.hough_points = self.hough_transformer.hough_points
         self.hough_lines = self.hough_transformer.hough_lines
 
@@ -1592,13 +912,12 @@ class Calibrator:
 
     def fit(
         self,
-        max_tries: int = 500,
-        fit_deg: int = 4,
+        max_tries: int = None,
+        fit_deg: int = None,
         fit_coeff: Union[list, np.ndarray] = None,
-        fit_tolerance: float = 5.0,
-        fit_type: str = "poly",
-        candidate_tolerance: float = 4.0,
-        brute_force: bool = False,
+        fit_tolerance: float = None,
+        fit_type: str = None,
+        candidate_tolerance: float = None,
         progress: bool = True,
         use_msac: bool = False,
     ):
@@ -1622,9 +941,6 @@ class Calibrator:
             One of 'poly', 'legendre' or 'chebyshev'
         candidate_tolerance: float (default: 2.0)
             toleranceold  (Angstroms) for considering a point to be an inlier
-        brute_force: boolean (default: False)
-            Set to True to try all possible combination in the given parameter
-            space
         progress: boolean (default: True)
             True to show progress with tdqm. It is overrid if tdqm cannot be
             imported.
@@ -1651,30 +967,27 @@ class Calibrator:
 
         """
 
-        self.max_tries = max_tries
-        self.fit_deg = fit_deg
+        self.fit_deg = self.config.ransac.degree
         self.fit_coeff = fit_coeff
+
         if fit_coeff is not None:
 
             self.fit_deg = len(fit_coeff) - 1
 
-        self.fit_tolerance = fit_tolerance
-        self.fit_type = fit_type
-        self.brute_force = brute_force
+        self.fit_tolerance = self.config.ransac.rms_tolerance
         self.progress = progress
-        self.use_msac = use_msac
 
-        if self.fit_type == "poly":
+        if self.config.ransac.type == "poly":
 
             self.polyfit = np.polynomial.polynomial.polyfit
             self.polyval = np.polynomial.polynomial.polyval
 
-        elif self.fit_type == "legendre":
+        elif self.config.ransac.type == "legendre":
 
             self.polyfit = np.polynomial.legendre.legfit
             self.polyval = np.polynomial.legendre.legval
 
-        elif self.fit_type == "chebyshev":
+        elif self.config.ransac.type == "chebyshev":
 
             self.polyfit = np.polynomial.chebyshev.chebfit
             self.polyval = np.polynomial.chebyshev.chebval
@@ -1685,32 +998,44 @@ class Calibrator:
                 "fit_type must be: (1) poly, (2) legendre or (3) chebyshev"
             )
 
+        n_lines = len(self.atlas_lines)
+
         # Reduce sample_size if it is larger than the number of atlas available
-        if self.sample_size > len(self.atlas):
+        """
+
+        THIS IS NEVER USED
+
+        if self.config.ransac.sample_size > n_lines:
 
             self.logger.warning(
                 "Size of sample_size is larger than the size of atlas, "
                 + "the sample_size is set to match the size of atlas = "
-                + str(len(self.atlas))
+                + str(n_lines)
                 + "."
             )
-            self.sample_size = len(self.atlas)
+        
+            self.sample_size = n_lines
 
         if self.sample_size <= fit_deg:
 
             self.sample_size = fit_deg + 1
+        """
 
         if (self.hough_lines is None) or (self.hough_points is None):
 
             self.do_hough_transform()
 
-        if self.minimum_matches > len(self.atlas):
+        """
+
+        This is now handled by RANSAC?
+
+        if self.ransac.minimum_matches > n_lines:
             self.logger.warning(
                 "Requested minimum matches is greater than the atlas size "
                 + "setting the minimum number of matches to equal the atlas "
-                + f"size = {len(self.atlas)}."
+                + f"size = {n_lines}."
             )
-            self.minimum_matches = len(self.atlas)
+            self.minimum_matches = n_lines
 
         if self.minimum_matches > len(self.peaks_effective):
             self.logger.warning(
@@ -1720,21 +1045,27 @@ class Calibrator:
             )
             self.minimum_matches = len(self.peaks_effective)
 
-        if self.linear:
+        """
 
-            self._get_candidate_points_linear(candidate_tolerance)
+        if self.config.ransac.linear:
+
+            self._get_candidate_points_linear(
+                self.config.ransac.inlier_tolerance
+            )
 
         else:
 
-            self._get_candidate_points_poly(candidate_tolerance)
+            self._get_candidate_points_poly(
+                self.config.ransac.inlier_tolerance
+            )
 
         (
             self.candidate_peak,
             self.candidate_arc,
         ) = self._get_most_common_candidates(
             self.candidates,
-            top_n_candidate=self.top_n_candidate,
-            weighted=self.candidate_weighted,
+            top_n_candidate=self.config.ransac.top_n_candidate,
+            weighted=self.config.ransac.candidate_weighted,
         )
 
         # Note that there may be multiple matches for
@@ -1744,37 +1075,17 @@ class Calibrator:
 
         self.success = False
 
-        config = {
-            "sample_size": self.sample_size,
-            "filter_close": self.filter_close,
-            "fit_tolerance": self.fit_tolerance,
-            "hough_weight": self.hough_weight,
-            "fit_type": self.fit_type,
-            "max_tries": self.max_tries,
-            "fit_deg": self.fit_deg,
-            "use_msac": self.use_msac,
-            "weight_samples": True,
-            "progress": self.progress,
-            "polyfit_fn": self.polyfit,
-            "polyval_fn": self.polyval,
-            "fit_valid_fn": self._fit_valid,
-            "sampler": self.sampler,
-            "hough": self.hough_transformer,
-        }
-
-        solver = RansacSolver(_x, _y, config)
+        solver = RansacSolver(_x, _y, config=self.config.ransac)
         solver.solve()
 
         if solver.valid_solution:
 
             result = solver.best_result
 
-            peak_utilisation = len(result.inliers_x) / len(
-                self.peaks_effective
-            )
-            atlas_utilisation = len(result.inliers_y) / len(self.atlas)
-            self.matched_peaks = result.inliers_x
-            self.matched_atlas = result.inliers_y
+            peak_utilisation = len(result.x) / len(self.peaks)
+            atlas_utilisation = len(result.y) / n_lines
+            self.matched_peaks = result.x
+            self.matched_atlas = result.y
 
             if result.rms_residual > self.fit_tolerance:
 
@@ -1850,9 +1161,11 @@ class Calibrator:
             min_wavelength_px = self.polyval(0, result.fit_coeffs)
 
             if min_wavelength_px < (
-                self.min_wavelength - self.range_tolerance
+                self.config.data.detector_min_wave
+                - self.config.data.detector_edge_tolerance
             ) or min_wavelength_px > (
-                self.min_wavelength + self.range_tolerance
+                self.config.data.detector_min_wave
+                + self.config.data.detector_edge_tolerance
             ):
                 self.logger.debug(
                     "Lower wavelength of fit too small, "
@@ -1873,9 +1186,11 @@ class Calibrator:
             )
 
             if max_wavelength_px > (
-                self.max_wavelength + self.range_tolerance
+                self.config.data.detector_max_wave
+                + self.detector_edge_tolerance
             ) or max_wavelength_px < (
-                self.max_wavelength - self.range_tolerance
+                self.config.data.detector_max_wave
+                - self.detector_edge_tolerance
             ):
                 self.logger.debug(
                     "Upper wavelength of fit too large, "
@@ -2123,10 +1438,8 @@ class Calibrator:
             np.nansum(self.residuals**2.0) / len(self.residuals)
         )
 
-        self.peak_utilisation = len(self.matched_peaks) / len(
-            self.peaks_effective
-        )
-        self.atlas_utilisation = len(self.matched_atlas) / len(self.atlas)
+        self.peak_utilisation = len(self.matched_peaks) / len(self.peaks)
+        self.atlas_utilisation = len(self.matched_atlas) / n_lines
 
         self.res = {
             "fit_coeff": self.fit_coeff,
@@ -2209,7 +1522,7 @@ class Calibrator:
         output += "+" * output2_max_width + os.linesep
         output += output2
 
-        print(output)
+        self.logger.info(output)
 
         if return_string:
 
@@ -2409,10 +1722,10 @@ class Calibrator:
             np.nansum(self.residuals**2.0) / len(self.residuals)
         )
 
-        self.peak_utilisation = len(self.matched_peaks) / len(
-            self.peaks_effective
+        self.peak_utilisation = len(self.matched_peaks) / len(self.peaks)
+        self.atlas_utilisation = len(self.matched_atlas) / len(
+            self.atlas_lines
         )
-        self.atlas_utilisation = len(self.matched_atlas) / len(self.atlas)
         self.success = True
 
         self.res = {

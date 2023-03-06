@@ -8,38 +8,23 @@ Configure the ransac for the calibrator
 
 import copy
 import logging
-from typing import Union
+from typing import Callable, Optional, Union
 
 import numpy as np
 from dotmap import DotMap
+from omegaconf import OmegaConf
 from scipy import interpolate
 from tqdm.auto import tqdm
 
 from . import models
+from .config import RansacConfig
+from .houghtransform import HoughTransform
 from .sampler import (
     ProbabilisticSampler,
     UniformRandomSampler,
     WeightedRandomSampler,
 )
 from .util import _derivative
-
-_default_config = {
-    "sample_size": 5,
-    "filter_close": False,
-    "fit_tolerance": 5,
-    "hough_weight": 1.0,
-    "fit_type": "poly",
-    "max_tries": -1,
-    "fit_deg": 4,
-    "use_msac": True,
-    "candidate_weighted": True,
-    "sampler": "weighted",
-    "progress": False,
-    "polyfit_fn": np.polynomial.polynomial.polyfit,
-    "polyval_fn": np.polynomial.polynomial.polyval,
-    "fit_valid_fn": lambda x: True,
-    "hough": None,
-}
 
 
 class SolveResult:
@@ -92,20 +77,31 @@ class RansacSolver:
         self,
         x: Union[list, np.ndarray],
         y: Union[list, np.ndarray],
+        hough: Optional[HoughTransform] = None,
         config: dict = None,
+        polyfit_fn: Callable = np.polynomial.polynomial.polyfit,
+        polyval_fn: Callable = np.polynomial.polynomial.polyval,
+        fit_valid_fn: Callable = lambda x: True,
     ):
         """
         Josh will write something here.
 
         """
 
-        if config is None:
-            config = _default_config
+        self.config = OmegaConf.structured(RansacConfig)
 
-        self.config = DotMap(config, _dynamic=False)
+        if config is not None:
+            if isinstance(config, dict):
+                OmegaConf.merge(self.config, OmegaConf.create(config))
+            else:
+                OmegaConf.merge(self.config, config)
 
         self.x = x
         self.y = y
+        self.polyfit = polyfit_fn
+        self.polyval = polyval_fn
+        self.hough = hough
+        self._fit_valid = fit_valid_fn
         self.unique_x = np.sort(np.unique(self.x))
 
         self.setup()
@@ -124,14 +120,10 @@ class RansacSolver:
 
         self.logger = logging.getLogger("ransac")
 
-        if len(np.unique(self.x)) <= self.config.fit_deg:
+        if len(np.unique(self.x)) <= self.config.degree:
             raise ValueError(
                 "Fit degree is greater than the provided number of points"
             )
-
-        self.polyfit = self.config.polyfit_fn
-        self.polyval = self.config.polyval_fn
-        self._fit_valid = self.config.fit_valid_fn
 
         if self.config.sampler == "weighted":
             self.logger.debug(f"Using weighted random sampler")
@@ -149,7 +141,7 @@ class RansacSolver:
                 self.config.sample_size,
                 n_samples=self.config.max_tries,
             )
-        else:
+        elif self.config.sampler == "uniform":
             self.logger.debug("Using uniform random sampler")
             self.sampler = UniformRandomSampler(
                 self.x,
@@ -157,17 +149,19 @@ class RansacSolver:
                 self.config.sample_size,
                 n_samples=self.config.max_tries,
             )
+        else:
+            raise NotImplementedError
 
         if self.config.filter_close:
             self.logger.debug(
                 "Filtering close x-values with tolerance "
-                + f"{self.config.fit_tolerance}"
+                + f"{self.config.rms_tolerance}"
             )
             self._filter_close()
 
-        if self.config.hough is not None:
+        if self.hough is not None:
             self.logger.debug("Using hough weighting")
-            ht = self.config.hough
+            ht = self.hough
 
             xbin_size = (ht.xedges[1] - ht.xedges[0]) / 2.0
             ybin_size = (ht.yedges[1] - ht.yedges[0]) / 2.0
@@ -192,7 +186,7 @@ class RansacSolver:
         unique_y = np.unique(self.y)
 
         idx = np.argwhere(
-            unique_y[1:] - unique_y[0:-1] < 3 * self.config.fit_tolerance
+            unique_y[1:] - unique_y[0:-1] < 3 * self.config.rms_tolerance
         )
         separation_mask = np.argwhere((self.y == unique_y[idx]).sum(0) == 0)
 
@@ -341,7 +335,7 @@ class RansacSolver:
 
         # Try to fit the data.
         # This doesn't need to be robust, it's an exact fit.
-        return self.polyfit(x_hat, y_hat, self.config.fit_deg)
+        return self.polyfit(x_hat, y_hat, self.config.degree)
 
     def _cost(self, result: SolveResult):
         """
@@ -355,7 +349,7 @@ class RansacSolver:
         """
 
         # modified cost function weighted by the Hough space density
-        if (self.config.hough is not None) & (self.twoditp is not None):
+        if (self.hough is not None) & (self.twoditp is not None):
 
             wave = self.polyval(self.x, result.fit_coeffs)
             gradient = self.polyval(self.x, _derivative(result.fit_coeffs))
@@ -386,7 +380,7 @@ class RansacSolver:
         else:
 
             cost = 1.0 / (
-                sum(result.residual < self.config.fit_tolerance) + 1e-16
+                sum(result.residual < self.config.inlier_tolerance) + 1e-16
             )
 
         return cost
@@ -404,24 +398,23 @@ class RansacSolver:
 
         if result.cost <= self.best_result.cost:
 
-            mask = result.residual < self.config.fit_tolerance
+            mask = result.residual < self.config.rms_tolerance
             n_inliers = sum(mask)
             inliers_x = result.x[mask]
             inliers_y = result.y[mask]
 
-            if len(inliers_x) <= self.config.fit_deg:
+            if len(inliers_x) <= self.config.degree:
 
                 self.logger.debug("Too few good candidates for fitting.")
 
                 return False
 
             # Now we do a robust fit
-            if self.config.fit_type == "poly":
-
+            if self.config.type == "poly":
                 try:
 
                     coeffs = models.robust_polyfit(
-                        inliers_x, inliers_y, self.config.fit_deg
+                        inliers_x, inliers_y, self.config.degree
                     )
 
                 except np.linalg.LinAlgError:
@@ -430,18 +423,15 @@ class RansacSolver:
                     return False
 
             else:
-
-                coeffs = self.polyfit(
-                    inliers_x, inliers_y, self.config.fit_deg
-                )
+                coeffs = self.polyfit(inliers_x, inliers_y, self.config.degree)
 
             if self._fit_valid(result):
 
                 # Get the residual of the inliers
                 residual = self.polyval(inliers_x, coeffs) - inliers_y
                 residual[
-                    np.abs(residual) > self.config.fit_tolerance
-                ] = self.config.fit_tolerance
+                    np.abs(residual) > self.config.rms_tolerance
+                ] = self.config.rms_tolerance
 
                 rms_residual = np.sqrt(np.mean(residual**2))
 
@@ -458,7 +448,7 @@ class RansacSolver:
                     return False
 
                 # Overfit
-                if n_inliers <= self.config.fit_deg + 1:
+                if n_inliers <= self.config.degree + 1:
                     return False
 
                 # Sanity check that matching peaks/atlas lines are 1:1
