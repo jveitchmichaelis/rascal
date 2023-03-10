@@ -3,6 +3,7 @@ dotmap
 kaleido
 matplotlib
 numpy
+omegaconf
 plotly
 pyyaml
 scipy
