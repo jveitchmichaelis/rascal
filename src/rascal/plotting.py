@@ -133,25 +133,25 @@ def plot_search_space(
     )
 
     # Get the search space boundaries
-    x = calibrator.effective_pixel
+    x = calibrator.contiguous_pixel
 
     m_1 = (
         calibrator.max_wavelength - calibrator.min_wavelength
-    ) / calibrator.effective_pixel.max()
+    ) / calibrator.contiguous_pixel.max()
     y_1 = m_1 * x + calibrator.min_wavelength
 
     m_2 = (
         calibrator.max_wavelength
         + calibrator.range_tolerance
         - (calibrator.min_wavelength + calibrator.range_tolerance)
-    ) / calibrator.effective_pixel.max()
+    ) / calibrator.contiguous_pixel.max()
     y_2 = m_2 * x + calibrator.min_wavelength + calibrator.range_tolerance
 
     m_3 = (
         calibrator.max_wavelength
         - calibrator.range_tolerance
         - (calibrator.min_wavelength - calibrator.range_tolerance)
-    ) / calibrator.effective_pixel.max()
+    ) / calibrator.contiguous_pixel.max()
     y_3 = m_3 * x + (calibrator.min_wavelength - calibrator.range_tolerance)
 
     if calibrator.plot_with_matplotlib:
@@ -181,13 +181,13 @@ def plot_search_space(
         plt.hlines(
             calibrator.min_wavelength,
             0,
-            calibrator.effective_pixel.max(),
+            calibrator.contiguous_pixel.max(),
             color="k",
         )
         plt.hlines(
             calibrator.min_wavelength + calibrator.range_tolerance,
             0,
-            calibrator.effective_pixel.max(),
+            calibrator.contiguous_pixel.max(),
             linestyle="dashed",
             alpha=0.5,
             color="k",
@@ -195,7 +195,7 @@ def plot_search_space(
         plt.hlines(
             calibrator.min_wavelength - calibrator.range_tolerance,
             0,
-            calibrator.effective_pixel.max(),
+            calibrator.contiguous_pixel.max(),
             linestyle="dashed",
             alpha=0.5,
             color="k",
@@ -210,13 +210,13 @@ def plot_search_space(
         plt.hlines(
             calibrator.max_wavelength,
             0,
-            calibrator.effective_pixel.max(),
+            calibrator.contiguous_pixel.max(),
             color="k",
         )
         plt.hlines(
             calibrator.max_wavelength + calibrator.range_tolerance,
             0,
-            calibrator.effective_pixel.max(),
+            calibrator.contiguous_pixel.max(),
             linestyle="dashed",
             alpha=0.5,
             color="k",
@@ -224,7 +224,7 @@ def plot_search_space(
         plt.hlines(
             calibrator.max_wavelength - calibrator.range_tolerance,
             0,
-            calibrator.effective_pixel.max(),
+            calibrator.contiguous_pixel.max(),
             linestyle="dashed",
             alpha=0.5,
             color="k",
@@ -255,7 +255,7 @@ def plot_search_space(
             label="Best Candidate Pairs",
         )
 
-        plt.xlim(0, calibrator.effective_pixel.max())
+        plt.xlim(0, calibrator.contiguous_pixel.max())
         plt.ylim(
             calibrator.min_wavelength - calibrator.range_tolerance,
             calibrator.max_wavelength + calibrator.range_tolerance,
@@ -329,7 +329,7 @@ def plot_search_space(
         # Tolerance region around the minimum wavelength
         fig.add_trace(
             go.Scatter(
-                x=[0, calibrator.effective_pixel.max()],
+                x=[0, calibrator.contiguous_pixel.max()],
                 y=[calibrator.min_wavelength, calibrator.min_wavelength],
                 name="Min/Maximum",
                 mode="lines",
@@ -338,7 +338,7 @@ def plot_search_space(
         )
         fig.add_trace(
             go.Scatter(
-                x=[0, calibrator.effective_pixel.max()],
+                x=[0, calibrator.contiguous_pixel.max()],
                 y=[
                     calibrator.min_wavelength + calibrator.range_tolerance,
                     calibrator.min_wavelength + calibrator.range_tolerance,
@@ -350,7 +350,7 @@ def plot_search_space(
         )
         fig.add_trace(
             go.Scatter(
-                x=[0, calibrator.effective_pixel.max()],
+                x=[0, calibrator.contiguous_pixel.max()],
                 y=[
                     calibrator.min_wavelength - calibrator.range_tolerance,
                     calibrator.min_wavelength - calibrator.range_tolerance,
@@ -364,7 +364,7 @@ def plot_search_space(
         # Tolerance region around the minimum wavelength
         fig.add_trace(
             go.Scatter(
-                x=[0, calibrator.effective_pixel.max()],
+                x=[0, calibrator.contiguous_pixel.max()],
                 y=[calibrator.max_wavelength, calibrator.max_wavelength],
                 showlegend=False,
                 mode="lines",
@@ -373,7 +373,7 @@ def plot_search_space(
         )
         fig.add_trace(
             go.Scatter(
-                x=[0, calibrator.effective_pixel.max()],
+                x=[0, calibrator.contiguous_pixel.max()],
                 y=[
                     calibrator.max_wavelength + calibrator.range_tolerance,
                     calibrator.max_wavelength + calibrator.range_tolerance,
@@ -385,7 +385,7 @@ def plot_search_space(
         )
         fig.add_trace(
             go.Scatter(
-                x=[0, calibrator.effective_pixel.max()],
+                x=[0, calibrator.contiguous_pixel.max()],
                 y=[
                     calibrator.max_wavelength - calibrator.range_tolerance,
                     calibrator.max_wavelength - calibrator.range_tolerance,
@@ -461,7 +461,7 @@ def plot_search_space(
             xaxis=dict(
                 title="Pixel",
                 zeroline=False,
-                range=[0.0, calibrator.effective_pixel.max()],
+                range=[0.0, calibrator.contiguous_pixel.max()],
                 showgrid=True,
             ),
             hovermode="closest",
@@ -592,7 +592,7 @@ def plot_fit(
         vline_max = 1.0
         text_box_pos = 0.5
 
-    wave = calibrator.polyval(calibrator.effective_pixel, fit_coeff)
+    wave = calibrator.polyval(calibrator.contiguous_pixel, fit_coeff)
 
     fitted_diff = []
 
@@ -731,7 +731,7 @@ def plot_fit(
             label="Fitted Peaks",
         )
         ax3.plot(
-            wave, calibrator.effective_pixel, color="C2", label="Solution"
+            wave, calibrator.contiguous_pixel, color="C2", label="Solution"
         )
         ax3.grid(linestyle=":")
         ax3.set_xlabel("Wavelength / A")
@@ -887,7 +887,7 @@ def plot_fit(
         fig.add_trace(
             go.Scatter(
                 x=wave,
-                y=calibrator.effective_pixel,
+                y=calibrator.contiguous_pixel,
                 mode="lines",
                 line=dict(color=pio_color[2]),
                 yaxis="y1",
@@ -934,7 +934,7 @@ def plot_fit(
             ),
             yaxis=dict(
                 title="Pixel",
-                range=[0.0, max(calibrator.effective_pixel)],
+                range=[0.0, max(calibrator.contiguous_pixel)],
                 domain=[0.0, 0.32],
                 showgrid=True,
             ),
@@ -1007,7 +1007,7 @@ def plot_fit(
 
 def plot_arc(
     calibrator: "calibrator.Calibrator",
-    effective_pixel: Union[list, np.ndarray] = None,
+    contiguous_pixel: Union[list, np.ndarray] = None,
     log_spectrum: Union[list, np.ndarray] = False,
     save_fig: bool = False,
     fig_type: str = "png",
@@ -1021,7 +1021,7 @@ def plot_arc(
 
     parameters
     ----------
-    effective_pixel: array (default: None)
+    contiguous_pixel: array (default: None)
         pixel value of the of the spectrum, this is only needed if the
         spectrum spans multiple detector arrays.
     log_spectrum: boolean (default: False)
@@ -1053,9 +1053,9 @@ def plot_arc(
 
     """
 
-    if effective_pixel is None:
+    if contiguous_pixel is None:
 
-        effective_pixel = calibrator.effective_pixel
+        contiguous_pixel = calibrator.contiguous_pixel
 
     if calibrator.plot_with_matplotlib:
 
@@ -1066,7 +1066,7 @@ def plot_arc(
         if calibrator.spectrum is not None:
             if log_spectrum:
                 plt.plot(
-                    effective_pixel,
+                    contiguous_pixel,
                     np.log10(calibrator.spectrum / calibrator.spectrum.max()),
                     label="Arc Spectrum",
                 )
@@ -1081,7 +1081,7 @@ def plot_arc(
                 plt.ylim(-2, 0)
             else:
                 plt.plot(
-                    effective_pixel,
+                    contiguous_pixel,
                     calibrator.spectrum / calibrator.spectrum.max(),
                     label="Arc Spectrum",
                 )
@@ -1140,7 +1140,7 @@ def plot_arc(
             # Plot all-pairs
             fig.add_trace(
                 go.Scatter(
-                    x=list(effective_pixel),
+                    x=list(contiguous_pixel),
                     y=list(
                         np.log10(
                             calibrator.spectrum / calibrator.spectrum.max()
@@ -1162,7 +1162,7 @@ def plot_arc(
             # Plot all-pairs
             fig.add_trace(
                 go.Scatter(
-                    x=list(effective_pixel),
+                    x=list(contiguous_pixel),
                     y=list(calibrator.spectrum / calibrator.spectrum.max()),
                     mode="lines",
                     name="Arc",

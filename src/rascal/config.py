@@ -79,7 +79,7 @@ with open(filename, "w+", encoding="ascii") as config_file:
 class DataConfig:
     filename: str = ""
     num_pix: Optional[int] = None
-    effective_pixel: Optional[List[int]] = field(default=None)
+    contiguous_range: Optional[List[float]] = field(default=None)
     peaks: Optional[List[float]] = field(default=None)
     spectrum: Optional[List[float]] = field(default=None)
     detector_min_wave: float = 3000.0

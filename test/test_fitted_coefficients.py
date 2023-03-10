@@ -84,9 +84,6 @@ def create_pixel_array(binning):
 
 def test_gmos_fit():
 
-    pixels = create_pixel_array(2)
-    rawpix_to_pix_itp = interpolate.interp1d(np.arange(len(pixels)), pixels)
-
     spectrum2D = fits.open(
         os.path.join(
             base_dir,
@@ -105,22 +102,27 @@ def test_gmos_fit():
         spectrum, height=1000, prominence=500, distance=5, threshold=None
     )
     peaks = util.refine_peaks(spectrum, peaks, window_width=3)
-    peaks_shifted = rawpix_to_pix_itp(peaks)
+
+    config = {
+        "data": {
+            "contiguous_range": [0, 1023, 1057.5, 2080.5, 2115.0, 3138.0]
+        },
+        "hough": {
+            "num_slopes": 5000,
+            "range_tolerance": 500.0,
+            "xbins": 200,
+            "ybins": 200,
+        },
+        "ransac": {
+            "sample_size": 5,
+            "top_n_candidate": 10,
+            "minimum_matches": 18,
+        },
+    }
 
     # Initialise the calibrator
-    c = Calibrator(peaks_shifted, spectrum=spectrum)
-    c.set_calibrator_properties(effective_pixel=pixels)
-    c.set_hough_properties(
-        num_slopes=5000,
-        range_tolerance=500.0,
-        xbins=200,
-        ybins=200,
-        min_wavelength=5000.0,
-        max_wavelength=9500.0,
-    )
-    c.set_ransac_properties(
-        sample_size=5, top_n_candidate=10, minimum_matches=18
-    )
+    c = Calibrator(peaks, spectrum=spectrum, config=config)
+
     # Vacuum wavelengths
     # blend: 5143.21509, 5146.74143
     # something weird near there, so not used: 8008.359, 8016.990
