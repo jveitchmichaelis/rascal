@@ -3,6 +3,7 @@ from functools import partialmethod
 
 import numpy as np
 import pytest
+from rascal.atlas import Atlas
 from rascal.calibrator import Calibrator, HoughTransform
 
 # Suppress tqdm output
@@ -166,7 +167,21 @@ def test_extending_ht_expect_fail():
 
 
 def test_loading_ht_into_calibrator():
-    c = Calibrator(np.arange(10))
+    user_atlas = Atlas(
+        elements="Test",
+        line_list="manual",
+        wavelengths=np.arange(10),
+        min_wavelength=0,
+        max_wavelength=10,
+    )
+    c = Calibrator(
+        np.arange(
+            4000.0,
+            7000.0,
+            1000.0,
+        ),
+        user_atlas.atlas_lines,
+    )
     c.load_hough_transform(
         os.path.join(HERE, "test_output", "test_hough_transform_npy")
     )

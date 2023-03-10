@@ -665,7 +665,7 @@ class Calibrator:
         y_matched = []
         fit_new = fit.copy()
 
-        atlas_lines = self.atlas.get_lines()
+        atlas_lines = [line.wavelength for line in self.atlas_lines]
 
         for i, _d in enumerate(delta):
 
@@ -1365,7 +1365,7 @@ class Calibrator:
         matched_atlas = []
         residuals = []
 
-        atlas_lines = self.atlas.get_lines()
+        atlas_lines = [line.wavelength for line in self.atlas_lines]
 
         # Find all Atlas peaks within tolerance
         for _p in self.peaks_effective:

@@ -3,14 +3,13 @@ from functools import partialmethod
 
 import numpy as np
 from astropy.io import fits
+from rascal import util
+from rascal.atlas import Atlas
+from rascal.calibrator import Calibrator
 from scipy.signal import find_peaks
 
 # Suppress tqdm output
 from tqdm import tqdm
-
-from rascal import util
-from rascal.atlas import Atlas
-from rascal.calibrator import Calibrator
 
 tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 
@@ -33,8 +32,6 @@ config = {
         "range_tolerance": 200.0,
         "xbins": 100,
         "ybins": 100,
-        "min_wavelength": 3600.0,
-        "max_wavelength": 8000.0,
     },
     "ransac": {"sample_size": 5, "top_n_candidate": 10, "filter_close": True},
 }
@@ -55,8 +52,19 @@ peaks, _ = find_peaks(
 peaks = util.refine_peaks(spectrum, peaks, window_width=3)
 
 # Initialise the calibrator
-c = Calibrator(peaks, config=config, spectrum=spectrum)
-atlas = Atlas()
+
+user_atlas = Atlas(
+    elements="Test",
+    line_list="manual",
+    wavelengths=np.arange(10),
+    min_wavelength=0,
+    max_wavelength=10,
+)
+
+c = Calibrator(
+    peaks, atlas_lines=user_atlas.atlas_lines, config=config, spectrum=spectrum
+)
+
 
 # blend: 4829.71, 4844.33
 # blend: 5566.62, 5581.88
@@ -102,15 +110,17 @@ atlas_lines = [
 ]
 element = ["Xe"] * len(atlas_lines)
 
-atlas = Atlas(range_tolerance=200)
-atlas.add_user_atlas(
-    element,
-    atlas_lines,
-    pressure=pressure,
-    temperature=temperature,
-    relative_humidity=relative_humidity,
+user_atlas = Atlas(
+    elements="Test",
+    line_list="manual",
+    wavelengths=np.arange(10),
+    min_wavelength=0,
+    max_wavelength=10,
 )
-c.set_atlas(atlas)
+
+c = Calibrator(
+    peaks, atlas_lines=user_atlas.atlas_lines, config=config, spectrum=spectrum
+)
 c.do_hough_transform(brute_force=True)
 
 

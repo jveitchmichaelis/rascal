@@ -22,7 +22,7 @@ s = SyntheticSpectrum(coefficients=best_p)
 # We add a bunch of wavelegnths between 200-1200 nm
 peaks, waves = s.get_pixels(np.linspace(200, 1200, num=25))
 
-effective_pixel = np.arange(987).astype("int")
+effective_pixel = np.arange(int(max(peaks)) * 1.1).astype("int")
 effective_pixel[len(effective_pixel) // 2 :] = (
     effective_pixel[len(effective_pixel) // 2 :] + 53.37
 )
@@ -30,35 +30,44 @@ effective_pixel[len(effective_pixel) // 2 :] = (
 assert len(peaks) > 0
 
 
+# Effective pixel: arbitrarily we'll set the number of pixels to 768 (i.e.
+# a max range of around 1500 nm
+config = {
+    "data": {"effective_pixel": effective_pixel.tolist()},
+    "hough": {
+        "num_slopes": 2000,
+        "range_tolerance": 100.0,
+        "xbins": 100,
+        "ybins": 100,
+    },
+    "ransac": {
+        "sample_size": 5,
+        "top_n_candidate": 10,
+        "filter_close": True,
+        "minimum_fit_error": 1e-25,
+    },
+}
+
+
 def test_effective_pixel_not_affecting_fit_int_peaks():
 
     # Set up the calibrator with the pixel values of our
     # wavelengths
-    c = Calibrator(peaks=peaks.astype("int"))
-    a = Atlas()
-
-    # Arbitrarily we'll set the number of pixels to 768 (i.e.
-    # a max range of around 1500 nm
-    c.set_calibrator_properties(effective_pixel=effective_pixel)
-
-    # Setup the Hough transform parameters
-    c.set_hough_properties(
-        range_tolerance=100.0, min_wavelength=100.0, max_wavelength=1300.0
+    a = Atlas(
+        elements="Test",
+        line_list="manual",
+        wavelengths=np.arange(10),
+        min_wavelength=0,
+        max_wavelength=10,
     )
-
-    c.set_ransac_properties(minimum_fit_error=1e-25)
-
-    # Add our fake lines as the atlas
-    a.add_user_atlas(elements=["Test"] * len(waves), wavelengths=waves)
-    c.set_atlas(a)
-    assert len(c.atlas.atlas_lines) > 0
+    c = Calibrator(
+        peaks=peaks.astype("int"), atlas_lines=a.atlas_lines, config=config
+    )
 
     # And let's try and fit...
     res = c.fit(max_tries=2000, fit_deg=3)
 
     assert res
-
-    c.plot_fit(display=False)
 
     (
         res["fit_coeff"],
@@ -84,24 +93,16 @@ def test_effective_pixel_not_affecting_fit_perfect_peaks():
 
     # Set up the calibrator with the pixel values of our
     # wavelengths
-    c = Calibrator(peaks=peaks)
-    a = Atlas()
-
+    a = Atlas(
+        elements="Test",
+        line_list="manual",
+        wavelengths=np.arange(10),
+        min_wavelength=0,
+        max_wavelength=10,
+    )
     # Arbitrarily we'll set the number of pixels to 768 (i.e.
     # a max range of around 1500 nm
-    c.set_calibrator_properties(effective_pixel=effective_pixel)
-
-    # Setup the Hough transform parameters
-    c.set_hough_properties(
-        range_tolerance=100.0, min_wavelength=100.0, max_wavelength=1300.0
-    )
-
-    c.set_ransac_properties(minimum_fit_error=1e-25)
-
-    # Add our fake lines as the atlas
-    a.add_user_atlas(elements=["Test"] * len(waves), wavelengths=waves)
-    c.set_atlas(a)
-    assert len(c.atlas.atlas_lines) > 0
+    c = Calibrator(peaks=peaks, atlas_lines=a.atlas_lines, config=config)
 
     # And let's try and fit...
     res = c.fit(max_tries=2000, fit_deg=3)
