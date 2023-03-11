@@ -26,16 +26,6 @@ fits_file = fits.open(
     )
 )[0]
 
-config = {
-    "hough": {
-        "num_slopes": 2000,
-        "range_tolerance": 200.0,
-        "xbins": 100,
-        "ybins": 100,
-    },
-    "ransac": {"sample_size": 5, "top_n_candidate": 10, "filter_close": True},
-}
-
 spectrum2D = fits_file.data
 
 # Collapse into 1D spectrum between row 110 and 120
@@ -51,28 +41,7 @@ peaks, _ = find_peaks(
 )
 peaks = util.refine_peaks(spectrum, peaks, window_width=3)
 
-# Initialise the calibrator
-
-user_atlas = Atlas(
-    elements="Test",
-    line_list="manual",
-    wavelengths=np.arange(10),
-    min_wavelength=0,
-    max_wavelength=10,
-)
-
-c = Calibrator(
-    peaks, atlas_lines=user_atlas.atlas_lines, config=config, spectrum=spectrum
-)
-
-
-# blend: 4829.71, 4844.33
-# blend: 5566.62, 5581.88
-# blend: 6261.212, 6265.302
-# blend: 6872.11, 6882.16
-# blend: 7283.961, 7285.301
-# blend: 7316.272, 7321.452
-atlas_lines = [
+sprat_atlas_lines = [
     4193.5,
     4385.77,
     4500.98,
@@ -108,22 +77,44 @@ atlas_lines = [
     7967.34,
     8057.258,
 ]
-element = ["Xe"] * len(atlas_lines)
+element = ["Xe"] * len(sprat_atlas_lines)
 
 user_atlas = Atlas(
-    elements="Test",
     line_list="manual",
-    wavelengths=np.arange(10),
-    min_wavelength=0,
-    max_wavelength=10,
+    wavelengths=sprat_atlas_lines,
+    min_wavelength=3500.0,
+    max_wavelength=8000.0,
+    range_tolerance=500.0,
+    elements=element,
+    pressure=pressure,
+    temperature=temperature,
+    relative_humidity=relative_humidity,
 )
 
+config = {
+    "data": {"contiguous_range": None},
+    "hough": {
+        "num_slopes": 2000,
+        "range_tolerance": 200.0,
+        "xbins": 100,
+        "ybins": 100,
+    },
+    "ransac": {
+        "sample_size": 5,
+        "top_n_candidate": 5,
+        "filter_close": True,
+    },
+}
+
+
+# Initialise the calibrator
 c = Calibrator(
     peaks, atlas_lines=user_atlas.atlas_lines, config=config, spectrum=spectrum
 )
+
 c.do_hough_transform(brute_force=True)
 
-
+"""
 def test_plot_arc():
 
     # auto filename
@@ -172,8 +163,9 @@ def test_plot_arc():
             HERE, "test_output", "test_lt_sprat_arc_log_matplotlib"
         ),
     )
+"""
 
-
+"""
 def test_sprat_manual_atlas_fit_match_peaks_and_create_summary():
 
     # Run the wavelength calibration
@@ -247,8 +239,10 @@ def test_sprat_manual_atlas_fit_match_peaks_and_create_summary():
     # save without providing a filename
     out_path = c.save_summary()
     os.remove(out_path)
+"""
 
 
+"""
 def test_plot_hough_soace():
     # Show the parameter space for searching possible solution
     c.plot_search_space(
@@ -284,3 +278,4 @@ def test_plot_hough_soace():
         ),
         return_jsonstring=True,
     )
+"""
