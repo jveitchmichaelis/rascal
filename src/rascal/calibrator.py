@@ -927,14 +927,8 @@ class Calibrator:
 
     def fit(
         self,
-        max_tries: int = None,
-        fit_deg: int = None,
         fit_coeff: Union[list, np.ndarray] = None,
-        fit_tolerance: float = None,
-        fit_type: str = None,
-        candidate_tolerance: float = None,
         progress: bool = True,
-        use_msac: bool = False,
     ):
         """
         Solve for the wavelength calibration polynomial by getting the most
