@@ -46,8 +46,8 @@ class AtlasLine:
 
     wavelength: float
     element: str
+    source: str = ""
     intensity: float = 0
-    source: str
 
     def __repr__(self):
         if self.intensity > 0:
