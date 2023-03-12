@@ -201,6 +201,17 @@ class Calibrator:
         if spectrum is not None:
             self.spectrum = copy.deepcopy(spectrum)
 
+        # Check atlas
+        for line in self.atlas_lines:
+            if (
+                line.wavelength < 0
+                or line.wavelength < self.config.data.detector_min_wave
+                or line.wavelength > self.config.data.detector_max_wave
+            ):
+                self.logger.warning(
+                    f"The provided peak {line.wavelength} is outside the given range of the detector."
+                )
+
     def _set_num_pix(self):
         """
         Josh will write something here.
@@ -235,7 +246,11 @@ class Calibrator:
         # Only user-provided num pixels, so just check that it's
         # greater than the peak with the highest index
         else:
-            assert self.config.data.num_pix >= max(self.peaks)
+            if self.config.data.num_pix <= max(self.peaks):
+                self.logger.error(
+                    f"Maximum pixel {self.config.data.num_pix} is too low, max peak provided is {max(self.peaks)}"
+                )
+                raise ValueError
 
         self.logger.info(f"num_pix is set to {self.config.data.num_pix}.")
 
@@ -324,12 +339,12 @@ class Calibrator:
                 [
                     (
                         0,
-                        self.max_intercept
+                        self.config.hough.max_intercept
                         + self.config.hough.linearity_tolerance,
                     ),
                     (
                         0,
-                        self.min_intercept
+                        self.config.hough.min_intercept
                         - self.config.hough.linearity_tolerance,
                     ),
                     (
@@ -352,6 +367,8 @@ class Calibrator:
 
         else:
             self.pairs = np.array(pairs)
+
+        self.logger.debug(f"Pairs: {self.pairs}")
 
     def _check_ransac_properties(
         self,
@@ -394,10 +411,13 @@ class Calibrator:
             self.config.data.detector_min_wave
             - self.config.hough.range_tolerance
         )
+        self.min_intercept = self.config.hough.min_intercept  # TODO fix this
+
         self.config.hough.max_intercept = float(
             self.config.data.detector_min_wave
             + self.config.hough.range_tolerance
         )
+        self.max_intercept = self.config.hough.max_intercept  # TODO fix this
 
         if self.contiguous_pixel is not None:
             self.config.hough.min_slope = float(
@@ -431,6 +451,22 @@ class Calibrator:
                 )
                 / np.ptp(self.contiguous_pixel)
             )
+
+        self.logger.debug("Hough parameters:")
+        self.logger.debug(
+            f"Minimum intercept: {self.config.hough.min_intercept}"
+        )
+        self.logger.debug(
+            f"Maximum intercept: {self.config.hough.max_intercept}"
+        )
+        self.logger.debug(f"Minimum slope: {self.config.hough.min_slope}")
+        self.logger.debug(f"Maximum slope: {self.config.hough.max_slope}")
+        self.logger.debug(
+            f"Minimum wavelength: {self.config.data.detector_min_wave}"
+        )
+        self.logger.debug(
+            f"Maximum wavelength: {self.config.data.detector_max_wave}"
+        )
 
     def _merge_candidates(self, candidates: Union[list, np.ndarray]):
         """
@@ -1023,11 +1059,13 @@ class Calibrator:
         """
 
         if self.config.ransac.linear:
+            self.logger.debug("Using linear candidate points")
             self._get_candidate_points_linear(
                 self.config.ransac.inlier_tolerance
             )
 
         else:
+            self.logger.debug("Using polynomial candidate points")
             self._get_candidate_points_poly(
                 self.config.ransac.inlier_tolerance
             )
@@ -1048,6 +1086,11 @@ class Calibrator:
 
         self.success = False
 
+        self.logger.debug(
+            f"Candidates: {[xy for xy in list(zip(_x.round(2), _y.round(2)))]}"
+        )
+
+        self.logger.debug("Starting RANSAC")
         solver = RansacSolver(_x, _y, config=self.config.ransac)
         solver.solve()
 
@@ -1082,6 +1125,9 @@ class Calibrator:
                 "peak_utilisation": self.peak_utilisation,
                 "atlas_utilisation": self.atlas_utilisation,
                 "success": self.success,
+                "candidates": [
+                    xy for xy in list(zip(_x.round(2), _y.round(2)))
+                ],
             }
 
         return self.res
@@ -1095,6 +1141,9 @@ class Calibrator:
         # reject lines outside the rms limit (ransac_tolerance)
         # TODO: should n_inliers be recalculated from the robust
         # fit?
+
+        assert self.min_intercept is not None and self.min_intercept > 0
+        assert self.max_intercept is not None
 
         # Check the intercept.
         fit_intercept = result.fit_coeffs[0]
@@ -1168,7 +1217,7 @@ class Calibrator:
                 return False
 
         # Make sure that we don't accept fits with zero error
-        if result.rms_residual < self.minimum_fit_error:
+        if result.rms_residual < self.config.ransac.minimum_fit_error:
             self.logger.debug(
                 "Fit error too small, {result.rms_residual:1.2f}."
             )
