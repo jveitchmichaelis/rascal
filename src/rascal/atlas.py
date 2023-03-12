@@ -22,7 +22,8 @@ logger = logging.getLogger(__name__)
 from .util import load_calibration_lines, vacuum_to_air_wavelength
 
 
-@dataclass(kw_only=True)
+# @dataclass(kw_only=True) requires > 3.10, so drop for now
+@dataclass
 class AtlasLine:
     """
     For storing information of an atlas line
@@ -35,7 +36,8 @@ class AtlasLine:
     source: str
 
 
-@dataclass(kw_only=True)
+# @dataclass(kw_only=True)
+@dataclass
 class AtlasLine:
     """
     For storing basic information of an atlas line
@@ -54,7 +56,8 @@ class AtlasLine:
             return f"{self.element} ({self.source}): {self.wavelength} Å"
 
 
-@dataclass(kw_only=True)
+# @dataclass(kw_only=True)
+@dataclass
 class Atlas:
     """
     Creates an atlas of arc lines.
