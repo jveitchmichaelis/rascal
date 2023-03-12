@@ -10,8 +10,9 @@ import logging
 from typing import Union
 
 import numpy as np
-from rascal import calibrator, util
 from scipy import signal
+
+from rascal import calibrator, util
 
 logger = logging.getLogger("plotting")
 
@@ -136,23 +137,36 @@ def plot_search_space(
     x = calibrator.contiguous_pixel
 
     m_1 = (
-        calibrator.max_wavelength - calibrator.min_wavelength
+        calibrator.config.data.detector_max_wave
+        - calibrator.config.data.detector_min_wave
     ) / calibrator.contiguous_pixel.max()
-    y_1 = m_1 * x + calibrator.min_wavelength
+    y_1 = m_1 * x + calibrator.config.data.detector_min_wave
 
     m_2 = (
-        calibrator.max_wavelength
+        calibrator.config.data.detector_max_wave
         + calibrator.range_tolerance
-        - (calibrator.min_wavelength + calibrator.range_tolerance)
+        - (
+            calibrator.config.data.detector_min_wave
+            + calibrator.range_tolerance
+        )
     ) / calibrator.contiguous_pixel.max()
-    y_2 = m_2 * x + calibrator.min_wavelength + calibrator.range_tolerance
+    y_2 = (
+        m_2 * x
+        + calibrator.config.data.detector_min_wave
+        + calibrator.range_tolerance
+    )
 
     m_3 = (
-        calibrator.max_wavelength
+        calibrator.config.data.detector_max_wave
         - calibrator.range_tolerance
-        - (calibrator.min_wavelength - calibrator.range_tolerance)
+        - (
+            calibrator.config.data.detector_min_wave
+            - calibrator.range_tolerance
+        )
     ) / calibrator.contiguous_pixel.max()
-    y_3 = m_3 * x + (calibrator.min_wavelength - calibrator.range_tolerance)
+    y_3 = m_3 * x + (
+        calibrator.config.data.detector_min_wave - calibrator.range_tolerance
+    )
 
     if calibrator.plot_with_matplotlib:
         _import_matplotlib()
@@ -175,17 +189,18 @@ def plot_search_space(
         # Tolerance region around the minimum wavelength
         plt.text(
             5,
-            calibrator.min_wavelength + 100,
+            calibrator.config.data.detector_min_wave + 100,
             "Min wavelength (user-supplied)",
         )
         plt.hlines(
-            calibrator.min_wavelength,
+            calibrator.config.data.detector_min_wave,
             0,
             calibrator.contiguous_pixel.max(),
             color="k",
         )
         plt.hlines(
-            calibrator.min_wavelength + calibrator.range_tolerance,
+            calibrator.config.data.detector_min_wave
+            + calibrator.range_tolerance,
             0,
             calibrator.contiguous_pixel.max(),
             linestyle="dashed",
@@ -193,7 +208,8 @@ def plot_search_space(
             color="k",
         )
         plt.hlines(
-            calibrator.min_wavelength - calibrator.range_tolerance,
+            calibrator.config.data.detector_min_wave
+            - calibrator.range_tolerance,
             0,
             calibrator.contiguous_pixel.max(),
             linestyle="dashed",
@@ -204,17 +220,18 @@ def plot_search_space(
         # Tolerance region around the maximum wavelength
         plt.text(
             5,
-            calibrator.max_wavelength + 100,
+            calibrator.config.data.detector_max_wave + 100,
             "Max wavelength (user-supplied)",
         )
         plt.hlines(
-            calibrator.max_wavelength,
+            calibrator.config.data.detector_max_wave,
             0,
             calibrator.contiguous_pixel.max(),
             color="k",
         )
         plt.hlines(
-            calibrator.max_wavelength + calibrator.range_tolerance,
+            calibrator.config.data.detector_max_wave
+            + calibrator.range_tolerance,
             0,
             calibrator.contiguous_pixel.max(),
             linestyle="dashed",
@@ -222,7 +239,8 @@ def plot_search_space(
             color="k",
         )
         plt.hlines(
-            calibrator.max_wavelength - calibrator.range_tolerance,
+            calibrator.config.data.detector_max_wave
+            - calibrator.range_tolerance,
             0,
             calibrator.contiguous_pixel.max(),
             linestyle="dashed",
@@ -257,8 +275,10 @@ def plot_search_space(
 
         plt.xlim(0, calibrator.contiguous_pixel.max())
         plt.ylim(
-            calibrator.min_wavelength - calibrator.range_tolerance,
-            calibrator.max_wavelength + calibrator.range_tolerance,
+            calibrator.config.data.detector_min_wave
+            - calibrator.range_tolerance,
+            calibrator.config.data.detector_max_wave
+            + calibrator.range_tolerance,
         )
 
         plt.ylabel("Wavelength / A")
@@ -330,7 +350,10 @@ def plot_search_space(
         fig.add_trace(
             go.Scatter(
                 x=[0, calibrator.contiguous_pixel.max()],
-                y=[calibrator.min_wavelength, calibrator.min_wavelength],
+                y=[
+                    calibrator.config.data.detector_min_wave,
+                    calibrator.config.data.detector_min_wave,
+                ],
                 name="Min/Maximum",
                 mode="lines",
                 line=dict(color="black"),
@@ -340,8 +363,10 @@ def plot_search_space(
             go.Scatter(
                 x=[0, calibrator.contiguous_pixel.max()],
                 y=[
-                    calibrator.min_wavelength + calibrator.range_tolerance,
-                    calibrator.min_wavelength + calibrator.range_tolerance,
+                    calibrator.config.data.detector_min_wave
+                    + calibrator.range_tolerance,
+                    calibrator.config.data.detector_min_wave
+                    + calibrator.range_tolerance,
                 ],
                 name="Tolerance Range",
                 mode="lines",
@@ -352,8 +377,10 @@ def plot_search_space(
             go.Scatter(
                 x=[0, calibrator.contiguous_pixel.max()],
                 y=[
-                    calibrator.min_wavelength - calibrator.range_tolerance,
-                    calibrator.min_wavelength - calibrator.range_tolerance,
+                    calibrator.config.data.detector_min_wave
+                    - calibrator.range_tolerance,
+                    calibrator.config.data.detector_min_wave
+                    - calibrator.range_tolerance,
                 ],
                 showlegend=False,
                 mode="lines",
@@ -365,7 +392,10 @@ def plot_search_space(
         fig.add_trace(
             go.Scatter(
                 x=[0, calibrator.contiguous_pixel.max()],
-                y=[calibrator.max_wavelength, calibrator.max_wavelength],
+                y=[
+                    calibrator.config.data.detector_max_wave,
+                    calibrator.config.data.detector_max_wave,
+                ],
                 showlegend=False,
                 mode="lines",
                 line=dict(color="black"),
@@ -375,8 +405,10 @@ def plot_search_space(
             go.Scatter(
                 x=[0, calibrator.contiguous_pixel.max()],
                 y=[
-                    calibrator.max_wavelength + calibrator.range_tolerance,
-                    calibrator.max_wavelength + calibrator.range_tolerance,
+                    calibrator.config.data.detector_max_wave
+                    + calibrator.range_tolerance,
+                    calibrator.config.data.detector_max_wave
+                    + calibrator.range_tolerance,
                 ],
                 showlegend=False,
                 mode="lines",
@@ -387,8 +419,10 @@ def plot_search_space(
             go.Scatter(
                 x=[0, calibrator.contiguous_pixel.max()],
                 y=[
-                    calibrator.max_wavelength - calibrator.range_tolerance,
-                    calibrator.max_wavelength - calibrator.range_tolerance,
+                    calibrator.config.data.detector_max_wave
+                    - calibrator.range_tolerance,
+                    calibrator.config.data.detector_max_wave
+                    - calibrator.range_tolerance,
                 ],
                 showlegend=False,
                 mode="lines",
@@ -451,9 +485,9 @@ def plot_search_space(
             yaxis=dict(
                 title="Wavelength / A",
                 range=[
-                    calibrator.min_wavelength
+                    calibrator.config.data.detector_min_wave
                     - calibrator.range_tolerance * 1.1,
-                    calibrator.max_wavelength
+                    calibrator.config.data.detector_max_wave
                     + calibrator.range_tolerance * 1.1,
                 ],
                 showgrid=True,
@@ -598,14 +632,14 @@ def plot_fit(
 
     for p, x in zip(calibrator.matched_peaks, calibrator.matched_atlas):
 
-        diff = calibrator.atlas.get_lines() - calibrator.polyval(p, fit_coeff)
+        diff = calibrator.atlas_wavelengths - calibrator.polyval(p, fit_coeff)
         idx = np.argmin(np.abs(diff))
 
         calibrator.logger.info(f"Peak at: {x} A")
 
         fitted_diff.append(diff[idx])
         calibrator.logger.info(
-            f"- matched to {calibrator.atlas.get_lines()[idx]} A"
+            f"- matched to {calibrator.atlas_wavelengths[idx]} A"
         )
 
     if calibrator.plot_with_matplotlib:
@@ -637,7 +671,7 @@ def plot_fit(
             #    fit, model_type='poly', degree=len(fit)-1)
             # x_locs = spec.get_pixels(calibrator.atlas)
             ax1.vlines(
-                calibrator.atlas.get_lines(),
+                calibrator.atlas_wavelengths,
                 0,
                 vline_max,
                 colors="C2",
@@ -675,8 +709,8 @@ def plot_fit(
                 x - 3,
                 text_box_pos,
                 s=(
-                    f"{calibrator.atlas.get_elements()[idx]}:"
-                    + f"{calibrator.atlas.get_lines()[idx]:1.2f}"
+                    f"{calibrator.atlas_lines[idx].element}:"
+                    + f"{calibrator.atlas_lines[idx].wavelength:1.2f}"
                 ),
                 rotation=90,
                 bbox=dict(facecolor="white", alpha=1),
