@@ -6,13 +6,14 @@ import numpy as np
 import pkg_resources
 import pytest
 from astropy.io import fits
-from rascal import util
-from rascal.atlas import Atlas
-from rascal.calibrator import Calibrator
 from scipy.signal import find_peaks
 
 # Suppress tqdm output
 from tqdm import tqdm
+
+from rascal import util
+from rascal.atlas import Atlas
+from rascal.calibrator import Calibrator
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger()
@@ -74,6 +75,7 @@ config = {
         "sample_size": 5,
         "top_n_candidate": 5,
         "filter_close": True,
+        "max_tries": 2500,
     },
 }
 
@@ -106,26 +108,17 @@ def run_sprat_calibration(fit_deg):
         elements=element,
     )
 
+    config["ransac"]["degree"] = fit_deg
+    config["ransac"]["sample_size"] = fit_deg + 1
+
     # Initialise the calibrator
     c = Calibrator(
         peaks, atlas_lines=atlas.atlas_lines, config=config, spectrum=spectrum
     )
 
-    c.set_atlas(a)
-    c.atlas.clear()
-    assert len(a.atlas_lines) == 0
-    a.add_user_atlas(elements=elements, wavelengths=wavelengths)
-    c.set_atlas(a)
-    c.atlas.remove_atlas_lines_range(9999.0)
-    assert len(c.atlas.atlas_lines) == len(wavelengths) - 1
-    c.atlas.list()
-
     # Run the wavelength calibration
-    res = c.fit(
-        max_tries=5000, fit_deg=fit_deg, candidate_tolerance=5.0, use_msac=True
-    )
-
-    assert res
+    res = c.fit()
+    assert res["success"]
 
     # Refine solution
     res = c.match_peaks(res["fit_coeff"], refine=False, robust_refit=True)
@@ -150,8 +143,8 @@ def test_run_sprat_calibration_with_manual_linelist_file():
     )
 
     # Run the wavelength calibration
-    res = c.fit(max_tries=2500, fit_deg=4, candidate_tolerance=5)
-    assert res
+    res = c.fit()
+    assert res["success"]
 
 
 @pytest.mark.timeout(180)
