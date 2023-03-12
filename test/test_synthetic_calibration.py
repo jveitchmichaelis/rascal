@@ -1,30 +1,38 @@
+import logging
 from functools import partialmethod
 
 import numpy as np
+
+# Suppress tqdm output
+from tqdm import tqdm
+
 from rascal.atlas import Atlas
 from rascal.calibrator import Calibrator
 from rascal.synthetic import SyntheticSpectrum
 
-# Suppress tqdm output
-from tqdm import tqdm
+logger = logging.getLogger(__name__)
 
 tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 
 # Create a test spectrum with a simple linear relationship
 # between pixels/wavelengths. The intercept is set to
 # 100 nm and the gradient is set to 2.
-intercept = 100
-gradient = 2
+intercept = 3000  # Wavelength at pixel 0
+gradient = 10  # A/px
+min_wavelength = 3500
+max_wavelength = 9000
 best_p = [intercept, gradient]
-s = SyntheticSpectrum(coefficients=best_p)
+s = SyntheticSpectrum(
+    coefficients=best_p,
+    min_wavelength=min_wavelength,
+    max_wavelength=max_wavelength,
+)
 
 # We add a bunch of wavelegnths between 200-1200 nm
-peaks, waves = s.get_pixels(np.linspace(200, 1200, num=25))
-assert len(peaks) > 0
-
-import logging
-
-logging.basicConfig(level=logging.INFO)
+peaks, waves = s.get_pixels(
+    np.linspace(min_wavelength + 100, max_wavelength - 100, num=25)
+)
+max_pix, _ = s.get_pixels([max_wavelength])
 
 
 def test_default():
@@ -32,18 +40,24 @@ def test_default():
     atlas = Atlas(
         line_list="manual",
         wavelengths=waves,
-        min_wavelength=100.0,
-        max_wavelength=1500.0,
+        min_wavelength=min_wavelength,
+        max_wavelength=max_wavelength,
         range_tolerance=100.0,
         elements=["Test"] * len(waves),
     )
-    assert len(atlas.atlas_lines) > 0
+    assert len(atlas.atlas_lines) == len(waves)
 
     config = {
-        "data": {"contiguous_range": None, "num_pix": 768},
+        "data": {
+            "contiguous_range": None,
+            "num_pix": int(max_pix),
+            "detector_min_wave": 3000.0,
+            "detector_max_wave": 9000.0,
+            "detector_edge_tolerance": 500.0,
+        },
         "hough": {
             "num_slopes": 2000,
-            "range_tolerance": 200.0,
+            "range_tolerance": 100.0,
             "xbins": 100,
             "ybins": 100,
         },
@@ -58,10 +72,16 @@ def test_default():
 
     c.do_hough_transform(brute_force=False)
 
+    # Check that all the ground truth lines are in the pair list:
+    ground_truth = list(zip(peaks.round(2), waves.round(2)))
+    for point in ground_truth:
+        assert point in c.pairs.round(2)
+        # idx = np.where((c.pairs.round(2) == point).all(axis=1))[0][0]
+
     # And let's try and fit...
     res = c.fit(max_tries=1000)
 
-    assert res is not None
+    assert res["success"]
 
     # res = c.match_peaks(res["fit_coeff"], refine=False, robust_refit=True)
 
