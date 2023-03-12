@@ -118,7 +118,7 @@ class RansacSolver:
 
         """
 
-        self.logger = logging.getLogger("ransac")
+        self.logger = logging.getLogger(__name__)
 
         if len(np.unique(self.x)) <= self.config.degree:
             raise ValueError(
@@ -204,6 +204,11 @@ class RansacSolver:
         if self.config.progress:
             sample_iter = tqdm(sample_iter)
 
+        self.logger.debug(
+            f"Starting RANSAC with {self.config.max_tries} tries"
+        )
+        self.logger.debug(f"Unique x values: {len(self.unique_x)}")
+
         for sample in sample_iter:
 
             if self.should_stop:
@@ -237,6 +242,8 @@ class RansacSolver:
             if self.config.progress:
 
                 if self.valid_solution:
+
+                    self.logger.debug(f"Inliers: {len(self.best_result.x):d}")
 
                     sample_iter.set_description(
                         f"Most inliers: {len(self.best_result.x):d} "
@@ -400,6 +407,9 @@ class RansacSolver:
 
             mask = result.residual < self.config.rms_tolerance
             n_inliers = sum(mask)
+            self.logger.debug(
+                f"Number of points inlying with an error less than {self.config.rms_tolerance}: {n_inliers}, out of {len(mask)}"
+            )
             inliers_x = result.x[mask]
             inliers_y = result.y[mask]
 
@@ -449,6 +459,9 @@ class RansacSolver:
 
                 # Overfit
                 if n_inliers <= self.config.degree + 1:
+                    self.logger.debug(
+                        f"Overfit: number of inliers {n_inliers} is less than what's required to fit: {self.config.degree+1}"
+                    )
                     return False
 
                 # Sanity check that matching peaks/atlas lines are 1:1
@@ -471,7 +484,13 @@ class RansacSolver:
                 )
 
                 if n_inliers == len(self.x):
-
+                    self.logger.debug(
+                        "All x fitted as inliers, breaking early."
+                    )
                     self.should_stop = True
 
                 self.valid_solution = True
+        else:
+            self.logger.debug(
+                f"New solution {result.cost} is worse than current best {self.best_result.cost}."
+            )
