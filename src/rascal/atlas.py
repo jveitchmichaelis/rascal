@@ -78,9 +78,10 @@ class Atlas:
 
     """
 
-    line_list: str = "nist"
     min_wavelength: float = MISSING
     max_wavelength: float = MISSING
+    elements: Optional[List[str]] = MISSING
+    line_list: str = "nist"
     range_tolerance: float = 500.0
     min_intensity: float = 10.0
     min_distance: float = 10.0
@@ -89,7 +90,6 @@ class Atlas:
     pressure: float = 101325.0
     temperature: float = 273.15
     relative_humidity: float = 0.0
-    elements: Optional[List[str]] = MISSING
 
     wavelengths: Optional[List[float]] = field(default=None)
     intensities: Optional[List[float]] = field(default=None)
