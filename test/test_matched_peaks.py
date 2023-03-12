@@ -136,7 +136,6 @@ def calibrator(base_dir):
     # Initialise the calibrator
     c = Calibrator(peaks, atlas_lines=user_atlas.atlas_lines, config=config)
 
-    """
     c.atlas.clear()
     assert len(a.atlas_lines) == 0
     a.add_user_atlas(elements=elements, wavelengths=wavelengths)
@@ -144,7 +143,7 @@ def calibrator(base_dir):
     c.atlas.remove_atlas_lines_range(9999.0)
     assert len(c.atlas.atlas_lines) == len(wavelengths) - 1
     c.atlas.list()
-    """
+
     return c
 
 
@@ -156,7 +155,7 @@ def result(calibrator):
     rms = res["rms"]
     n_peaks = len(calibrator.matched_peaks)
 
-    # assert n_peaks > 10
+    assert n_peaks > 10
 
     return res
 
@@ -176,7 +175,7 @@ def test_match_peaks_robust_refit(calibrator, result):
         _ = calibrator.match_peaks(
             result["fit_coeff"], refine=True, robust_refit=True
         )
-        # check_fit(calibrator, result)
+        check_fit(calibrator, result)
 
 
 def test_match_peaks_NOT_robust_refit(calibrator, result):
@@ -186,7 +185,7 @@ def test_match_peaks_NOT_robust_refit(calibrator, result):
     for i in range(10):
         # Refine solution
         _ = calibrator.match_peaks(fit_coeff, refine=True, robust_refit=False)
-        # check_fit(calibrator, result)
+        check_fit(calibrator, result)
 
 
 def test_match_peaks_robust_refit_powell(calibrator, result):
@@ -198,7 +197,7 @@ def test_match_peaks_robust_refit_powell(calibrator, result):
         _ = calibrator.match_peaks(
             fit_coeff, refine=True, robust_refit=True, method="powell"
         )
-        # check_fit(calibrator, result)
+        check_fit(calibrator, result)
 
 
 def test_match_peaks_robust_refit_different_fit_deg(calibrator, result):
@@ -213,7 +212,7 @@ def test_match_peaks_robust_refit_different_fit_deg(calibrator, result):
             robust_refit=True,
             fit_deg=5,
         )
-        # check_fit(calibrator, result)
+        check_fit(calibrator, result)
 
 
 def test_match_peaks_output(calibrator, base_dir):

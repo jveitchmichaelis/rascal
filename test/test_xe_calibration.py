@@ -111,7 +111,6 @@ def run_sprat_calibration(fit_deg):
         peaks, atlas_lines=atlas.atlas_lines, config=config, spectrum=spectrum
     )
 
-    """
     c.set_atlas(a)
     c.atlas.clear()
     assert len(a.atlas_lines) == 0
@@ -120,7 +119,6 @@ def run_sprat_calibration(fit_deg):
     c.atlas.remove_atlas_lines_range(9999.0)
     assert len(c.atlas.atlas_lines) == len(wavelengths) - 1
     c.atlas.list()
-    """
 
     # Run the wavelength calibration
     res = c.fit(
@@ -166,7 +164,7 @@ def test_sprat_calibration():
 
     for i in range(3, 6):
         res = run_sprat_calibration(fit_deg=i)
-        # assert len(res["fit_coeff"]) == (i + 1)
+        assert len(res["fit_coeff"]) == (i + 1)
 
 
 @pytest.mark.timeout(300)
@@ -192,7 +190,6 @@ def test_sprat_calibration_multirun():
         atlas_utilisation[i] = res["atlas_utilisation"]
         rms[i] = res["rms"]
 
-    """
     assert np.std(c0) < 500.0
     assert np.std(c1) < 10
     assert np.std(c2) < 1
@@ -201,4 +198,3 @@ def test_sprat_calibration_multirun():
     assert np.std(peak_utilisation) < 10.0
     assert np.std(atlas_utilisation) < 10.0
     assert np.std(rms) < 5.0
-    """

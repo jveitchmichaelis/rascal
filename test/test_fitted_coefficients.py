@@ -199,7 +199,9 @@ def test_gmos_fit():
     res = c.fit(max_tries=5000, fit_deg=4)
     assert res
 
-    # assert np.isclose(res["fit_coeff"][:2], gmos_fit_coeff[:2], rtol=0.02).all()
+    assert np.isclose(
+        res["fit_coeff"][:2], gmos_fit_coeff[:2], rtol=0.02
+    ).all()
 
 
 def test_osiris_fit():
@@ -289,7 +291,9 @@ def test_osiris_fit():
     # Run the wavelength calibration
     res = c.fit(max_tries=5000, fit_tolerance=10.0, fit_deg=4)
 
-    # assert np.isclose(res["fit_coeff"][:2], osiris_fit_coeff[:2], rtol=0.02).all()
+    assert np.isclose(
+        res["fit_coeff"][:2], osiris_fit_coeff[:2], rtol=0.02
+    ).all()
 
 
 def test_sprat_fit():
@@ -400,4 +404,6 @@ def test_sprat_fit():
     # Run the wavelength calibration
     res = c.fit(max_tries=5000, candidate_tolerance=3.0)
 
-    # assert np.isclose(res["fit_coeff"][:2], sprat_fit_coeff[:2], rtol=0.02).all()
+    assert np.isclose(
+        res["fit_coeff"][:2], sprat_fit_coeff[:2], rtol=0.02
+    ).all()

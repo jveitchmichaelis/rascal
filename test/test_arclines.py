@@ -124,7 +124,7 @@ user_atlas = Atlas(
 
 cal = Calibrator(np.arange(10), user_atlas.atlas_lines)
 
-"""
+
 def test_get_summary_executive():
     cal.atlas_summary(mode="executive")
 
@@ -179,4 +179,3 @@ def test_save_full_summary_default():
         mode="full",
     )
     os.remove(output_path)
-"""

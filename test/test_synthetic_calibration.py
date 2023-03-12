@@ -2,13 +2,12 @@ import logging
 from functools import partialmethod
 
 import numpy as np
-
-# Suppress tqdm output
-from tqdm import tqdm
-
 from rascal.atlas import Atlas
 from rascal.calibrator import Calibrator
 from rascal.synthetic import SyntheticSpectrum
+
+# Suppress tqdm output
+from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
 
@@ -83,11 +82,11 @@ def test_default():
 
     assert res["success"]
 
-    # res = c.match_peaks(res["fit_coeff"], refine=False, robust_refit=True)
+    res = c.match_peaks(res["fit_coeff"], refine=False, robust_refit=True)
 
-    # assert res["peak_utilisation"] > 0.7
-    # assert res["atlas_utilisation"] > 0.0
-    # assert res["rms"] < 5.0
+    assert res["peak_utilisation"] > 0.7
+    assert res["atlas_utilisation"] > 0.0
+    assert res["rms"] < 5.0
 
 
 # def test_fitting_with_initial_polynomial():

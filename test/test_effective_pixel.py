@@ -66,7 +66,7 @@ def test_effective_pixel_not_affecting_fit_int_peaks():
     res = c.fit(max_tries=2000, fit_deg=3)
 
     assert res
-    """
+
     (
         res["fit_coeff"],
         x_fit,
@@ -79,7 +79,6 @@ def test_effective_pixel_not_affecting_fit_int_peaks():
     ) = c.match_peaks(best_p, refine=True, robust_refit=True).values()
     fit_diff = c.polyval(x_fit, best_p) - y_fit
     rms = np.sqrt(np.sum(fit_diff**2 / len(x_fit)))
-    """
 
     assert np.in1d(c.matched_peaks, c.peaks).all()
     # assert res["peak_utilisation"] > 0.7
@@ -107,7 +106,7 @@ def test_effective_pixel_not_affecting_fit_perfect_peaks():
     assert res
 
     # c.plot_fit(display=False)
-    """
+
     (
         res["fit_coeff"],
         x_fit,
@@ -121,7 +120,6 @@ def test_effective_pixel_not_affecting_fit_perfect_peaks():
 
     fit_diff = c.polyval(x_fit, best_p) - y_fit
     rms = np.sqrt(np.sum(fit_diff**2 / len(x_fit)))
-    """
 
     # assert res["peak_utilisation"] > 0.7
     assert res["atlas_utilisation"] > 0.0

@@ -59,11 +59,11 @@ def test_linear_fit():
     # Refine solution
     res = c.match_peaks(res["fit_coeff"], refine=False, robust_refit=True)
 
-    # assert np.abs(res["fit_coeff"][1] - 5.0) / 5.0 < 0.001
-    # assert np.abs(res["fit_coeff"][0] - 3000.0) / 3000.0 < 0.001
-    # assert res["peak_utilisation"] > 0.8
-    # assert res["atlas_utilisation"] > 0.0
-    # assert len(c.get_pix_wave_pairs()) == len(peaks)
+    assert np.abs(res["fit_coeff"][1] - 5.0) / 5.0 < 0.001
+    assert np.abs(res["fit_coeff"][0] - 3000.0) / 3000.0 < 0.001
+    assert res["peak_utilisation"] > 0.8
+    assert res["atlas_utilisation"] > 0.0
+    assert len(c.get_pix_wave_pairs()) == len(peaks)
 
 
 def test_manual_refit():
@@ -101,7 +101,7 @@ def test_manual_refit():
     res = c.match_peaks(res["fit_coeff"], refine=False, robust_refit=True)
     res_manual = c.manual_refit(res["matched_peaks"], res["matched_atlas"])
 
-    # assert np.allclose(res_manual["fit_coeff"], res["fit_coeff"])
+    assert np.allclose(res_manual["fit_coeff"], res["fit_coeff"])
 
 
 def test_manual_refit_remove_points():
@@ -138,13 +138,11 @@ def test_manual_refit_remove_points():
     # Refine solution
     res = c.match_peaks(res["fit_coeff"], refine=False, robust_refit=True)
 
-    """
     c.remove_pix_wave_pair(5)
 
     res_manual = c.manual_refit(res["matched_peaks"], res["matched_atlas"])
 
     assert np.allclose(res_manual["fit_coeff"], res["fit_coeff"])
-    """
 
 
 def test_manual_refit_add_points():
@@ -181,12 +179,10 @@ def test_manual_refit_add_points():
     # Refine solution
     res = c.match_peaks(res["fit_coeff"], refine=False, robust_refit=True)
 
-    """
     c.add_pix_wave_pair(2000.0, 3000.0 + 4 * 2000.0 + 1.0e-3 * 2000.0**2.0)
     res_manual = c.manual_refit(res["matched_peaks"], res["matched_atlas"])
 
     assert np.allclose(res_manual["fit_coeff"], res["fit_coeff"])
-    """
 
 
 def test_quadratic_fit():
@@ -226,13 +222,11 @@ def test_quadratic_fit():
         res["fit_coeff"], refine=False, robust_refit=True
     )
 
-    """
     assert np.abs(res_robust["fit_coeff"][2] - 1e-3) / 1e-3 < 0.001
     assert np.abs(res_robust["fit_coeff"][1] - 4.0) / 4.0 < 0.001
     assert np.abs(res_robust["fit_coeff"][0] - 3000.0) / 3000.0 < 0.001
     assert res_robust["peak_utilisation"] > 0.7
     assert res_robust["atlas_utilisation"] > 0.5
-    """
 
 
 def test_quadratic_fit_legendre():
@@ -274,12 +268,10 @@ def test_quadratic_fit_legendre():
     )
 
     # Legendre 2nd order takes the form
-    """
     assert np.abs(res["fit_coeff"][1] - 4.0) / 4.0 < 0.001
     assert np.abs(res["fit_coeff"][0] - 3000.0) / 3000.0 < 0.001
     assert res["peak_utilisation"] > 0.6
     assert res["atlas_utilisation"] > 0.5
-    """
 
 
 def test_quadratic_fit_chebyshev():
@@ -320,9 +312,7 @@ def test_quadratic_fit_chebyshev():
         fit_type="chebyshev",
     )
 
-    """
     assert np.abs(res["fit_coeff"][1] - 4.0) / 4.0 < 0.001
     assert np.abs(res["fit_coeff"][0] - 3000.0) / 3000.0 < 0.001
     assert res["peak_utilisation"] > 0.6
     assert res["atlas_utilisation"] > 0.5
-    """
