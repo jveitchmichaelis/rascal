@@ -40,11 +40,8 @@ class SyntheticSpectrum:
 
         """
 
-        self.min_wavelength = min_wavelength
-        self.max_wavelength = max_wavelength
-
         # Default is approx. range of Silicon
-        self.set_wavelength_limit(min_wavelength, max_wavelength)
+        self.set_wavelength_limit(float(min_wavelength), float(max_wavelength))
 
         if coefficients is not None:
 
@@ -142,8 +139,8 @@ class SyntheticSpectrum:
             raise TypeError("Please provide a list or an numpy array.")
 
         wavelengths = np.array(wavelengths)
-        wavelengths = wavelengths[wavelengths > self.min_wavelength]
-        wavelengths = wavelengths[wavelengths < self.max_wavelength]
+        wavelengths = wavelengths[wavelengths >= self.min_wavelength]
+        wavelengths = wavelengths[wavelengths <= self.max_wavelength]
 
         # Constant function y = c
         if self.degree == 0:
