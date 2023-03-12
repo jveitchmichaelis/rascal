@@ -92,9 +92,11 @@ class RansacSolver:
 
         if config is not None:
             if isinstance(config, dict):
-                OmegaConf.merge(self.config, OmegaConf.create(config))
+                self.config = OmegaConf.merge(
+                    self.config, OmegaConf.create(config)
+                )
             else:
-                OmegaConf.merge(self.config, config)
+                self.config = OmegaConf.merge(self.config, config)
 
         self.x = x
         self.y = y
