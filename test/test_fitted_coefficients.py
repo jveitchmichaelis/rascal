@@ -3,14 +3,15 @@ from functools import partialmethod
 
 import numpy as np
 from astropy.io import fits
-from rascal import util
-from rascal.atlas import Atlas
-from rascal.calibrator import Calibrator
 from scipy import interpolate
 from scipy.signal import find_peaks
 
 # Suppress tqdm output
 from tqdm import tqdm
+
+from rascal import util
+from rascal.atlas import Atlas
+from rascal.calibrator import Calibrator
 
 tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 
@@ -197,7 +198,7 @@ def test_gmos_fit():
 
     # Run the wavelength calibration
     res = c.fit(max_tries=5000, fit_deg=4)
-    assert res
+    assert res["success"]
 
     assert np.isclose(
         res["fit_coeff"][:2], gmos_fit_coeff[:2], rtol=0.02
