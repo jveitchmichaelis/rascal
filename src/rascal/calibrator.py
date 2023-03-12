@@ -634,7 +634,7 @@ class Calibrator:
         self.candidates = []
 
         # actual wavelengths
-        actual = np.array(self.atlas.get_lines())
+        actual = np.array(self.atlas_wavelengths)
 
         num = len(self.hough_lines)
 
@@ -693,20 +693,18 @@ class Calibrator:
         y_matched = []
         fit_new = fit.copy()
 
-        atlas_lines = [line.wavelength for line in self.atlas_lines]
-
         for i, _d in enumerate(delta):
             fit_new[i] += _d
 
         for _p in self.peaks_effective:
             _x = self.polyval(_p, fit_new)
-            diff = atlas_lines - _x
+            diff = self.atlas_wavelengths - _x
             diff_abs = np.abs(diff)
             idx = np.argmin(diff_abs)
 
             if diff_abs[idx] < tolerance:
                 x_matched.append(_p)
-                y_matched.append(atlas_lines[idx])
+                y_matched.append(self.atlas_wavelengths[idx])
 
         x_matched = np.array(x_matched)
         y_matched = np.array(y_matched)
@@ -1371,17 +1369,17 @@ class Calibrator:
         matched_atlas = []
         residuals = []
 
-        atlas_lines = [line.wavelength for line in self.atlas_lines]
-
         # Find all Atlas peaks within tolerance
         for _p in self.peaks_effective:
             _x = self.polyval(_p, fit_coeff)
-            diff = atlas_lines - _x
+            diff = self.atlas_wavelengths - _x
             diff_abs = np.abs(diff) < tolerance
 
             if diff_abs.any():
                 matched_peaks.append(_p)
-                matched_atlas.append(list(np.asarray(atlas_lines)[diff_abs]))
+                matched_atlas.append(
+                    list(np.asarray(self.atlas_wavelengths)[diff_abs])
+                )
                 residuals.append(diff_abs)
 
         assert len(matched_peaks) == len(matched_atlas)
@@ -1944,3 +1942,7 @@ class Calibrator:
             renderer=renderer,
             display=display,
         )
+
+    @property
+    def atlas_wavelengths(self):
+        return [line.wavelength for line in self.atlas_lines]
