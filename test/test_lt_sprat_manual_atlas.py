@@ -4,14 +4,13 @@ from functools import partialmethod
 import numpy as np
 import pytest
 from astropy.io import fits
+from rascal import util
+from rascal.atlas import Atlas
+from rascal.calibrator import Calibrator
 from scipy.signal import find_peaks
 
 # Suppress tqdm output
 from tqdm import tqdm
-
-from rascal import util
-from rascal.atlas import Atlas
-from rascal.calibrator import Calibrator
 
 tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 
@@ -102,6 +101,8 @@ config = {
         "ybins": 100,
     },
     "ransac": {
+        "max_tries": 5000,
+        "inlier_tolerance": 5.0,
         "sample_size": 5,
         "top_n_candidate": 5,
         "filter_close": True,
@@ -170,7 +171,7 @@ def test_plot_arc():
 def test_sprat_manual_atlas_fit_match_peaks_and_create_summary():
 
     # Run the wavelength calibration
-    res = c.fit(max_tries=5000, candidate_tolerance=5.0)
+    res = c.fit()
     assert res["success"]
 
     # Plot the solution
@@ -243,7 +244,6 @@ def test_sprat_manual_atlas_fit_match_peaks_and_create_summary():
     os.remove(out_path)
 
 
-@pytest.mark.xfail()
 def test_plot_hough_space():
     # Show the parameter space for searching possible solution
     c.plot_search_space(

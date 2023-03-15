@@ -133,38 +133,39 @@ def plot_search_space(
     )
 
     # Get the search space boundaries
-    x = calibrator.contiguous_pixel
+    x = np.array(calibrator.contiguous_pixel)
 
     m_1 = (
         calibrator.config.data.detector_max_wave
         - calibrator.config.data.detector_min_wave
-    ) / calibrator.contiguous_pixel.max()
+    ) / max(x)
     y_1 = m_1 * x + calibrator.config.data.detector_min_wave
 
     m_2 = (
         calibrator.config.data.detector_max_wave
-        + calibrator.range_tolerance
+        + calibrator.config.hough.range_tolerance
         - (
             calibrator.config.data.detector_min_wave
-            + calibrator.range_tolerance
+            + calibrator.config.hough.range_tolerance
         )
-    ) / calibrator.contiguous_pixel.max()
+    ) / max(x)
     y_2 = (
         m_2 * x
         + calibrator.config.data.detector_min_wave
-        + calibrator.range_tolerance
+        + calibrator.config.hough.range_tolerance
     )
 
     m_3 = (
         calibrator.config.data.detector_max_wave
-        - calibrator.range_tolerance
+        - calibrator.config.hough.range_tolerance
         - (
             calibrator.config.data.detector_min_wave
-            - calibrator.range_tolerance
+            - calibrator.config.hough.range_tolerance
         )
-    ) / calibrator.contiguous_pixel.max()
+    ) / max(x)
     y_3 = m_3 * x + (
-        calibrator.config.data.detector_min_wave - calibrator.range_tolerance
+        calibrator.config.data.detector_min_wave
+        - calibrator.config.hough.range_tolerance
     )
 
     if calibrator.plot_with_matplotlib:
@@ -194,23 +195,23 @@ def plot_search_space(
         plt.hlines(
             calibrator.config.data.detector_min_wave,
             0,
-            calibrator.contiguous_pixel.max(),
+            max(x),
             color="k",
         )
         plt.hlines(
             calibrator.config.data.detector_min_wave
-            + calibrator.range_tolerance,
+            + calibrator.config.hough.range_tolerance,
             0,
-            calibrator.contiguous_pixel.max(),
+            max(x),
             linestyle="dashed",
             alpha=0.5,
             color="k",
         )
         plt.hlines(
             calibrator.config.data.detector_min_wave
-            - calibrator.range_tolerance,
+            - calibrator.config.hough.range_tolerance,
             0,
-            calibrator.contiguous_pixel.max(),
+            max(x),
             linestyle="dashed",
             alpha=0.5,
             color="k",
@@ -225,23 +226,23 @@ def plot_search_space(
         plt.hlines(
             calibrator.config.data.detector_max_wave,
             0,
-            calibrator.contiguous_pixel.max(),
+            max(x),
             color="k",
         )
         plt.hlines(
             calibrator.config.data.detector_max_wave
-            + calibrator.range_tolerance,
+            + calibrator.config.hough.range_tolerance,
             0,
-            calibrator.contiguous_pixel.max(),
+            max(x),
             linestyle="dashed",
             alpha=0.5,
             color="k",
         )
         plt.hlines(
             calibrator.config.data.detector_max_wave
-            - calibrator.range_tolerance,
+            - calibrator.config.hough.range_tolerance,
             0,
-            calibrator.contiguous_pixel.max(),
+            max(x),
             linestyle="dashed",
             alpha=0.5,
             color="k",
@@ -272,12 +273,12 @@ def plot_search_space(
             label="Best Candidate Pairs",
         )
 
-        plt.xlim(0, calibrator.contiguous_pixel.max())
+        plt.xlim(0, max(x))
         plt.ylim(
             calibrator.config.data.detector_min_wave
-            - calibrator.range_tolerance,
+            - calibrator.config.hough.range_tolerance,
             calibrator.config.data.detector_max_wave
-            + calibrator.range_tolerance,
+            + calibrator.config.hough.range_tolerance,
         )
 
         plt.ylabel("Wavelength / A")
@@ -348,7 +349,7 @@ def plot_search_space(
         # Tolerance region around the minimum wavelength
         fig.add_trace(
             go.Scatter(
-                x=[0, calibrator.contiguous_pixel.max()],
+                x=[0, max(x)],
                 y=[
                     calibrator.config.data.detector_min_wave,
                     calibrator.config.data.detector_min_wave,
@@ -360,12 +361,12 @@ def plot_search_space(
         )
         fig.add_trace(
             go.Scatter(
-                x=[0, calibrator.contiguous_pixel.max()],
+                x=[0, max(x)],
                 y=[
                     calibrator.config.data.detector_min_wave
-                    + calibrator.range_tolerance,
+                    + calibrator.config.hough.range_tolerance,
                     calibrator.config.data.detector_min_wave
-                    + calibrator.range_tolerance,
+                    + calibrator.config.hough.range_tolerance,
                 ],
                 name="Tolerance Range",
                 mode="lines",
@@ -374,12 +375,12 @@ def plot_search_space(
         )
         fig.add_trace(
             go.Scatter(
-                x=[0, calibrator.contiguous_pixel.max()],
+                x=[0, max(x)],
                 y=[
                     calibrator.config.data.detector_min_wave
-                    - calibrator.range_tolerance,
+                    - calibrator.config.hough.range_tolerance,
                     calibrator.config.data.detector_min_wave
-                    - calibrator.range_tolerance,
+                    - calibrator.config.hough.range_tolerance,
                 ],
                 showlegend=False,
                 mode="lines",
@@ -390,7 +391,7 @@ def plot_search_space(
         # Tolerance region around the minimum wavelength
         fig.add_trace(
             go.Scatter(
-                x=[0, calibrator.contiguous_pixel.max()],
+                x=[0, max(x)],
                 y=[
                     calibrator.config.data.detector_max_wave,
                     calibrator.config.data.detector_max_wave,
@@ -402,12 +403,12 @@ def plot_search_space(
         )
         fig.add_trace(
             go.Scatter(
-                x=[0, calibrator.contiguous_pixel.max()],
+                x=[0, max(x)],
                 y=[
                     calibrator.config.data.detector_max_wave
-                    + calibrator.range_tolerance,
+                    + calibrator.config.hough.range_tolerance,
                     calibrator.config.data.detector_max_wave
-                    + calibrator.range_tolerance,
+                    + calibrator.config.hough.range_tolerance,
                 ],
                 showlegend=False,
                 mode="lines",
@@ -416,12 +417,12 @@ def plot_search_space(
         )
         fig.add_trace(
             go.Scatter(
-                x=[0, calibrator.contiguous_pixel.max()],
+                x=[0, max(x)],
                 y=[
                     calibrator.config.data.detector_max_wave
-                    - calibrator.range_tolerance,
+                    - calibrator.config.hough.range_tolerance,
                     calibrator.config.data.detector_max_wave
-                    - calibrator.range_tolerance,
+                    - calibrator.config.hough.range_tolerance,
                 ],
                 showlegend=False,
                 mode="lines",
@@ -485,16 +486,16 @@ def plot_search_space(
                 title="Wavelength / A",
                 range=[
                     calibrator.config.data.detector_min_wave
-                    - calibrator.range_tolerance * 1.1,
+                    - calibrator.config.hough.range_tolerance * 1.1,
                     calibrator.config.data.detector_max_wave
-                    + calibrator.range_tolerance * 1.1,
+                    + calibrator.config.hough.range_tolerance * 1.1,
                 ],
                 showgrid=True,
             ),
             xaxis=dict(
                 title="Pixel",
                 zeroline=False,
-                range=[0.0, calibrator.contiguous_pixel.max()],
+                range=[0.0, max(x)],
                 showgrid=True,
             ),
             hovermode="closest",
