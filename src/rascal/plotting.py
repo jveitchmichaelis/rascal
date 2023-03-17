@@ -543,7 +543,6 @@ def plot_search_space(
 
 def plot_fit(
     calibrator: "calibrator.Calibrator",
-    fit_coeff: Union[list, np.ndarray],
     spectrum: Union[list, np.ndarray] = None,
     plot_atlas: bool = True,
     log_spectrum: bool = False,
@@ -560,8 +559,6 @@ def plot_fit(
 
     Parameters
     ----------
-    fit_coeff: 1D numpy array or list
-        Best fit polynomail fit_coefficients
     spectrum: 1D numpy array (N)
         Array of length N pixels
     plot_atlas: boolean (default: True)
@@ -626,17 +623,23 @@ def plot_fit(
         vline_max = 1.0
         text_box_pos = 0.5
 
-    wave = calibrator.polyval(calibrator.contiguous_pixel, fit_coeff)
+    wave = calibrator.polyval(
+        calibrator.contiguous_pixel, calibrator.res["fit_coeff"]
+    )
 
     fitted_diff = []
+    matched_idx = []
 
     for p, x in zip(calibrator.matched_peaks, calibrator.matched_atlas):
 
-        diff = calibrator.atlas_wavelengths - calibrator.polyval(p, fit_coeff)
+        diff = calibrator.atlas_wavelengths - calibrator.polyval(
+            p, calibrator.res["fit_coeff"]
+        )
         idx = np.argmin(np.abs(diff))
 
         calibrator.logger.info(f"Peak at: {x} A")
 
+        matched_idx.append(idx)
         fitted_diff.append(diff[idx])
         calibrator.logger.info(
             f"- matched to {calibrator.atlas_wavelengths[idx]} A"
@@ -656,7 +659,9 @@ def plot_fit(
 
             ax1.plot(wave, spectrum, label="Arc Spectrum")
             ax1.vlines(
-                calibrator.polyval(calibrator.peaks_effective, fit_coeff),
+                calibrator.polyval(
+                    calibrator.peaks_effective, calibrator.res["fit_coeff"]
+                ),
                 np.array(spectrum)[calibrator.peaks.astype("int")],
                 vline_max,
                 linestyles="dashed",
@@ -679,7 +684,9 @@ def plot_fit(
             )
 
         first_one = True
-        for p, x in zip(calibrator.matched_peaks, calibrator.matched_atlas):
+        for p, x, m in zip(
+            calibrator.matched_peaks, calibrator.matched_atlas, matched_idx
+        ):
 
             p_idx = int(
                 calibrator.peaks[np.where(calibrator.peaks_effective == p)[0]]
@@ -689,7 +696,7 @@ def plot_fit(
 
                 if first_one:
                     ax1.vlines(
-                        calibrator.polyval(p, fit_coeff),
+                        calibrator.polyval(p, calibrator.res["fit_coeff"]),
                         spectrum[p_idx],
                         vline_max,
                         colors="C1",
@@ -699,7 +706,7 @@ def plot_fit(
 
                 else:
                     ax1.vlines(
-                        calibrator.polyval(p, fit_coeff),
+                        calibrator.polyval(p, calibrator.res["fit_coeff"]),
                         spectrum[p_idx],
                         vline_max,
                         colors="C1",
@@ -709,8 +716,8 @@ def plot_fit(
                 x - 3,
                 text_box_pos,
                 s=(
-                    f"{calibrator.atlas_lines[idx].element}:"
-                    + f"{calibrator.atlas_lines[idx].wavelength:1.2f}"
+                    f"{calibrator.atlas_lines[m].element}:"
+                    + f"{calibrator.atlas_lines[m].wavelength:1.2f}"
                 ),
                 rotation=90,
                 bbox=dict(facecolor="white", alpha=1),
@@ -735,7 +742,9 @@ def plot_fit(
 
         # Plot the residuals
         ax2.scatter(
-            calibrator.polyval(calibrator.matched_peaks, fit_coeff),
+            calibrator.polyval(
+                calibrator.matched_peaks, calibrator.res["fit_coeff"]
+            ),
             fitted_diff,
             marker="+",
             color="C1",
@@ -758,7 +767,9 @@ def plot_fit(
 
         # Plot the polynomial
         ax3.scatter(
-            calibrator.polyval(calibrator.matched_peaks, fit_coeff),
+            calibrator.polyval(
+                calibrator.matched_peaks, calibrator.res["fit_coeff"]
+            ),
             calibrator.matched_peaks,
             marker="+",
             color="C1",
@@ -771,8 +782,12 @@ def plot_fit(
         ax3.set_xlabel("Wavelength / A")
         ax3.set_ylabel("Pixel")
         ax3.legend(loc="lower right")
-        w_min = calibrator.polyval(min(calibrator.matched_peaks), fit_coeff)
-        w_max = calibrator.polyval(max(calibrator.matched_peaks), fit_coeff)
+        w_min = calibrator.polyval(
+            min(calibrator.matched_peaks), calibrator.res["fit_coeff"]
+        )
+        w_max = calibrator.polyval(
+            max(calibrator.matched_peaks), calibrator.res["fit_coeff"]
+        )
         ax3.set_xlim(w_min * 0.95, w_max * 1.05)
 
         plt.tight_layout()
@@ -829,7 +844,7 @@ def plot_fit(
 
         for p in calibrator.peaks_effective:
 
-            x = calibrator.polyval(p, fit_coeff)
+            x = calibrator.polyval(p, calibrator.res["fit_coeff"])
 
             p_idx = int(
                 calibrator.peaks[np.where(calibrator.peaks_effective == p)[0]]
@@ -851,7 +866,9 @@ def plot_fit(
 
                 y_fitted.append(spectrum[p_idx])
 
-        x_fitted = calibrator.polyval(calibrator.matched_peaks, fit_coeff)
+        x_fitted = calibrator.polyval(
+            calibrator.matched_peaks, calibrator.res["fit_coeff"]
+        )
 
         fig.add_trace(
             go.Scatter(
@@ -977,11 +994,13 @@ def plot_fit(
                 zeroline=False,
                 range=[
                     calibrator.polyval(
-                        min(calibrator.matched_peaks), fit_coeff
+                        min(calibrator.matched_peaks),
+                        calibrator.res["fit_coeff"],
                     )
                     * 0.95,
                     calibrator.polyval(
-                        max(calibrator.matched_peaks), fit_coeff
+                        max(calibrator.matched_peaks),
+                        calibrator.res["fit_coeff"],
                     )
                     * 1.05,
                 ],

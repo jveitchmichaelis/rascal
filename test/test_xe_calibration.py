@@ -6,14 +6,13 @@ import numpy as np
 import pkg_resources
 import pytest
 from astropy.io import fits
+from rascal import util
+from rascal.atlas import Atlas
+from rascal.calibrator import Calibrator
 from scipy.signal import find_peaks
 
 # Suppress tqdm output
 from tqdm import tqdm
-
-from rascal import util
-from rascal.atlas import Atlas
-from rascal.calibrator import Calibrator
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger()
@@ -102,9 +101,9 @@ def run_sprat_calibration(fit_deg):
     atlas = Atlas(
         line_list="manual",
         wavelengths=sprat_atlas_lines,
-        min_wavelength=3500.0,
+        min_wavelength=3800.0,
         max_wavelength=8000.0,
-        range_tolerance=500.0,
+        range_tolerance=250.0,
         elements=element,
     )
 
