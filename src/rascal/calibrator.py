@@ -1928,7 +1928,6 @@ class Calibrator:
 
         return plotting.plot_fit(
             self,
-            fit_coeff=fit_coeff,
             spectrum=spectrum,
             plot_atlas=plot_atlas,
             log_spectrum=log_spectrum,
