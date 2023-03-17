@@ -452,20 +452,23 @@ class Calibrator:
                 / np.ptp(self.contiguous_pixel)
             )
 
-        self.logger.debug("Hough parameters:")
-        self.logger.debug(
+        self.logger.info("Hough parameters:")
+        self.logger.info(
             f"Minimum intercept: {self.config.hough.min_intercept}"
         )
-        self.logger.debug(
+        self.logger.info(
             f"Maximum intercept: {self.config.hough.max_intercept}"
         )
-        self.logger.debug(f"Minimum slope: {self.config.hough.min_slope}")
-        self.logger.debug(f"Maximum slope: {self.config.hough.max_slope}")
-        self.logger.debug(
-            f"Minimum wavelength: {self.config.data.detector_min_wave}"
+        self.logger.info(f"Minimum slope: {self.config.hough.min_slope}")
+        self.logger.info(f"Maximum slope: {self.config.hough.max_slope}")
+        self.logger.info(
+            f"Minimum detector wavelength: {self.config.data.detector_min_wave}"
         )
-        self.logger.debug(
-            f"Maximum wavelength: {self.config.data.detector_max_wave}"
+        self.logger.info(
+            f"Maximum detector wavelength: {self.config.data.detector_max_wave}"
+        )
+        self.logger.info(
+            f"Detector range tolerance: {self.config.data.detector_edge_tolerance}"
         )
 
     def _merge_candidates(self, candidates: Union[list, np.ndarray]):
