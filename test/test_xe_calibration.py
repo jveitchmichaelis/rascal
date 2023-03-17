@@ -6,13 +6,14 @@ import numpy as np
 import pkg_resources
 import pytest
 from astropy.io import fits
-from rascal import util
-from rascal.atlas import Atlas
-from rascal.calibrator import Calibrator
 from scipy.signal import find_peaks
 
 # Suppress tqdm output
 from tqdm import tqdm
+
+from rascal import util
+from rascal.atlas import Atlas
+from rascal.calibrator import Calibrator
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger()
@@ -63,7 +64,13 @@ sprat_atlas_lines = [
 element = ["Xe"] * len(sprat_atlas_lines)
 
 config = {
-    "data": {"contiguous_range": None},
+    "data": {
+        "contiguous_range": None,
+        "detector_min_wave": 3500.0,
+        "detector_max_wave": 8000.0,
+        "detector_edge_tolerance": 200.0,
+        "num_pix": 1024,
+    },
     "hough": {
         "num_slopes": 2000,
         "range_tolerance": 200.0,
