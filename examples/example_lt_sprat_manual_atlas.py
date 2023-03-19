@@ -23,7 +23,9 @@ plt.xlabel("Spectral Direction / Pix")
 plt.ylabel("Spatial Direction / Pix")
 plt.tight_layout()
 plt.savefig(
-    os.path.join(base_dir, "output", "lt-sprat-manual-atlas-arc-image.png")
+    os.path.join(
+        base_dir, "output_lt_sprat", "lt-sprat-manual-atlas-arc-image.png"
+    )
 )
 
 # Collapse into 1D spectrum between row 110 and 120
@@ -35,28 +37,18 @@ relative_humidity = fits_file.header["REFHUMID"]
 
 # Identify the peaks
 peaks, _ = find_peaks(
-    spectrum, height=300, prominence=150, distance=5, threshold=None
+    spectrum, height=200, prominence=100, distance=5, threshold=None
 )
 peaks = util.refine_peaks(spectrum, peaks, window_width=3)
 
-# Initialise the calibrator
-c = Calibrator(peaks, spectrum=spectrum)
-c.set_hough_properties(
-    num_slopes=2000,
-    range_tolerance=200.0,
-    xbins=100,
-    ybins=100,
-    min_wavelength=3600.0,
-    max_wavelength=8000.0,
-)
-c.set_ransac_properties(sample_size=5, top_n_candidate=10, filter_close=True)
+
 # blend: 4829.71, 4844.33
 # blend: 5566.62, 5581.88
 # blend: 6261.212, 6265.302
 # blend: 6872.11, 6882.16
 # blend: 7283.961, 7285.301
 # blend: 7316.272, 7321.452
-atlas_lines = [
+sprat_atlas_lines = [
     4193.5,
     4385.77,
     4500.98,
@@ -92,29 +84,52 @@ atlas_lines = [
     7967.34,
     8057.258,
 ]
-element = ["Xe"] * len(atlas_lines)
+element = ["Xe"] * len(sprat_atlas_lines)
 
-atlas = Atlas(range_tolerance=200)
-atlas.add_user_atlas(
-    element,
-    atlas_lines,
-    pressure=pressure,
-    temperature=temperature,
-    relative_humidity=relative_humidity,
+config = {
+    "data": {
+        "contiguous_range": None,
+        "detector_min_wave": 3500.0,
+        "detector_max_wave": 8000.0,
+        "detector_edge_tolerance": 200.0,
+        "num_pix": 1024,
+    },
+    "hough": {
+        "num_slopes": 2000,
+        "range_tolerance": 200.0,
+        "xbins": 100,
+        "ybins": 100,
+    },
+    "ransac": {
+        "sample_size": 5,
+        "top_n_candidate": 5,
+        "filter_close": True,
+        "max_tries": 2500,
+    },
+}
+
+atlas = Atlas(
+    line_list="manual",
+    wavelengths=sprat_atlas_lines,
+    min_wavelength=3800.0,
+    max_wavelength=8000.0,
+    range_tolerance=250.0,
+    elements=element,
 )
-c.set_atlas(atlas)
 
-
-c.do_hough_transform(brute_force=True)
+# Initialise the calibrator
+c = Calibrator(
+    peaks, atlas_lines=atlas.atlas_lines, config=config, spectrum=spectrum
+)
 
 # Run the wavelength calibration
-res = c.fit(max_tries=5000, candidate_tolerance=5.0)
+res = c.fit()
 
 c.plot_arc(
     display=False,
     save_fig="png",
     filename=os.path.join(
-        base_dir, "output", "lt-sprat-manual-atlas-arc-spectrum"
+        base_dir, "output_lt_sprat", "lt-sprat-manual-atlas-arc-spectrum"
     ),
 )
 
@@ -127,7 +142,9 @@ c.plot_fit(
     log_spectrum=False,
     save_fig="png",
     filename=os.path.join(
-        base_dir, "output", "lt-sprat-manual-atlas-wavelength-calibration"
+        base_dir,
+        "output_lt_sprat",
+        "lt-sprat-manual-atlas-wavelength-calibration",
     ),
 )
 
@@ -135,7 +152,7 @@ c.plot_fit(
 c.plot_search_space(
     save_fig="png",
     filename=os.path.join(
-        base_dir, "output", "lt-sprat-manual-atlas-search-space"
+        base_dir, "output_lt_sprat", "lt-sprat-manual-atlas-search-space"
     ),
 )
 

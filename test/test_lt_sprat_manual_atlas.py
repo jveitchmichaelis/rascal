@@ -4,14 +4,13 @@ from functools import partialmethod
 import numpy as np
 import pytest
 from astropy.io import fits
+from rascal import util
+from rascal.atlas import Atlas
+from rascal.calibrator import Calibrator
 from scipy.signal import find_peaks
 
 # Suppress tqdm output
 from tqdm import tqdm
-
-from rascal import util
-from rascal.atlas import Atlas
-from rascal.calibrator import Calibrator
 
 tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 
@@ -85,8 +84,8 @@ element = ["Xe"] * len(sprat_atlas_lines)
 user_atlas = Atlas(
     line_list="manual",
     wavelengths=sprat_atlas_lines,
-    min_wavelength=4000.0,
-    max_wavelength=8000.0,
+    min_wavelength=3800.0,
+    max_wavelength=8200.0,
     range_tolerance=200.0,
     elements=element,
     pressure=pressure,
@@ -95,23 +94,24 @@ user_atlas = Atlas(
 )
 
 config = {
+    "log_level": "INFO",
     "data": {
         "contiguous_range": None,
         "detector_min_wave": 3500.0,
-        "detector_max_wave": 8000.0,
+        "detector_max_wave": 8200.0,
         "detector_edge_tolerance": 200.0,
         "num_pix": 1024,
     },
     "hough": {
-        "num_slopes": 2000,
+        "num_slopes": 2500,
         "range_tolerance": 200.0,
-        "xbins": 100,
-        "ybins": 100,
+        "xbins": 200,
+        "ybins": 200,
     },
     "ransac": {
         "max_tries": 5000,
         "inlier_tolerance": 5.0,
-        "sample_size": 5,
+        "sample_size": 8,
         "top_n_candidate": 5,
         "filter_close": True,
     },
@@ -194,6 +194,7 @@ def test_sprat_manual_atlas_fit_match_peaks_and_create_summary():
     )
 
     res = c.match_peaks(res["fit_coeff"])
+    assert res["atlas_utilisation"] > 0.9
 
     c.plot_fit(
         res["fit_coeff"],

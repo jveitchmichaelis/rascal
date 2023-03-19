@@ -146,13 +146,17 @@ class Atlas:
         ):
             if wavelength < (self.min_wavelength - self.range_tolerance):
                 logger.warning(
-                    f"User-supplied wavelength {wavelength} is below the minimum atlas wavelength of {self.min_wavelength} with a tolerance of {self.range_tolerance}, will not use."
+                    f"User-supplied wavelength {wavelength} is below the "
+                    f"minimum atlas wavelength of {self.min_wavelength} with "
+                    f"a tolerance of {self.range_tolerance}, will not use."
                 )
                 continue
 
             if wavelength > (self.max_wavelength + self.range_tolerance):
                 logger.warning(
-                    f"User-supplied wavelength {wavelength} is above the maximum atlas wavelength of {self.max_wavelength} with a tolerance of {self.range_tolerance}, will not use."
+                    f"User-supplied wavelength {wavelength} is above the "
+                    f"maximum atlas wavelength of {self.max_wavelength} with "
+                    f"a tolerance of {self.range_tolerance}, will not use."
                 )
                 continue
 
