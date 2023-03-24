@@ -27,7 +27,6 @@ class SyntheticSpectrum:
             self.set_model(self.coefficients)
 
         else:
-
             self.model = None
             self.degree = None
 
@@ -37,12 +36,10 @@ class SyntheticSpectrum:
         """
 
         if isinstance(coefficients, (list, np.ndarray)):
-
             self.degree = len(coefficients) - 1
             self.model = models.polynomial(a=coefficients, degree=self.degree)
 
         else:
-
             raise TypeError("Please provide a list or an numpy array.")
 
     def set_wavelength_limit(self, min_wavelength=None, max_wavelength=None):
@@ -54,28 +51,23 @@ class SyntheticSpectrum:
             not isinstance(min_wavelength, float)
             and min_wavelength is not None
         ):
-
             raise TypeError(
                 "Please provide a numeric value or None to "
                 "retain the min_wavelength."
             )
 
         else:
-
             # Placeholder Min/Max
             if min_wavelength is not None:
-
                 new_min_wavelength = min_wavelength
 
             else:
-
                 new_min_wavelength = self.min_wavelength
 
         if (
             not isinstance(max_wavelength, float)
             and max_wavelength is not None
         ):
-
             raise TypeError(
                 "Please provide a numeric value or None to "
                 "retain the max_wavelength."
@@ -83,21 +75,17 @@ class SyntheticSpectrum:
 
         else:
             if max_wavelength is not None:
-
                 new_max_wavelength = max_wavelength
 
             else:
-
                 new_max_wavelength = self.max_wavelength
 
         # Check if Max > Min
         if new_max_wavelength > new_min_wavelength:
-
             self.min_wavelength = new_min_wavelength
             self.max_wavelength = new_max_wavelength
 
         else:
-
             raise RuntimeError(
                 "Minimum wavelength cannot be larger than "
                 "the maximum wavelength."
@@ -109,7 +97,6 @@ class SyntheticSpectrum:
         """
 
         if not isinstance(wavelengths, (list, np.ndarray)):
-
             raise TypeError("Please provide a list or an numpy array.")
 
         wavelengths = np.array(wavelengths)

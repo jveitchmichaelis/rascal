@@ -11,7 +11,6 @@ from rascal.synthetic import SyntheticSpectrum
 @patch("matplotlib.pyplot.show")
 @pytest.mark.skipif(sys.platform == "darwin", reason="does not run on Mac")
 def test_providing_effective_pixel_not_affecting_fit(mock_show):
-
     # Create a test spectrum with a simple linear relationship
     # between pixels/wavelengths. The intercept is set to
     # 100 nm and the gradient is set to 2.

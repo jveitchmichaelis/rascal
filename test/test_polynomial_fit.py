@@ -19,7 +19,6 @@ elements_quadratic = ["Quadratic"] * len(wavelengths_quadratic)
 
 
 def test_linear_fit():
-
     # Initialise the calibrator
     c = Calibrator(peaks)
     a = Atlas()
@@ -67,7 +66,6 @@ def test_linear_fit():
 
 
 def test_manual_refit():
-
     # Initialise the calibrator
     c = Calibrator(peaks)
     a = Atlas()
@@ -119,7 +117,6 @@ def test_manual_refit():
 
 
 def test_manual_refit_remove_points():
-
     # Initialise the calibrator
     c = Calibrator(peaks)
     a = Atlas()
@@ -173,7 +170,6 @@ def test_manual_refit_remove_points():
 
 
 def test_manual_refit_add_points():
-
     # Initialise the calibrator
     c = Calibrator(peaks)
     a = Atlas()
@@ -226,7 +222,6 @@ def test_manual_refit_add_points():
 
 
 def test_quadratic_fit():
-
     # Initialise the calibrator
     c = Calibrator(peaks)
     a = Atlas()
@@ -277,7 +272,6 @@ def test_quadratic_fit():
 
 
 def test_quadratic_fit_legendre():
-
     # Initialise the calibrator
     c = Calibrator(peaks)
     a = Atlas()
@@ -325,7 +319,6 @@ def test_quadratic_fit_legendre():
 
 
 def test_quadratic_fit_chebyshev():
-
     # Initialise the calibrator
     c = Calibrator(peaks)
     a = Atlas()

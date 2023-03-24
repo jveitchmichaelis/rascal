@@ -152,39 +152,32 @@ class Atlas:
         """
 
         if min_atlas_wavelength is None:
-
             min_atlas_wavelength = (
                 self.min_atlas_wavelength - self.range_tolerance
             )
 
         if max_atlas_wavelength is None:
-
             max_atlas_wavelength = (
                 self.max_atlas_wavelength + self.range_tolerance
             )
 
         if not np.isfinite(min_atlas_wavelength):
-
             raise ValueError(
                 "min_atlas_wavelength has to be finite or None. "
                 "{} is given.".format(min_atlas_wavelength)
             )
 
         if not np.isfinite(max_atlas_wavelength):
-
             raise ValueError(
                 "max_atlas_wavelength has to be finite or None. "
                 "{} is given.".format(max_atlas_wavelength)
             )
 
         if isinstance(elements, str):
-
             elements = [elements]
 
         if elements is not None:
-
             for element in elements:
-
                 (
                     atlas_elements_tmp,
                     atlas_tmp,
@@ -254,21 +247,16 @@ class Atlas:
         """
 
         if not isinstance(elements, list):
-
             elements = list(elements)
 
         if not isinstance(wavelengths, list):
-
             wavelengths = list(wavelengths)
 
         if intensities is None:
-
             intensities = [0] * len(wavelengths)
 
         else:
-
             if not isinstance(intensities, list):
-
                 intensities = list(intensities)
 
         assert len(elements) == len(wavelengths), ValueError(
@@ -279,7 +267,6 @@ class Atlas:
         )
 
         if vacuum:
-
             wavelengths = vacuum_to_air_wavelength(
                 wavelengths, temperature, pressure, relative_humidity
             )
@@ -338,9 +325,7 @@ class Atlas:
         """
 
         for atlas_line in self.atlas_lines:
-
             if abs(atlas_line.wavelength - wavelength) < tolerance:
-
                 self.atlas_lines.remove(atlas_line)
 
     def list(self):
@@ -350,7 +335,6 @@ class Atlas:
         """
 
         for line in self.atlas_lines:
-
             print(
                 "Element "
                 + str(line.element)

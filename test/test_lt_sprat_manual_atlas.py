@@ -12,7 +12,6 @@ HERE = os.path.dirname(os.path.realpath(__file__))
 
 
 def test_sprat_manual_atlas():
-
     # Load the LT SPRAT data
     fits_file = fits.open(
         os.path.join(

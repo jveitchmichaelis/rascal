@@ -9,7 +9,6 @@ class HoughTransform:
     """
 
     def __init__(self):
-
         self.hough_points = None
         self.hough_lines = None
         self.hist = None
@@ -119,7 +118,6 @@ class HoughTransform:
         # For each point (x, y), computes the gradient and intercept for all
         # (X, Y) with positive gradients
         for i in range(len(x) - 1):
-
             gradient_tmp = (y[i + 1 :] - y[i]) / (x[i + 1 :] - x[i])
             intercept_tmp = y[i + 1 :] - gradient_tmp * x[i + 1 :]
 
@@ -156,15 +154,12 @@ class HoughTransform:
         """
 
         if isinstance(hp, HoughTransform):
-
             points = hp.hough_points
 
         elif isinstance(hp, np.ndarray):
-
             points = hp
 
         else:
-
             raise TypeError("Unsupported type for extending hough points.")
 
         self.hough_points = np.vstack((self.hough_points, points))
@@ -205,7 +200,6 @@ class HoughTransform:
         lines = []
 
         for b in self.hist_sorted_arg:
-
             lines.append(
                 (
                     self.xedges[b[0]] + xbin_width,
@@ -247,7 +241,6 @@ class HoughTransform:
         fileformat_split = fileformat.split(delimiter)
 
         if "npy" in fileformat_split:
-
             output_npy = []
 
             output_npy.append(self.hough_points)
@@ -260,11 +253,9 @@ class HoughTransform:
             output_npy.append([self.max_intercept])
 
             if to_disk:
-
                 np.save(filename + ".npy", output_npy)
 
         if "json" in fileformat_split:
-
             output_json = {}
 
             output_json["hough_points"] = self.hough_points.tolist()
@@ -277,31 +268,24 @@ class HoughTransform:
             output_json["max_intercept"] = self.max_intercept
 
             if to_disk:
-
                 with open(filename + ".json", "w+") as f:
-
                     json.dump(output_json, f)
 
         if not to_disk:
-
             if ("npy" in fileformat_split) and (
                 "json" not in fileformat_split
             ):
-
                 return output_npy
 
             elif ("npy" not in fileformat_split) and (
                 "json" in fileformat_split
             ):
-
                 return output_json
 
             elif ("npy" in fileformat_split) and ("json" in fileformat_split):
-
                 return output_npy, output_json
 
             else:
-
                 return None
 
     def load(self, filename="hough_transform", filetype="npy"):
@@ -320,9 +304,7 @@ class HoughTransform:
         """
 
         if filetype == "npy":
-
             if filename[-4:] != ".npy":
-
                 filename += ".npy"
 
             input_npy = np.load(filename, allow_pickle=True)
@@ -337,9 +319,7 @@ class HoughTransform:
             self.max_intercept = float(input_npy[7][0])
 
         elif filetype == "json":
-
             if filename[-5:] != ".json":
-
                 filename += ".json"
 
             input_json = json.load(open(filename))
@@ -354,7 +334,6 @@ class HoughTransform:
             self.max_intercept = float(input_json["max_intercept"])
 
         else:
-
             raise ValueError(
                 "Unknown filetype %s, it has to be npy or json" % filetype
             )

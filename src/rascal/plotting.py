@@ -17,12 +17,10 @@ def _import_matplotlib():
     """
 
     try:
-
         global plt
         import matplotlib.pyplot as plt
 
     except ImportError:
-
         logger.error("matplotlib package not available.")
 
 
@@ -33,7 +31,6 @@ def _import_plotly():
     """
 
     try:
-
         global go
         global pio
         global psp
@@ -60,7 +57,6 @@ def _import_plotly():
         pio.templates.default = "CN"
 
     except ImportError:
-
         logger.error("plotly package not available.")
 
 
@@ -204,9 +200,7 @@ def plot_calibration_lines(
         plt.setp(markerline, markersize=2.5, color="C{}".format(j))
 
         if label:
-
             for _w in wavelength_list[e_mask]:
-
                 plt.text(
                     _w,
                     max(model_spectrum) * 1.05,
@@ -240,25 +234,19 @@ def plot_calibration_lines(
         plt.yscale("log")
 
     if save_fig:
-
         fig_type = fig_type.split("+")
 
         if filename is None:
-
             filename_output = "rascal_arc"
 
         else:
-
             filename_output = filename
 
         for t in fig_type:
-
             if t in ["jpg", "png", "svg", "pdf"]:
-
                 plt.savefig(filename_output + "." + t, format=t)
 
     if display:
-
         plt.show()
 
     return fig
@@ -432,7 +420,6 @@ def plot_search_space(
         plt.plot(x, y_3, linestyle="dashed", color="C3")
 
         if fit_coeff is not None:
-
             plt.scatter(
                 calibrator.peaks,
                 calibrator.polyval(calibrator.peaks, fit_coeff),
@@ -460,25 +447,19 @@ def plot_search_space(
         plt.tight_layout()
 
         if save_fig:
-
             fig_type = fig_type.split("+")
 
             if filename is None:
-
                 filename_output = "rascal_hough_search_space"
 
             else:
-
                 filename_output = filename
 
             for t in fig_type:
-
                 if t in ["jpg", "png", "svg", "pdf"]:
-
                     plt.savefig(filename_output + "." + t, format=t)
 
         if display:
-
             plt.show()
 
         return fig
@@ -630,7 +611,6 @@ def plot_search_space(
         )
 
         if fit_coeff is not None:
-
             fig.add_trace(
                 go.Scatter(
                     x=calibrator.peaks,
@@ -667,39 +647,29 @@ def plot_search_space(
         )
 
         if save_fig:
-
             fig_type = fig_type.split("+")
 
             if filename is None:
-
                 filename_output = "rascal_hough_search_space"
 
             else:
-
                 filename_output = filename
 
             for t in fig_type:
-
                 if t == "iframe":
-
                     pio.write_html(fig, filename_output + "." + t)
 
                 elif t in ["jpg", "png", "svg", "pdf"]:
-
                     pio.write_image(fig, filename_output + "." + t)
 
         if display:
-
             if renderer == "default":
-
                 fig.show()
 
             else:
-
                 fig.show(renderer)
 
         if return_jsonstring:
-
             return fig.to_json()
 
 
@@ -761,34 +731,27 @@ def plot_fit(
     """
 
     if spectrum is None:
-
         try:
-
             spectrum = calibrator.spectrum
 
         except Exception as e:
-
             calibrator.logger.error(e)
             calibrator.logger.error(
                 "Spectrum is not provided, it cannot be " "plotted."
             )
 
     if spectrum is not None:
-
         if log_spectrum:
-
             spectrum[spectrum < 0] = 1e-100
             spectrum = np.log10(spectrum)
             vline_max = np.nanmax(spectrum) * 2.0
             text_box_pos = 1.2 * max(spectrum)
 
         else:
-
             vline_max = np.nanmax(spectrum) * 1.2
             text_box_pos = 0.8 * max(spectrum)
 
     else:
-
         vline_max = 1.0
         text_box_pos = 0.5
 
@@ -804,7 +767,6 @@ def plot_fit(
 
         # Plot fitted spectrum
         if spectrum is not None:
-
             ax1.plot(wave, spectrum, label="Arc Spectrum")
             ax1.vlines(
                 calibrator.polyval(calibrator.peaks, fit_coeff),
@@ -819,7 +781,6 @@ def plot_fit(
 
         # Plot the atlas
         if plot_atlas:
-
             # spec = SyntheticSpectrum(
             #    fit, model_type='poly', degree=len(fit)-1)
             # x_locs = spec.get_pixels(calibrator.atlas)
@@ -837,7 +798,6 @@ def plot_fit(
 
         first_one = True
         for p, x in zip(calibrator.matched_peaks, calibrator.matched_atlas):
-
             diff = calibrator.atlas.get_lines() - x
             idx = np.argmin(np.abs(diff))
             all_diff.append(diff[idx])
@@ -851,7 +811,6 @@ def plot_fit(
             )
 
             if spectrum is not None:
-
                 if first_one:
                     ax1.vlines(
                         calibrator.polyval(p, fit_coeff),
@@ -887,13 +846,10 @@ def plot_fit(
         ax1.set_ylabel("Electron Count / e-")
 
         if spectrum is not None:
-
             if log_spectrum:
-
                 ax1.set_ylim(0, vline_max)
 
             else:
-
                 ax1.set_ylim(np.nanmin(spectrum), vline_max)
 
         ax1.legend(loc="center right")
@@ -948,25 +904,19 @@ def plot_fit(
         plt.tight_layout()
 
         if save_fig:
-
             fig_type = fig_type.split("+")
 
             if filename is None:
-
                 filename_output = "rascal_solution"
 
             else:
-
                 filename_output = filename
 
             for t in fig_type:
-
                 if t in ["jpg", "png", "svg", "pdf"]:
-
                     plt.savefig(filename_output + "." + t, format=t)
 
         if display:
-
             plt.show()
 
         return fig
@@ -991,7 +941,6 @@ def plot_fit(
             spec_max = np.nanmax(spectrum) * 1.05
 
         else:
-
             spec_max = vline_max
 
         fitted_peaks = []
@@ -1000,7 +949,6 @@ def plot_fit(
         all_diff = []
 
         for p in calibrator.peaks:
-
             x = calibrator.polyval(p, fit_coeff)
 
             # Add vlines
@@ -1024,7 +972,6 @@ def plot_fit(
             calibrator.logger.info("Peak at: {} A".format(x))
 
             if np.abs(diff[idx]) < tolerance:
-
                 fitted_peaks.append(p)
                 if spectrum is not None:
                     fitted_peaks_adu.append(
@@ -1119,9 +1066,7 @@ def plot_fit(
 
         # Layout, Title, Grid config
         if spectrum is not None:
-
             if log_spectrum:
-
                 fig.update_layout(
                     yaxis3=dict(
                         title="Electron Count / e-",
@@ -1136,7 +1081,6 @@ def plot_fit(
                 )
 
             else:
-
                 fig.update_layout(
                     yaxis3=dict(
                         title="Electron Count / e-",
@@ -1176,43 +1120,32 @@ def plot_fit(
         )
 
         if save_fig:
-
             fig_type = fig_type.split("+")
 
             if filename is None:
-
                 filename_output = "rascal_solution"
 
             else:
-
                 filename_output = filename
 
             for t in fig_type:
-
                 if t == "iframe":
-
                     pio.write_html(fig, filename_output + "." + t)
 
                 elif t in ["jpg", "png", "svg", "pdf"]:
-
                     pio.write_image(fig, filename_output + "." + t)
 
         if display:
-
             if renderer == "default":
-
                 fig.show()
 
             else:
-
                 fig.show(renderer)
 
         if return_jsonstring:
-
             return fig.to_json()
 
     else:
-
         assert calibrator.matplotlib_imported, (
             "matplotlib package not available. " + "Plot cannot be generated."
         )
@@ -1271,7 +1204,6 @@ def plot_arc(
     """
 
     if pixel_list is None:
-
         pixel_list = np.arange(len(calibrator.spectrum))
 
     if calibrator.plot_with_matplotlib:
@@ -1310,7 +1242,6 @@ def plot_arc(
             plt.legend()
 
         else:
-
             plt.xlim(0, max(calibrator.peaks))
 
         plt.xlabel("Pixel (Spectral Direction)")
@@ -1318,37 +1249,29 @@ def plot_arc(
         plt.tight_layout()
 
         if save_fig:
-
             fig_type = fig_type.split("+")
 
             if filename is None:
-
                 filename_output = "rascal_arc"
 
             else:
-
                 filename_output = filename
 
             for t in fig_type:
-
                 if t in ["jpg", "png", "svg", "pdf"]:
-
                     plt.savefig(filename_output + "." + t, format=t)
 
         if display:
-
             plt.show()
 
         return fig
 
     if calibrator.plot_with_plotly:
-
         _import_plotly()
 
         fig = go.Figure()
 
         if log_spectrum:
-
             # Plot all-pairs
             fig.add_trace(
                 go.Scatter(
@@ -1370,7 +1293,6 @@ def plot_arc(
             )
 
         else:
-
             # Plot all-pairs
             fig.add_trace(
                 go.Scatter(
@@ -1424,37 +1346,27 @@ def plot_arc(
         )
 
         if save_fig:
-
             fig_type = fig_type.split("+")
 
             if filename is None:
-
                 filename_output = "rascal_arc"
 
             else:
-
                 filename_output = filename
 
             for t in fig_type:
-
                 if t == "iframe":
-
                     pio.write_html(fig, filename_output + "." + t)
 
                 elif t in ["jpg", "png", "svg", "pdf"]:
-
                     pio.write_image(fig, filename_output + "." + t)
 
         if display:
-
             if renderer == "default":
-
                 fig.show()
 
             else:
-
                 fig.show(renderer)
 
         if return_jsonstring:
-
             return fig.to_json()

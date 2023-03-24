@@ -246,23 +246,18 @@ def filter_intensity(elements, lines, min_intensity=None):
     """
 
     if min_intensity is None:
-
         min_intensity_dict = {}
 
         for i, e in enumerate(elements):
-
             min_intensity_dict[e] = 0.0
 
     elif isinstance(min_intensity, (int, float)):
-
         min_intensity_dict = {}
 
         for i, e in enumerate(elements):
-
             min_intensity_dict[e] = float(min_intensity)
 
     elif isinstance(min_intensity, (list, np.ndarray)):
-
         assert len(min_intensity) == len(elements), (
             "min_intensity has to be in, float of list/array "
             "the same size as the elements. min_intensity is {}"
@@ -272,11 +267,9 @@ def filter_intensity(elements, lines, min_intensity=None):
         min_intensity_dict = {}
 
         for i, e in enumerate(elements):
-
             min_intensity_dict[e] = min_intensity[i]
 
     else:
-
         raise ValueError(
             "min_intensity has to be in, float of list/array "
             "the same size as the elements. min_intensity is {}"
@@ -487,7 +480,6 @@ def refine_peaks(spectrum, peaks, window_width=10, distance=None):
     length = len(spectrum)
 
     for peak in peaks:
-
         y = spectrum[
             max(0, int(peak) - window_width) : min(
                 int(peak) + window_width, length
@@ -506,7 +498,6 @@ def refine_peaks(spectrum, peaks, window_width=10, distance=None):
         sigma = np.sum(y * (x - mean) ** 2) / n
 
         try:
-
             popt, _ = curve_fit(gauss, x[mask], y[mask], p0=[1, mean, sigma])
             height, centre, _ = popt
 
@@ -519,7 +510,6 @@ def refine_peaks(spectrum, peaks, window_width=10, distance=None):
             refined_peaks.append(peak - window_width + centre)
 
         except RuntimeError:
-
             continue
 
     refined_peaks = np.array(refined_peaks)
