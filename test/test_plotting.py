@@ -13,7 +13,6 @@ def test_plot_calibration_lines(mock_show):
 
 @patch("matplotlib.pyplot.show")
 def test_display_plot_calibration_lines_1_element(mock_show):
-
     plotting.plot_calibration_lines(
         elements=["He"],
         min_atlas_wavelength=2900,
@@ -27,7 +26,6 @@ def test_display_plot_calibration_lines_1_element(mock_show):
 
 
 def test_save_plot_calibration_lines_1_element():
-
     plotting.plot_calibration_lines(
         elements=["He"],
         min_atlas_wavelength=2900,
@@ -45,7 +43,6 @@ def test_save_plot_calibration_lines_1_element():
 
 
 def test_save_plot_calibration_lines_3_elements():
-
     plotting.plot_calibration_lines(
         elements=["Cu", "Ne", "Ar"],
         min_atlas_wavelength=2900,

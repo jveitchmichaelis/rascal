@@ -6,7 +6,6 @@ from rascal.synthetic import SyntheticSpectrum
 
 
 def test_default():
-
     # Create a test spectrum with a simple linear relationship
     # between pixels/wavelengths. The intercept is set to
     # 100 nm and the gradient is set to 2.
@@ -64,7 +63,6 @@ def test_default():
 
 
 def test_get_candidate_points_poly():
-
     # Create a test spectrum with a simple linear relationship
     # between pixels/wavelengths. The intercept is set to
     # 100 nm and the gradient is set to 2.

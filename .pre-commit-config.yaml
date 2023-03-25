@@ -1,6 +1,6 @@
 repos:
 -   repo: https://github.com/psf/black
-    rev: 22.1.0
+    rev: 23.1.0
     hooks:
     - id: black
       language_version: python3
@@ -8,7 +8,7 @@ repos:
         - --line-length=79
 
 -   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.0.1
+    rev: v4.4.0
     hooks:
     # Identify invalid files
     - id: check-ast
@@ -22,3 +22,21 @@ repos:
     # Python checks
     - id: debug-statements
     - id: requirements-txt-fixer
+
+-   repo: local
+    hooks:
+    - id: remarklint
+      name: remarklint
+      language: node
+      entry: remark
+      types: [markdown]
+      args: ["--frail", "--quiet"]
+      additional_dependencies:
+        [
+          remark,
+          remark-lint,
+          remark-cli,
+          remark-preset-lint-recommended,
+          remark-lint-list-item-indent,
+          remark-lint-no-undefined-references,
+        ]

@@ -104,7 +104,6 @@ def test_ht_not_saved_to_disk():
 
 
 def test_extending_ht():
-
     ht2 = HoughTransform()
     ht2.set_constraints(
         min_slope=1, max_slope=4, min_intercept=7000.0, max_intercept=9000.0
@@ -128,7 +127,6 @@ def test_extending_ht():
 
 @pytest.mark.xfail()
 def test_extending_ht_expect_fail():
-
     ht.add_hough_points(np.ones(100))
 
 

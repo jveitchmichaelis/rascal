@@ -54,7 +54,6 @@ elements = ["Xe"] * len(wavelengths)
 
 
 def run_sprat_calibration(fit_deg):
-
     # Load the LT SPRAT data
     base_dir = os.path.dirname(__file__)
     spectrum2D = fits.open(
@@ -116,7 +115,6 @@ def run_sprat_calibration(fit_deg):
 
 
 def test_sprat_calibration():
-
     logger.info(
         "Test if LT/SPRAT Xe calibration return the order of "
         "polynomial properly."
@@ -128,7 +126,6 @@ def test_sprat_calibration():
 
 
 def test_sprat_calibration_multirun():
-
     logger.info("Test the repeatability of LT/SPRAT Xe calibration.")
 
     n = 10
