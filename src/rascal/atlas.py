@@ -12,7 +12,7 @@ import time
 from collections import Counter
 from dataclasses import MISSING, dataclass, field, fields
 from pprint import pprint
-from typing import List, Optional, Union
+from typing import Any, List, Optional
 
 import numpy as np
 import yaml
@@ -80,24 +80,31 @@ class Atlas:
 
     min_wavelength: float = MISSING
     max_wavelength: float = MISSING
-    elements: Optional[List[str]] = MISSING
+    elements: Optional[Any] = None
     line_list: str = "nist"
-    range_tolerance: float = 500.0
-    min_intensity: float = 10.0
+    range_tolerance: float = 0.0
+    min_intensity: Optional[float] = 10.0
     min_distance: float = 10.0
-    brightest_n_lines: int = 100
+    brightest_n_lines: Optional[int] = field(default=None)
     vacuum: bool = False
     pressure: float = 101325.0
     temperature: float = 273.15
     relative_humidity: float = 0.0
-
     wavelengths: Optional[List[float]] = field(default=None)
     intensities: Optional[List[float]] = field(default=None)
+    use_accurate_lines: Optional[bool] = True
 
     def __post_init__(self):
 
         if isinstance(self.elements, str):
             self.elements = [self.elements]
+
+        logger.info(
+            f"Loading lines from {self.line_list} between {self.min_wavelength} and {self.max_wavelength} for elements: {set(self.elements)}"
+        )
+        logger.info(
+            f"Filtering lines by intensity > {self.min_intensity} and separation > {self.min_distance} Å"
+        )
 
         self.atlas_lines = []
 
@@ -176,11 +183,7 @@ class Atlas:
 
         for element in self.elements:
 
-            (
-                atlas_elements_tmp,
-                atlas_tmp,
-                atlas_intensities_tmp,
-            ) = load_calibration_lines(
+            lines = load_calibration_lines(
                 elements=element,
                 linelist=line_list,
                 min_atlas_wavelength=min_atlas_wavelength,
@@ -192,16 +195,15 @@ class Atlas:
                 pressure=self.pressure,
                 temperature=self.temperature,
                 relative_humidity=self.relative_humidity,
+                use_accurate_lines=self.use_accurate_lines,
             )
 
-            for element, wavelength, intensity in list(
-                zip(atlas_elements_tmp, atlas_tmp, atlas_intensities_tmp)
-            ):
+            for line in lines:
                 self.atlas_lines.append(
                     AtlasLine(
-                        wavelength=wavelength,
+                        wavelength=line["wavelength"],
                         element=element,
-                        intensity=intensity,
+                        intensity=line["intensity"],
                         source=self.line_list,
                     )
                 )
@@ -283,7 +285,13 @@ class AtlasCollection:
 
     @classmethod
     def from_config(self, config):
-        return self(OmegaConf.load(config).atlases)
+
+        if isinstance(config, str):
+            return self(OmegaConf.load(config).atlases)
+        elif isinstance(config, dict):
+            return self(OmegaConf.create(config).atlases)
+        else:
+            raise NotImplementedError
 
     def __post_init__(self):
         self.atlases = [Atlas(**config) for config in self.atlases]
@@ -312,3 +320,7 @@ class AtlasCollection:
         lines = list(filter(self.line_valid, lines))
 
         return sorted(lines, key=lambda x: x.wavelength)
+
+    @property
+    def wavelengths(self):
+        return [line.wavelength for line in self.atlas_lines]

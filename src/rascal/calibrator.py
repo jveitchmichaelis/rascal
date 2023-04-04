@@ -98,8 +98,24 @@ class Calibrator:
 
         # fitting properties
         self.progress = None
-        self.polyfit = None
-        self.polyval = None
+
+        if self.config.ransac.type == "poly":
+            self.polyfit = np.polynomial.polynomial.polyfit
+            self.polyval = np.polynomial.polynomial.polyval
+
+        elif self.config.ransac.type == "legendre":
+            self.polyfit = np.polynomial.legendre.legfit
+            self.polyval = np.polynomial.legendre.legval
+
+        elif self.config.ransac.type == "chebyshev":
+            self.polyfit = np.polynomial.chebyshev.chebfit
+            self.polyval = np.polynomial.chebyshev.chebval
+
+        else:
+            raise ValueError(
+                "fit_type must be: (1) poly, (2) legendre or (3) chebyshev"
+            )
+
         self.candidates = None
         self.candidate_peak = None
         self.candidate_arc = None
@@ -987,24 +1003,6 @@ class Calibrator:
 
         self.fit_tolerance = self.config.ransac.rms_tolerance
         self.progress = progress
-
-        if self.config.ransac.type == "poly":
-            self.polyfit = np.polynomial.polynomial.polyfit
-            self.polyval = np.polynomial.polynomial.polyval
-
-        elif self.config.ransac.type == "legendre":
-            self.polyfit = np.polynomial.legendre.legfit
-            self.polyval = np.polynomial.legendre.legval
-
-        elif self.config.ransac.type == "chebyshev":
-            self.polyfit = np.polynomial.chebyshev.chebfit
-            self.polyval = np.polynomial.chebyshev.chebval
-
-        else:
-            raise ValueError(
-                "fit_type must be: (1) poly, (2) legendre or (3) chebyshev"
-            )
-
         n_lines = len(self.atlas_lines)
 
         # Reduce sample_size if it is larger than the number of atlas available
@@ -1485,6 +1483,11 @@ class Calibrator:
                 f"--> Coefficient of {i + 1}{ordinal} order: "
                 + f"{self.fit_coeff[i]}{os.linesep}"
             )
+
+        output += (
+            "Calculated detector range: "
+            + f"Start: {self.polyval(0, self.fit_coeff):1.6}, End: {self.polyval(self.config.data.num_pix, self.fit_coeff):1.6}{os.linesep}"
+        )
 
         output += "RMS of the best fit solution: {self.rms}{os.linesep}"
         output += (

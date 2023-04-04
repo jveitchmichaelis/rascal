@@ -130,6 +130,7 @@ class CalibratorConfig:
     logger_name: str = "rascal"
     log_level: str = "info"
     hide_progress: bool = False
+    atlases: List[Atlas] = MISSING
 
     data: DataConfig = field(default_factory=DataConfig)
     hough: HoughConfig = field(default_factory=HoughConfig)

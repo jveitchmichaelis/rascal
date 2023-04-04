@@ -6,13 +6,20 @@ Some uncategorised utility functions.
 
 """
 
+import csv
+import logging
 import os
+import time
 from collections import defaultdict
-from typing import Union
+from importlib import resources as import_resources
+from typing import List, Optional, Union
 
+import astropy.units as u
 import numpy as np
-import pkg_resources
+from astropy.units import Quantity
 from scipy.optimize import curve_fit
+
+logger = logging.getLogger(__name__)
 
 
 def get_vapour_pressure(temperature: float):
@@ -216,10 +223,10 @@ def air_to_vacuum_wavelength(
 
 
 def filter_wavelengths(
-    lines: Union[list, np.ndarray],
+    lines: List[dict],
     min_atlas_wavelength: float,
     max_atlas_wavelength: float,
-):
+) -> List[int]:
     """
     Filters a wavelength list to a minimum and maximum range.
 
@@ -240,19 +247,20 @@ def filter_wavelengths(
         Filtered wavelengths within specified range limit
 
     """
+    valid = []
 
-    wavelengths = lines[:, 1].astype(np.float64)
+    for idx, line in enumerate(lines):
 
-    _, index, _ = np.unique(wavelengths, return_counts=True, return_index=True)
+        if (
+            line["wavelength"] >= min_atlas_wavelength
+            and line["wavelength"] <= max_atlas_wavelength
+        ):
+            valid.append(idx)
 
-    wavelength_mask = (wavelengths[index] >= min_atlas_wavelength) & (
-        wavelengths[index] <= max_atlas_wavelength
-    )
-
-    return lines[index][wavelength_mask]
+    return valid
 
 
-def filter_distance(wavelengths: float, min_distance: float = 0.0):
+def filter_distance(lines: List[dict], min_distance: float = 0.0) -> List[int]:
     """
     Filters a wavelength list by a distance threshold.
 
@@ -272,6 +280,10 @@ def filter_distance(wavelengths: float, min_distance: float = 0.0):
 
     """
 
+    if len(lines) == 0:
+        return []
+
+    wavelengths = np.array([line["wavelength"] for line in lines])
     left_dists = np.zeros_like(wavelengths)
     left_dists[1:] = wavelengths[1:] - wavelengths[:-1]
 
@@ -281,98 +293,115 @@ def filter_distance(wavelengths: float, min_distance: float = 0.0):
     distances[0] = right_dists[0]
     distances[-1] = left_dists[-1]
 
-    distance_mask = np.abs(distances) >= min_distance
+    distance_mask = (np.abs(distances) >= min_distance).astype(int)
 
-    return distance_mask
+    indices = np.argwhere(distance_mask)
+
+    return indices.flatten()
 
 
 def filter_intensity(
-    elements: Union[list, np.ndarray],
-    lines: Union[list, np.ndarray],
-    min_intensity: float = None,
-):
+    lines: List[dict],
+    element_intensities: Optional[Union[float, dict]] = {},
+    include_unknown: bool = True,
+    keep_n: Optional[int] = None,
+) -> List[int]:
     """
     Filters a line list by an intensity threshold
 
     Parameters
     ----------
-    lines: list[tuple (str, float, float)]
-        A list of input lines where 1st parameter is the name of the element
-        the 2nd parameter is the wavelength, the 3rd is the intensities
-    min_intensity: float
-        Intensity threshold
+    lines: list[dict]
+        A list of input line dictionaries
+    element_intensities: dict, int
+        If float, assume that all elements have the same minimum intensity.
+        If dict, keys should be element names with the values the minimum intensities per element.
+    include_unknown: bool
+        Many arc lines in the NIST list do not have a known intensity, if this flag is true,
+        then these unknown lines are included. This option is default true as it is expected
+        that users will use optional filters to include e.g. lines with known accuracy.
 
     Returns
     -------
-    lines: list
-        Filtered line list
+    indices: List of indices with valid lines
 
     """
 
-    if min_intensity is None:
+    valid = defaultdict(list)
 
-        min_intensity_dict = {}
+    for idx, line in enumerate(lines):
 
-        for i, e in enumerate(elements):
+        if (
+            isinstance(element_intensities, dict)
+            and line["element"] in element_intensities
+        ):
+            min_intensity = element_intensities["element"]
+        elif isinstance(element_intensities, float) or isinstance(
+            element_intensities, int
+        ):
+            min_intensity = element_intensities
+        else:
+            raise NotImplementedError(
+                "Intensity threshold should be a scalar or dict."
+            )
 
-            min_intensity_dict[e] = 0.0
+        if line["element"] == "_unknown":
+            logger.warning(
+                "Element found labelled as _unknown, this may cause unexpected behaviour"
+            )
 
-    elif isinstance(min_intensity, (int, float)):
-
-        min_intensity_dict = {}
-
-        for i, e in enumerate(elements):
-
-            min_intensity_dict[e] = float(min_intensity)
-
-    elif isinstance(min_intensity, (list, np.ndarray)):
-
-        assert len(min_intensity) == len(elements), (
-            "min_intensity has to be in, float of list/array the same "
-            + f"size as the elements. min_intensity is {min_intensity} and "
-            + f"elements is {elements}."
-        )
-
-        min_intensity_dict = {}
-
-        for i, e in enumerate(elements):
-
-            min_intensity_dict[e] = min_intensity[i]
-
-    else:
-
-        raise ValueError(
-            "min_intensity has to be in, float of list/array the same "
-            + f"size as the elements. min_intensity is {min_intensity} and "
-            + f"elements is {elements}."
-        )
+        if line["intensity"] is None and include_unknown:
+            valid["_unknown"].append((idx, line))
+        elif line["intensity"] >= min_intensity:
+            valid[line["element"]].append((idx, line))
 
     out = []
+    for element in valid:
 
-    for line in lines:
-        element = line[0]
-        intensity = float(line[2])
+        # Keep all unknown lines
+        if element == "_unknown":
+            out.extend([l[0] for l in valid[element]])
 
-        if intensity >= min_intensity_dict[element]:
-            out.append(True)
+        # Otherwise filter the top
+        if keep_n:
+            top_n = sorted(valid[element], key=lambda x: x[1]["intensity"])[
+                :keep_n
+            ]
+            out.extend([l[0] for l in top_n])
         else:
-            out.append(False)
+            out.extend([l[0] for l in valid[element]])
 
-    return np.array(out).astype(bool)
+    return out
+
+
+def filter_accuracies(lines: List[dict]) -> List[int]:
+    valid = []
+
+    for idx, line in enumerate(lines):
+        if "acc" not in line:
+            raise KeyError(
+                "Line dictionary should contain acc field if filtering by accuracy"
+            )
+        elif line["acc"] != "":
+            valid.append(idx)
+
+    return valid
 
 
 def load_calibration_lines(
-    elements=[],
     linelist: str = "nist",
     min_atlas_wavelength: float = 3000.0,
     max_atlas_wavelength: float = 15000.0,
-    min_intensity: float = 5.0,
-    min_distance: float = 0.0,
-    brightest_n_lines: int = None,
-    vacuum: bool = False,
-    pressure: float = 101325.0,
-    temperature: float = 273.15,
-    relative_humidity: float = 0.0,
+    min_intensity: Union[dict, float] = 5.0,
+    elements: Optional[Union[list, str]] = None,
+    min_distance: Optional[float] = 0.0,
+    brightest_n_lines: Optional[int] = None,
+    vacuum: Optional[bool] = False,
+    pressure: Optional[float] = 101325.0,
+    temperature: Optional[float] = 273.15,
+    relative_humidity: Optional[float] = 0.0,
+    max_ionisation=1,
+    use_accurate_lines=True,
 ):
     """
     Get calibration lines from the standard NIST atlas to screen.
@@ -393,7 +422,7 @@ def load_calibration_lines(
     Parameters
     ----------
     elements: list
-        List of short element names, e.g. He as per NIST
+        List of short element names, e.g. He as per NIST. Case insensitive.
     linelist: str
         Either 'nist' to use the default lines or path to a linelist file.
     min_atlas_wavelength: int
@@ -430,75 +459,117 @@ def load_calibration_lines(
     if isinstance(elements, str):
         elements = [elements]
 
-    # Element, wavelength, intensity
     if isinstance(linelist, str):
         if linelist.lower() == "nist":
-            file_path = pkg_resources.resource_filename(
-                "rascal", "arc_lines/nist_clean.csv"
-            )
-            lines = np.loadtxt(file_path, delimiter=",", dtype=">U12")
+            # Default all-element NIST line list
+
+            for idx, element in enumerate(elements):
+
+                ref = (
+                    import_resources.files(__package__)
+                    / f"arc_lines/nist_clean_{element}.csv"
+                )
+                with import_resources.as_file(ref) as path:
+
+                    with open(path) as fp:
+
+                        if idx > 1:
+                            fp.readline()
+
+                        lines_raw = fp.readlines()
+
         elif os.path.exists(linelist):
-            lines = np.loadtxt(linelist, delimiter=",", dtype=">U12")
+            with open(linelist) as path:
+                lines_raw = path.readlines()
         else:
             raise ValueError(
-                "Unknown string is provided as linelist: {linelist}."
+                f"Unknown string is provided as linelist: {linelist}."
             )
+
+        line_reader = csv.DictReader(lines_raw)
+
     else:
         raise ValueError("Please provide a valid format of line list.")
 
-    # Mask elements
-    mask = [(li[0] in elements) for li in lines]
-    lines = lines[mask]
+    # Validate line list columns:
+    assert "element" in line_reader.fieldnames
+    assert "intensity" in line_reader.fieldnames
+    assert "wavelength" in line_reader.fieldnames
 
-    # update the wavelength limit
+    line_list = list(line_reader)
+
+    # Mask elements
+    if elements is not None:
+        lines = [line for line in line_list if line["element"] in elements]
+    else:
+        lines = [line for line in line_list]
+
+    if linelist.lower() == "nist":
+        lines = [
+            line for line in line_list if int(line["state"]) <= max_ionisation
+        ]
+
+    # Co-erce types:
+    for line in lines:
+        line["wavelength"] = float(line["wavelength"])
+        line["intensity"] = float(line["intensity"])
+
+    # For air-spaced systems, filter wavelengths
+    # based on vacuum-equivalent limits
     if not vacuum:
-        min_atlas_wavelength, max_atlas_wavelength = air_to_vacuum_wavelength(
+        (
+            min_atlas_wavelength_vacuum,
+            max_atlas_wavelength_vacuum,
+        ) = air_to_vacuum_wavelength(
             (min_atlas_wavelength, max_atlas_wavelength),
             temperature,
             pressure,
             relative_humidity,
         )
 
-    # Filter wavelengths
-    lines = filter_wavelengths(
-        lines, min_atlas_wavelength, max_atlas_wavelength
+        min_atlas_wavelength_vacuum = max(0, min_atlas_wavelength_vacuum)
+    else:
+        min_atlas_wavelength_vacuum = min_atlas_wavelength
+        max_atlas_wavelength_vacuum = max_atlas_wavelength
+
+    # Filter wavelengths in vacuum-space
+    valid_lines_wavelengths = filter_wavelengths(
+        lines, min_atlas_wavelength_vacuum, max_atlas_wavelength_vacuum
     )
 
-    # Filter intensities
-    if isinstance(min_intensity, (float, int, list, np.ndarray)):
-        intensity_mask = filter_intensity(elements, lines, min_intensity)
-    else:
-        intensity_mask = np.ones_like(lines[:, 0]).astype(bool)
+    lines = [lines[i] for i in valid_lines_wavelengths]
 
-    element_list = lines[:, 0][intensity_mask]
-    wavelength_list = lines[:, 1][intensity_mask].astype("float64")
-    intensity_list = lines[:, 2][intensity_mask].astype("float64")
-
-    if brightest_n_lines is not None:
-        to_keep = np.argsort(np.array(intensity_list))[::-1][
-            :brightest_n_lines
-        ]
-        element_list = element_list[to_keep]
-        intensity_list = intensity_list[to_keep]
-        wavelength_list = wavelength_list[to_keep]
-
-    # Calculate peak distance
-    if min_distance > 0:
-        distance_mask = filter_distance(wavelength_list, min_distance)
-    else:
-        distance_mask = np.ones_like(wavelength_list.astype(bool))
-
-    element_list = element_list[distance_mask]
-    wavelength_list = wavelength_list[distance_mask]
-    intensity_list = intensity_list[distance_mask]
-
-    # Vacuum to air conversion
-    if not vacuum:
-        wavelength_list = vacuum_to_air_wavelength(
-            wavelength_list, temperature, pressure, relative_humidity
+    valid_lines_intensity = set(
+        filter_intensity(
+            lines,
+            min_intensity,
+            include_unknown=True,
+            keep_n=brightest_n_lines,
         )
+    )
 
-    return element_list, wavelength_list, intensity_list
+    if use_accurate_lines and "acc" in line_reader.fieldnames:
+        valid_lines_accuracy = set(filter_accuracies(lines))
+    else:
+        valid_lines_accuracy = set()
+
+    valid_lines = valid_lines_intensity.union(valid_lines_accuracy)
+
+    lines = [lines[i] for i in valid_lines]
+
+    """
+    valid_lines_distance = filter_distance(lines, min_distance)
+    lines = [lines[i] for i in valid_lines_distance]
+    """
+
+    # Convert back to air if needed
+    if not vacuum:
+        for line in lines:
+            line["wavelength"] = vacuum_to_air_wavelength(
+                line["wavelength"], temperature, pressure, relative_humidity
+            )
+
+    return lines
 
 
 def print_calibration_lines(
@@ -579,7 +650,7 @@ def print_calibration_lines(
             + f"{intensity}.{os.linesep}"
         )
 
-    print(output)
+    logger.info(output)
 
 
 def gauss(x: Union[float, np.ndarray], a: float, x0: float, sigma: float):
@@ -834,3 +905,23 @@ def _make_unique_permutation(x: list, empty_val: Union[int, float] = -1):
             permutations = new_permutations
 
     return permutations
+
+
+def get_elements() -> list[str]:
+    """Convenience function to get a list of all elements
+
+    Returns
+    -------
+    list[str]
+        List of short element names/symbols
+    """
+    ref = (
+        import_resources.files("rascal") / "arc_lines/pubchem_elements_all.csv"
+    )
+
+    with import_resources.as_file(ref) as path:
+        with open(path) as fp:
+            reader = csv.DictReader(fp.readlines(), delimiter=",")
+            elements = [row["Symbol"] for row in reader]
+
+    return elements
