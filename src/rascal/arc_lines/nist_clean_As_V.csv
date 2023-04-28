@@ -1,0 +1,10 @@
+element,wavelength,intensity,acc,state,source,reference,unit
+As,1029.5,250,,5,nist,L3372,A
+As,1051.6,0,,5,nist,L3372,A
+As,1056.6,0,,5,nist,L3372,A
+As,600.7,0,,5,nist,L3372,A
+As,616.0,0,,5,nist,L3372,A
+As,715.5,120,,5,nist,L3372,A
+As,734.8,150,,5,nist,L3372,A
+As,737.2,0,,5,nist,L3372,A
+As,987.7,250,,5,nist,L3372,A

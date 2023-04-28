@@ -1,0 +1,13 @@
+element,wavelength,intensity,acc,state,source,reference,unit
+Nb,1007.02,0,,5,nist,L3405,A
+Nb,1044.90,0,,5,nist,L3405,A
+Nb,1212.21,0,,5,nist,L3405,A
+Nb,1258.87,100,,5,nist,L3405,A
+Nb,1267.60,0,,5,nist,L3405,A
+Nb,1758.33,100,,5,nist,L3405,A
+Nb,1877.34,100,,5,nist,L3405,A
+Nb,464.55,0,,5,nist,L3405,A
+Nb,468.32,0,,5,nist,L3405,A
+Nb,753.01,0,,5,nist,L3405,A
+Nb,763.77,0,,5,nist,L3405,A
+Nb,774.02,0,,5,nist,L3405,A

@@ -1,0 +1,6 @@
+element,wavelength,intensity,acc,state,source,reference,unit
+Ce,365.66,100,,5,nist,L1507,A
+Ce,399.36,300,,5,nist,L1507,A
+Ce,404.21,150,,5,nist,L1507,A
+Ce,482.96,200,,5,nist,L1507,A
+Ce,552.13,100,,5,nist,L1507,A

@@ -1,0 +1,11 @@
+element,wavelength,intensity,acc,state,source,reference,unit
+Cf,3613.14,10000,,2,nist,u11,A
+Cf,3627.79,10000,,2,nist,u11,A
+Cf,3723.17,10000,,2,nist,u11,A
+Cf,3790.12,10000,,2,nist,u11,A
+Cf,3894.33,10000,,2,nist,u11,A
+Cf,3994.70,10000,,2,nist,u11,A
+Cf,6929.01,10000,,2,nist,u11,A
+Cf,8336.14,10000,,2,nist,u11,A
+Cf,8425.80,10000,,2,nist,u11,A
+Cf,8571.18,10000,,2,nist,u11,A

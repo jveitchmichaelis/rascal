@@ -78,6 +78,27 @@ def toRoman(n: int) -> str:
     )
 
 
+def toInt(s: str):
+    roman_dict = {
+        "I": 1,
+        "V": 5,
+        "X": 10,
+        "L": 50,
+        "C": 100,
+        "D": 500,
+        "M": 1000,
+    }
+    int_equ = 0
+
+    for i in range(len(s)):
+        if i > 0 and roman_dict[s[i]] > roman_dict[s[i - 1]]:
+            int_equ += roman_dict[s[i]] - 2 * roman_dict[s[i - 1]]
+        else:
+            int_equ += roman_dict[s[i]]
+
+    return int_equ
+
+
 def dump_line_list(
     line_list: List[Dict], fname: Optional[str] = "nist_clean.csv"
 ) -> None:
@@ -153,24 +174,34 @@ def create_line_list(elements: List[str]) -> List[dict]:
     """
 
     for element in tqdm(elements):
-        line_list = []
-        res = get_nist_rows(element)
-        for line in res:
-            if "element" not in line:
-                continue
-            line_list.append(line)
+        for state in [0, 1, 2, 3, 4, 5]:
+            line_list = []
+            res = get_nist_rows(element)
 
-        line_list = sorted(
-            line_list,
-            key=lambda x: (x["element"], x["obs_wl_vac(A)"].split('"')[1]),
-        )
+            for line in res:
+                if "element" not in line:
+                    continue
 
-        dump_line_list(line_list, fname=f"nist_clean_{element}.csv")
+                if "sp_num" in line and int(line["sp_num"]) == state:
+                    line_list.append(line)
+                else:
+                    continue
+
+            line_list = sorted(
+                line_list,
+                key=lambda x: (x["element"], x["obs_wl_vac(A)"].split('"')[1]),
+            )
+
+            if len(line_list) > 0:
+                dump_line_list(
+                    line_list,
+                    fname=f"nist_clean_{element}_{toRoman(state)}.csv",
+                )
 
     return line_list
 
 
-def get_elements():
+def get_elements(short_name=True):
     ref = (
         import_resources.files("rascal") / "arc_lines/pubchem_elements_all.csv"
     )
@@ -178,7 +209,13 @@ def get_elements():
     with import_resources.as_file(ref) as path:
         with open(path) as fp:
             reader = csv.DictReader(fp.readlines(), delimiter=",")
-            elements = [row["Symbol"] for row in reader]
+            if short_name:
+                elements = [row["Symbol"] for row in reader] + ["T", "D"]
+            else:
+                elements = [row["Name"] for row in reader] + [
+                    "Tritium",
+                    "Deuterium",
+                ]
 
     return elements
 

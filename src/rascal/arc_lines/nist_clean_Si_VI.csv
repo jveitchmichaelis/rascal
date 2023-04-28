@@ -1,0 +1,14 @@
+element,wavelength,intensity,acc,state,source,reference,unit
+Si,117.86,0,B+,5,nist,L7358,A
+Si,118.97,0,D+,5,nist,L7358,A
+Si,78.61,0,,5,nist,L7358,A
+Si,78.90,0,,5,nist,L7358,A
+Si,80.81,0,,5,nist,L7358,A
+Si,81.11,0,,5,nist,L7358,A
+Si,85.18,0,,5,nist,L7358,A
+Si,85.58,0,,5,nist,L7358,A
+Si,90.45,0,,5,nist,L7358,A
+Si,90.85,0,,5,nist,L7358,A
+Si,96.44,0,B+,5,nist,L7358,A
+Si,97.14,0,C,5,nist,L7358,A
+Si,98.21,0,D,5,nist,L7358,A

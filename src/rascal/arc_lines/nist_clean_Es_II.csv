@@ -1,0 +1,13 @@
+element,wavelength,intensity,acc,state,source,reference,unit
+Es,2695.12,300,,2,nist,L2225,A
+Es,2709.46,10000,,2,nist,L2225,A
+Es,2716.82,100,,2,nist,L2225,A
+Es,2725.38,1000,,2,nist,L2225,A
+Es,2787.92,3000,,2,nist,L2225,A
+Es,2796.93,1000,,2,nist,L2225,A
+Es,2886.69,100,,2,nist,L2225,A
+Es,3155.18,1000,,2,nist,L2225,A
+Es,3548.76,10000,,2,nist,L2225,A
+Es,3603.46,10000,,2,nist,L2225,A
+Es,3671.06,10000,,2,nist,L2225,A
+Es,3729.61,10000,,2,nist,L2225,A
