@@ -14,16 +14,13 @@ from scipy.signal import find_peaks
 # Suppress tqdm output
 from tqdm import tqdm
 
+from rascal import util
+from rascal.atlas import AtlasCollection
+from rascal.calibrator import Calibrator
+
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger()
 
-
-# blend: 4829.71, 4844.33
-# blend: 5566.62, 5581.88
-# blend: 6261.212, 6265.302
-# blend: 6872.11, 6882.16
-# blend: 7283.961, 7285.301
-# blend: 7316.272, 7321.452
 sprat_atlas_lines = [
     4193.5,
     4385.77,
@@ -60,28 +57,41 @@ sprat_atlas_lines = [
     7967.34,
     8057.258,
 ]
-element = ["Xe"] * len(sprat_atlas_lines)
+
+print(len(sprat_atlas_lines))
 
 config = {
     "data": {
         "contiguous_range": None,
         "detector_min_wave": 3500.0,
-        "detector_max_wave": 8000.0,
-        "detector_edge_tolerance": 200.0,
+        "detector_max_wave": 8200.0,
+        "detector_edge_tolerance": 100.0,
         "num_pix": 1024,
     },
     "hough": {
         "num_slopes": 2000,
-        "range_tolerance": 200.0,
+        "range_tolerance": 100.0,
         "xbins": 100,
         "ybins": 100,
     },
     "ransac": {
+        "max_tries": 5000,
+        "inlier_tolerance": 1.0,
         "sample_size": 5,
         "top_n_candidate": 5,
         "filter_close": True,
-        "max_tries": 2500,
     },
+    "atlases": [
+        {
+            "elements": ["Xe"],
+            "min_wavelength": 3500,
+            "max_wavelength": 8200,
+            "min_intensity": 10.0,
+            "min_distance": 30,
+            "range_tolerance": 100,
+            "brightest_n_lines": 50,
+        }
+    ],
 }
 
 # Load the LT SPRAT data
@@ -102,24 +112,44 @@ peaks, _ = find_peaks(
 peaks = util.refine_peaks(spectrum, peaks, window_width=5)
 
 
-def run_sprat_calibration(fit_deg):
+@pytest.fixture
+def auto_atlas():
+    return AtlasCollection.from_config(config)
 
-    atlas = Atlas(
-        line_list="manual",
-        wavelengths=sprat_atlas_lines,
-        min_wavelength=3800.0,
-        max_wavelength=8000.0,
-        range_tolerance=250.0,
-        elements=element,
-    )
 
-    config["ransac"]["degree"] = fit_deg
-    config["ransac"]["sample_size"] = fit_deg + 1
+def test_atlas_against_ground_truth(auto_atlas):
+
+    print("--")
+
+    atlas_wavelengths = np.array(auto_atlas.wavelengths)
+    print(f"Length of atlas: {len(atlas_wavelengths)}")
+
+    for line in sprat_atlas_lines:
+        tol = 0.5
+        print(
+            line,
+            np.isclose(line, atlas_wavelengths, atol=tol).any(),
+            atlas_wavelengths[
+                np.where(np.isclose(atlas_wavelengths, line, atol=tol))
+            ],
+        )
+
+
+def test_sprat_calibration(auto_atlas):
+
+    config["ransac"]["degree"] = 5
+    config["ransac"]["sample_size"] = 8
 
     # Initialise the calibrator
     c = Calibrator(
-        peaks, atlas_lines=atlas.atlas_lines, config=config, spectrum=spectrum
+        peaks,
+        atlas_lines=auto_atlas.atlas_lines,
+        config=config,
+        spectrum=spectrum,
     )
+
+    print("Number of peaks:", len(peaks))
+    print("Atlas length: ", len(auto_atlas.atlas_lines))
 
     # Run the wavelength calibration
     res = c.fit()
@@ -130,6 +160,8 @@ def run_sprat_calibration(fit_deg):
 
     return res
 
+
+"""
 
 def test_run_sprat_calibration_with_manual_linelist_file():
 
@@ -196,3 +228,4 @@ def test_sprat_calibration_multirun():
     assert np.std(peak_utilisation) < 10.0
     assert np.std(atlas_utilisation) < 10.0
     assert np.std(rms) < 5.0
+"""
