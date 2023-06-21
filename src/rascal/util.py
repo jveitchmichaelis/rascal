@@ -283,7 +283,11 @@ def filter_distance(lines: List[dict], min_distance: float = 0.0) -> List[int]:
     if len(lines) == 0:
         return []
 
-    wavelengths = np.array([line["wavelength"] for line in lines])
+    if isinstance(lines[0], dict):
+        wavelengths = np.array([line["wavelength"] for line in lines])
+    else:
+        wavelengths = np.array(lines)
+
     left_dists = np.zeros_like(wavelengths)
     left_dists[1:] = wavelengths[1:] - wavelengths[:-1]
 
@@ -302,8 +306,8 @@ def filter_distance(lines: List[dict], min_distance: float = 0.0) -> List[int]:
 
 def filter_intensity(
     lines: List[dict],
-    element_intensities: Optional[Union[float, dict]] = {},
-    include_unknown: bool = True,
+    min_intensity: Optional[float] = 0,
+    include_unknown: Optional[bool] = False,
     keep_n: Optional[int] = None,
 ) -> List[int]:
     """
@@ -327,51 +331,37 @@ def filter_intensity(
 
     """
 
-    valid = defaultdict(list)
+    filtered = defaultdict(list)
 
     for idx, line in enumerate(lines):
-
-        if (
-            isinstance(element_intensities, dict)
-            and line["element"] in element_intensities
-        ):
-            min_intensity = element_intensities["element"]
-        elif isinstance(element_intensities, float) or isinstance(
-            element_intensities, int
-        ):
-            min_intensity = element_intensities
-        else:
-            raise NotImplementedError(
-                "Intensity threshold should be a scalar or dict."
-            )
 
         if line["element"] == "_unknown":
             logger.warning(
                 "Element found labelled as _unknown, this may cause unexpected behaviour"
             )
 
-        if line["intensity"] is None and include_unknown:
-            valid["_unknown"].append((idx, line))
+        if (
+            line["intensity"] is None or line["intensity"] <= 0
+        ) and include_unknown:
+            filtered["unknown"].append((idx, line))
         elif line["intensity"] >= min_intensity:
-            valid[line["element"]].append((idx, line))
+            filtered["known"].append((idx, line))
 
-    out = []
-    for element in valid:
+    valid = []
 
-        # Keep all unknown lines
-        if element == "_unknown":
-            out.extend([l[0] for l in valid[element]])
+    if "unknown" in filtered:
+        valid.extend([l[0] for l in filtered["unknown"]])
 
-        # Otherwise filter the top
-        if keep_n:
-            top_n = sorted(valid[element], key=lambda x: x[1]["intensity"])[
-                :keep_n
-            ]
-            out.extend([l[0] for l in top_n])
-        else:
-            out.extend([l[0] for l in valid[element]])
+    # Otherwise filter the top
+    if keep_n:
+        top_n = sorted(filtered["known"], key=lambda x: x[1]["intensity"])[
+            :keep_n
+        ]
+        valid.extend([l[0] for l in top_n])
+    else:
+        valid.extend([l[0] for l in filtered["known"]])
 
-    return out
+    return valid
 
 
 def filter_accuracies(lines: List[dict]) -> List[int]:
@@ -393,18 +383,17 @@ def load_calibration_lines(
     min_atlas_wavelength: float = 3000.0,
     max_atlas_wavelength: float = 15000.0,
     min_intensity: Union[dict, float] = 5.0,
-    elements: Optional[Union[list, str]] = None,
+    element: Optional[str] = None,
     min_distance: Optional[float] = 0.0,
     brightest_n_lines: Optional[int] = None,
     vacuum: Optional[bool] = False,
     pressure: Optional[float] = 101325.0,
     temperature: Optional[float] = 273.15,
     relative_humidity: Optional[float] = 0.0,
-    max_ionisation=1,
-    use_accurate_lines=True,
+    use_accurate_lines=False,
 ):
     """
-    Get calibration lines from the standard NIST atlas to screen.
+    Get calibration lines from the standard NIST atlas.
     Rascal provides a cleaned set of NIST lines that can be used for
     general purpose calibration. It is recommended however that for
     repeated and robust calibration, the user should specify an
@@ -456,28 +445,31 @@ def load_calibration_lines(
 
     """
 
-    if isinstance(elements, str):
-        elements = [elements]
-
     if isinstance(linelist, str):
-        if linelist.lower() == "nist":
+        if linelist.lower() in ["nist", "nist_strong"]:
             # Default all-element NIST line list
 
-            for idx, element in enumerate(elements):
+            if linelist.lower() == "nist":
+                root = f"arc_lines/nist_clean_"
+            else:
+                root = f"arc_lines/strong_lines/"
 
-                ref = (
-                    import_resources.files(__package__)
-                    / f"arc_lines/nist_clean_{element}.csv"
-                )
-                with import_resources.as_file(ref) as path:
+            element_arr = element.split(" ")
+            if len(element_arr) == 2:
+                element, state = element_arr
+                file_name = root + f"{element}_{state}.csv"
+            else:
+                file_name = root + f"{element}.csv"
 
-                    with open(path) as fp:
+            ref = import_resources.files(__package__) / file_name
+            with import_resources.as_file(ref) as path:
 
-                        if idx > 1:
-                            fp.readline()
+                with open(path) as fp:
 
-                        lines_raw = fp.readlines()
+                    lines_raw = fp.readlines()
 
+                if len(lines_raw) == 0:
+                    logger.error("Empty line list!")
         elif os.path.exists(linelist):
             with open(linelist) as path:
                 lines_raw = path.readlines()
@@ -499,15 +491,15 @@ def load_calibration_lines(
     line_list = list(line_reader)
 
     # Mask elements
-    if elements is not None:
-        lines = [line for line in line_list if line["element"] in elements]
-    else:
-        lines = [line for line in line_list]
+    lines = []
+    for line in line_list:
+        if element.startswith(line["element"]):
+            # Hacky fix to override ionisation state
+            line["element"] = element
+            lines.append(line)
 
-    if linelist.lower() == "nist":
-        lines = [
-            line for line in line_list if int(line["state"]) <= max_ionisation
-        ]
+    if len(lines) == 0:
+        logger.warning("Empty line list.")
 
     # Co-erce types:
     for line in lines:
@@ -538,7 +530,12 @@ def load_calibration_lines(
     )
 
     lines = [lines[i] for i in valid_lines_wavelengths]
+    if len(lines) == 0:
+        logger.warning("Empty line list after wavelength filtering.")
 
+    """
+    Filter intensities within the range of interest.
+    """
     valid_lines_intensity = set(
         filter_intensity(
             lines,
@@ -548,6 +545,10 @@ def load_calibration_lines(
         )
     )
 
+    """
+    Filter lines by accuracy. Some NIST lines have an accuracy qualification, but not an intensity
+    and vice versa. If users wish, they can retrieve both "intense" and "accurate" lines.
+    """
     if use_accurate_lines and "acc" in line_reader.fieldnames:
         valid_lines_accuracy = set(filter_accuracies(lines))
     else:
@@ -556,11 +557,19 @@ def load_calibration_lines(
     valid_lines = valid_lines_intensity.union(valid_lines_accuracy)
 
     lines = [lines[i] for i in valid_lines]
+    if len(lines) == 0:
+        logger.warning("Empty line list after intensity/accuracy filtering.")
 
     """
+    Finally, sort the filtered lines by distance. Here we need to ensure 
+    that the lines are in wavelength-sorted order.
+    """
+    lines.sort(key=lambda x: x["wavelength"])
+
     valid_lines_distance = filter_distance(lines, min_distance)
     lines = [lines[i] for i in valid_lines_distance]
-    """
+    if len(lines) == 0:
+        logger.warning("Empty line list after distance filtering.")
 
     # Convert back to air if needed
     if not vacuum:
