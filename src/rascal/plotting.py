@@ -10,8 +10,9 @@ import logging
 from typing import Union
 
 import numpy as np
-from rascal import calibrator, util
 from scipy import signal
+
+from rascal import calibrator, util
 
 logger = logging.getLogger("plotting")
 
