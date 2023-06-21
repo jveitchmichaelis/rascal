@@ -32,20 +32,6 @@ class LineSource(Enum):
     NIST_ALL = auto()
 
 
-# @dataclass(kw_only=True) requires > 3.10, so drop for now
-@dataclass
-class AtlasLine:
-    """
-    For storing information of an atlas line
-
-    """
-
-    wavelength: float
-    element: str
-    intensity: float
-    source: str
-
-
 # @dataclass(kw_only=True)
 @dataclass
 class AtlasLine:
