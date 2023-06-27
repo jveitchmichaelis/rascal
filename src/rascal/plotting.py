@@ -797,7 +797,8 @@ def plot_fit(
         all_diff = []
 
         first_one = True
-        for p, x in zip(calibrator.matched_peaks, calibrator.matched_atlas):
+        for p in calibrator.peaks:
+            x = calibrator.polyval(p, fit_coeff)
             diff = calibrator.atlas.get_lines() - x
             idx = np.argmin(np.abs(diff))
             all_diff.append(diff[idx])

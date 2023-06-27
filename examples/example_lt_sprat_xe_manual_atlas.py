@@ -44,10 +44,10 @@ c.use_plotly()
 c.plot_arc()
 c.set_hough_properties(
     num_slopes=2000,
-    range_tolerance=500.0,
+    range_tolerance=250.0,
     xbins=100,
     ybins=100,
-    min_wavelength=3500.0,
+    min_wavelength=3800.0,
     max_wavelength=8000.0,
 )
 c.set_ransac_properties(sample_size=5, top_n_candidate=5, filter_close=True)
