@@ -737,7 +737,7 @@ def plot_fit(
         except Exception as e:
             calibrator.logger.error(e)
             calibrator.logger.error(
-                "Spectrum is not provided, it cannot be " "plotted."
+                "Spectrum is not provided, it cannot be plotted."
             )
 
     if spectrum is not None:
@@ -984,6 +984,22 @@ def plot_fit(
                         calibrator.atlas.get_lines()[idx]
                     )
                 )
+
+            fig.add_annotation(
+                x=x,
+                y=text_box_pos,
+                xref="x",
+                yref="y3",
+                text="{}:{:1.2f}".format(
+                    calibrator.atlas.get_elements()[idx],
+                    calibrator.atlas.get_lines()[idx],
+                ),
+                textangle=-90,
+                showarrow=False,
+                bordercolor="#000000",
+                borderwidth=1,
+                bgcolor="#FFFFFF",
+            )
 
         x_fitted = calibrator.polyval(fitted_peaks, fit_coeff)
 
