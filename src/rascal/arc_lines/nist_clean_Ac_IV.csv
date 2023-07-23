@@ -1,0 +1,7 @@
+element,wavelength,intensity,acc,state,source,reference,unit
+Ac,2062.66,0,,4,nist,L7344,A
+Ac,2502.87,0,,4,nist,L7344,A
+Ac,2558.85,100,,4,nist,L7344,A
+Ac,2791.65,0,,4,nist,L7344,A
+Ac,2794.72,0,,4,nist,L7344,A
+Ac,3225.6,0,,4,nist,L7344,A

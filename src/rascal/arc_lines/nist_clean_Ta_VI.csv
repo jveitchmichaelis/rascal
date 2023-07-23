@@ -1,0 +1,13 @@
+element,wavelength,intensity,acc,state,source,reference,unit
+Ta,1066.64,200,,5,nist,L3695,A
+Ta,1140.49,200,,5,nist,L3695,A
+Ta,1213.42,500,,5,nist,L3695,A
+Ta,1242.98,100,,5,nist,L3695,A
+Ta,1392.56,5000,,5,nist,L3695,A
+Ta,1709.10,7000,,5,nist,L3695,A
+Ta,478.29,0,,5,nist,L3695,A
+Ta,493.07,0,,5,nist,L3695,A
+Ta,841.31,200,,5,nist,L3695,A
+Ta,890.87,1000,,5,nist,L3695,A
+Ta,947.30,500,,5,nist,L3695,A
+Ta,990.29,100,,5,nist,L3695,A

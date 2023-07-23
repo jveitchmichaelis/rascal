@@ -99,7 +99,7 @@ config = {
         "contiguous_range": None,
         "detector_min_wave": 3500.0,
         "detector_max_wave": 8200.0,
-        "detector_edge_tolerance": 200.0,
+        "detector_edge_tolerance": 100.0,
         "num_pix": 1024,
     },
     "hough": {

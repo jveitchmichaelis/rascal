@@ -1,0 +1,13 @@
+element,wavelength,intensity,acc,state,source,reference,unit
+Pr,1234.07,250,,5,nist,L183,A
+Pr,1342.78,250,,5,nist,L183,A
+Pr,1958.09,200,,5,nist,L183,A
+Pr,1958.20,400,,5,nist,L183,A
+Pr,2246.76,300,,5,nist,L183,A
+Pr,2246.90,3300,,5,nist,L183,A
+Pr,843.78,200,,5,nist,L183,A
+Pr,865.90,7000,,5,nist,L183,A
+Pr,869.17,5000,,5,nist,L183,A
+Pr,869.66,0,,5,nist,L183,A
+Pr,896.65,1000,,5,nist,L183,A
+Pr,922.29,750,,5,nist,L183,A

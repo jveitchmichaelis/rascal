@@ -1,0 +1,14 @@
+element,wavelength,intensity,acc,state,source,reference,unit
+Sn,1089.35,200,,5,nist,L4099,A
+Sn,1132.79,100,,5,nist,L4099,A
+Sn,1160.74,200,,5,nist,L4099,A
+Sn,1176.26,100,,5,nist,L4099,A
+Sn,1189.92,100,,5,nist,L4099,A
+Sn,1205.72,100,,5,nist,L4099,A
+Sn,1251.38,2000,,5,nist,L4099,A
+Sn,1283.81,100,,5,nist,L4099,A
+Sn,1294.36,200,,5,nist,L4099,A
+Sn,1302.20,100,,5,nist,L4099,A
+Sn,355.14,120,,5,nist,L4099,A
+Sn,361.01,150,,5,nist,L4099,A
+Sn,372.55,100,,5,nist,L4099,A
