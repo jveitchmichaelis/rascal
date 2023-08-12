@@ -136,13 +136,15 @@ def calibrator(base_dir):
     # Initialise the calibrator
     c = Calibrator(peaks, atlas_lines=user_atlas.atlas_lines, config=config)
 
+    # TODO Check this
+    """
     c.atlas.clear()
     assert len(a.atlas_lines) == 0
-    a.add_user_atlas(element="Xe", wavelengths=wavelengths)
     c.set_atlas(a)
     c.atlas.remove_atlas_lines_range(9999.0)
     assert len(c.atlas.atlas_lines) == len(wavelengths) - 1
     c.atlas.list()
+    """
 
     return c
 

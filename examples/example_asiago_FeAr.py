@@ -1,11 +1,13 @@
+import csv
 import os
 
 import numpy as np
 from astropy.io import fits
+from scipy.signal import find_peaks
+
 from rascal import util
 from rascal.atlas import Atlas
 from rascal.calibrator import Calibrator
-from scipy.signal import find_peaks
 
 __file__ = __name__
 
