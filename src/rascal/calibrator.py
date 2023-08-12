@@ -221,8 +221,8 @@ class Calibrator:
         for line in self.atlas_lines:
             if (
                 line.wavelength < 0
-                or line.wavelength < self.config.data.detector_min_wave
-                or line.wavelength > self.config.data.detector_max_wave
+                or line.wavelength < self.config.detector.detector_min_wave
+                or line.wavelength > self.config.detector.detector_max_wave
             ):
                 self.logger.warning(
                     f"The provided peak {line.wavelength} is outside the given range of the detector."
@@ -236,19 +236,21 @@ class Calibrator:
 
         # We're given a spectrum
         if self.spectrum is not None:
-            if self.config.data.num_pix is None:
-                self.config.data.num_pix = len(self.spectrum)
+            if self.config.detector.num_pix is None:
+                self.config.detector.num_pix = len(self.spectrum)
             else:
                 # Assume that if number of pixels *and* spectrum
                 # are provided, they should be the same length
                 assert (
-                    len(self.spectrum) == self.config.data.num_pix
+                    len(self.spectrum) == self.config.detector.num_pix
                 ), "The length of the provided spectrum should match the num_pix"
 
         # No spectrum provided and num_pix not provided
-        elif self.config.data.num_pix is None:
+        elif self.config.detector.num_pix is None:
             if len(self.peaks) > 0:
-                self.config.data.num_pix = int(round(1.1 * max(self.peaks)))
+                self.config.detector.num_pix = int(
+                    round(1.1 * max(self.peaks))
+                )
                 self.logger.warning(
                     "Neither num_pix nor spectrum is given, "
                     "it uses 1.1 times max(peaks) as the "
@@ -262,23 +264,23 @@ class Calibrator:
         # Only user-provided num pixels, so just check that it's
         # greater than the peak with the highest index
         else:
-            if self.config.data.num_pix <= max(self.peaks):
+            if self.config.detector.num_pix <= max(self.peaks):
                 self.logger.error(
-                    f"Maximum pixel {self.config.data.num_pix} is too low, max peak provided is {max(self.peaks)}"
+                    f"Maximum pixel {self.config.detector.num_pix} is too low, max peak provided is {max(self.peaks)}"
                 )
                 raise ValueError
 
-        self.logger.info(f"num_pix is set to {self.config.data.num_pix}.")
+        self.logger.info(f"num_pix is set to {self.config.detector.num_pix}.")
 
         # Default 1:1 mapping between pixel location and effective pixel location
-        if self.config.data.contiguous_range is None:
-            self.contiguous_pixel = list(range(self.config.data.num_pix))
+        if self.config.detector.contiguous_range is None:
+            self.contiguous_pixel = list(range(self.config.detector.num_pix))
 
         # Otherwise assert the effective pixel array is the same as the number
         # of pixels in the spectrum
         else:
             contiguous_ranges = np.array(
-                self.config.data.contiguous_range
+                self.config.detector.contiguous_range
             ).flatten()
             n_ranges = int(contiguous_ranges.size / 2)
             assert n_ranges % 1 == 0
@@ -289,11 +291,11 @@ class Calibrator:
                 self.contiguous_pixel.extend(list(np.arange(x0, x1)))
 
             assert (
-                len(self.contiguous_pixel) == self.config.data.num_pix
-            ), f"The length of the effective pixel array ({len(self.contiguous_pixel)}) should match num_pix ({self.config.data.num_pix})"
+                len(self.contiguous_pixel) == self.config.detector.num_pix
+            ), f"The length of the effective pixel array ({len(self.contiguous_pixel)}) should match num_pix ({self.config.detector.num_pix})"
 
         self.pixel_mapping_itp = itp.interp1d(
-            np.arange(self.config.data.num_pix), self.contiguous_pixel
+            np.arange(self.config.detector.num_pix), self.contiguous_pixel
         )
         self.peaks_effective = self.pixel_mapping_itp(np.array(self.peaks))
 
@@ -424,13 +426,13 @@ class Calibrator:
 
         # Start wavelength in the spectrum, +/- some tolerance
         self.config.hough.min_intercept = float(
-            self.config.data.detector_min_wave
+            self.config.detector.detector_min_wave
             - self.config.hough.range_tolerance
         )
         self.min_intercept = self.config.hough.min_intercept  # TODO fix this
 
         self.config.hough.max_intercept = float(
-            self.config.data.detector_min_wave
+            self.config.detector.detector_min_wave
             + self.config.hough.range_tolerance
         )
         self.max_intercept = self.config.hough.max_intercept  # TODO fix this
@@ -439,7 +441,7 @@ class Calibrator:
             self.config.hough.min_slope = float(
                 (
                     (
-                        self.config.data.detector_max_wave
+                        self.config.detector.detector_max_wave
                         - self.config.hough.range_tolerance
                         - self.config.hough.linearity_tolerance
                     )
@@ -455,7 +457,7 @@ class Calibrator:
             self.config.hough.max_slope = float(
                 (
                     (
-                        self.config.data.detector_max_wave
+                        self.config.detector.detector_max_wave
                         + self.config.hough.range_tolerance
                         + self.config.hough.linearity_tolerance
                     )
@@ -478,13 +480,13 @@ class Calibrator:
         self.logger.info(f"Minimum slope: {self.config.hough.min_slope}")
         self.logger.info(f"Maximum slope: {self.config.hough.max_slope}")
         self.logger.info(
-            f"Minimum detector wavelength: {self.config.data.detector_min_wave}"
+            f"Minimum detector wavelength: {self.config.detector.detector_min_wave}"
         )
         self.logger.info(
-            f"Maximum detector wavelength: {self.config.data.detector_max_wave}"
+            f"Maximum detector wavelength: {self.config.detector.detector_max_wave}"
         )
         self.logger.info(
-            f"Detector range tolerance: {self.config.data.detector_edge_tolerance}"
+            f"Detector range tolerance: {self.config.detector.detector_edge_tolerance}"
         )
 
     def _merge_candidates(self, candidates: Union[list, np.ndarray]):
@@ -1172,11 +1174,11 @@ class Calibrator:
             min_wavelength_px = self.polyval(0, result.fit_coeffs)
 
             if min_wavelength_px < (
-                self.config.data.detector_min_wave
-                - self.config.data.detector_edge_tolerance
+                self.config.detector.detector_min_wave
+                - self.config.detector.detector_edge_tolerance
             ) or min_wavelength_px > (
-                self.config.data.detector_min_wave
-                + self.config.data.detector_edge_tolerance
+                self.config.detector.detector_min_wave
+                + self.config.detector.detector_edge_tolerance
             ):
                 self.logger.debug(
                     "Lower wavelength of fit too small, "
@@ -1196,10 +1198,10 @@ class Calibrator:
             )
 
             if max_wavelength_px > (
-                self.config.data.detector_max_wave
+                self.config.detector.detector_max_wave
                 + self.detector_edge_tolerance
             ) or max_wavelength_px < (
-                self.config.data.detector_max_wave
+                self.config.detector.detector_max_wave
                 - self.detector_edge_tolerance
             ):
                 self.logger.debug(
@@ -1486,7 +1488,7 @@ class Calibrator:
 
         output += (
             "Calculated detector range: "
-            + f"Start: {self.polyval(0, self.fit_coeff):1.6}, End: {self.polyval(self.config.data.num_pix, self.fit_coeff):1.6}{os.linesep}"
+            + f"Start: {self.polyval(0, self.fit_coeff):1.6}, End: {self.polyval(self.config.detector.num_pix, self.fit_coeff):1.6}{os.linesep}"
         )
 
         output += "RMS of the best fit solution: {self.rms}{os.linesep}"

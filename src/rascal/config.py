@@ -77,11 +77,14 @@ with open(filename, "w+", encoding="ascii") as config_file:
 
 @dataclass
 class DataConfig:
-    filename: str = ""
-    num_pix: Optional[int] = None
-    contiguous_range: Optional[List[float]] = field(default=None)
     peaks: Optional[List[float]] = field(default=None)
     spectrum: Optional[List[float]] = field(default=None)
+
+
+@dataclass
+class DetectorConfig:
+    contiguous_range: Optional[List[float]] = field(default=None)
+    num_pix: Optional[int] = None
     detector_min_wave: float = 3000.0
     detector_max_wave: float = 9000.0
     detector_edge_tolerance: float = 200.0
@@ -131,7 +134,7 @@ class CalibratorConfig:
     log_level: str = "info"
     hide_progress: bool = False
     atlases: List[Atlas] = MISSING
-
     data: DataConfig = field(default_factory=DataConfig)
+    detector: DetectorConfig = field(default_factory=DetectorConfig)
     hough: HoughConfig = field(default_factory=HoughConfig)
     ransac: RansacConfig = field(default_factory=RansacConfig)
