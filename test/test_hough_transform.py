@@ -169,7 +169,7 @@ def test_extending_ht_expect_fail():
 
 def test_loading_ht_into_calibrator():
     user_atlas = Atlas(
-        elements="Test",
+        element="Test",
         source="manual",
         wavelengths=np.arange(10),
         min_wavelength=0,

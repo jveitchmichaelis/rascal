@@ -30,7 +30,7 @@ assert len(peaks) > 0
 # Effective pixel: arbitrarily we'll set the number of pixels to 768 (i.e.
 # a max range of around 1500 nm
 config = {
-    "data": {
+    "detector": {
         "contiguous_range": [1.0, 344.0, 345.37, 634.37],
         "num_pix": 634,
     },
@@ -62,7 +62,7 @@ def test_effective_pixel_not_affecting_fit_int_peaks():
     # Set up the calibrator with the pixel values of our
     # wavelengths
     a = Atlas(
-        elements="Test",
+        element="Test",
         source="manual",
         wavelengths=np.arange(10),
         min_wavelength=0,
@@ -105,7 +105,7 @@ def test_effective_pixel_not_affecting_fit_perfect_peaks():
     # Set up the calibrator with the pixel values of our
     # wavelengths
     a = Atlas(
-        elements="Test",
+        element="Test",
         source="manual",
         wavelengths=np.arange(10),
         min_wavelength=0,
@@ -113,10 +113,14 @@ def test_effective_pixel_not_affecting_fit_perfect_peaks():
     )
     # Arbitrarily we'll set the number of pixels to 768 (i.e.
     # a max range of around 1500 nm
+
+    _config = config.copy()
+    _config["ransac"]["max_tries"] = 2000
+    _config["ransac"]["degree"] = 3
     c = Calibrator(peaks=peaks, atlas_lines=a.atlas_lines, config=config)
 
     # And let's try and fit...
-    res = c.fit(max_tries=2000, fit_deg=3)
+    res = c.fit()
 
     assert res
 

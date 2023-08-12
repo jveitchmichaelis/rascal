@@ -105,7 +105,7 @@ def test_gmos_fit():
     peaks = util.refine_peaks(spectrum, peaks, window_width=3)
 
     config = {
-        "data": {
+        "detector": {
             "contiguous_range": [0, 1023, 1057.5, 2080.5, 2115.0, 3138.0]
         },
         "hough": {
@@ -118,6 +118,8 @@ def test_gmos_fit():
             "sample_size": 5,
             "top_n_candidate": 10,
             "minimum_matches": 18,
+            "max_tries": 5000,
+            "degree": 4,
         },
     }
 
@@ -172,8 +174,6 @@ def test_gmos_fit():
         9787.186,
     ]
 
-    element = ["CuAr"] * len(gmos_atlas_lines)
-
     atlas = Atlas(
         source="manual",
         wavelengths=gmos_atlas_lines,
@@ -186,7 +186,7 @@ def test_gmos_fit():
         pressure=61700.0,
         temperature=276.55,
         relative_humidity=4.0,
-        elements=element,
+        element="CuAr",
     )
 
     # Initialise the calibrator
@@ -197,7 +197,7 @@ def test_gmos_fit():
     c.do_hough_transform()
 
     # Run the wavelength calibration
-    res = c.fit(max_tries=5000, fit_deg=4)
+    res = c.fit()
     assert res["success"]
 
     assert np.isclose(
@@ -229,7 +229,6 @@ def test_osiris_fit():
         7635.106,
         7723.98,
     ]
-    element = ["HgAr"] * len(osiris_atlas_lines)
 
     atlas = Atlas(
         source="manual",
@@ -237,7 +236,7 @@ def test_osiris_fit():
         min_wavelength=3500.0,
         max_wavelength=8000.0,
         range_tolerance=500.0,
-        elements=element,
+        element="HgAr",
     )
 
     config = {
@@ -259,6 +258,9 @@ def test_osiris_fit():
             "hough_weight": 1.0,
             "minimum_matches": 11,
             "sampler": "probabilistic",
+            "max_tries": 5000,
+            "fit_tolerance": 10.0,
+            "degree": 4,
         },
     }
 
@@ -290,7 +292,7 @@ def test_osiris_fit():
     c.do_hough_transform()
 
     # Run the wavelength calibration
-    res = c.fit(max_tries=5000, fit_tolerance=10.0, fit_deg=4)
+    res = c.fit()
 
     assert np.isclose(
         res["fit_coeff"][:2], osiris_fit_coeff[:2], rtol=0.02
@@ -366,15 +368,13 @@ def test_sprat_fit():
         7967.34,
         8057.258,
     ]
-    element = ["Xe"] * len(sprat_atlas_lines)
-
     atlas = Atlas(
         source="manual",
         wavelengths=sprat_atlas_lines,
         min_wavelength=3500.0,
         max_wavelength=8000.0,
         range_tolerance=500.0,
-        elements=element,
+        elements="Xe",
         pressure=pressure,
         temperature=temperature,
         relative_humidity=relative_humidity,
@@ -392,6 +392,8 @@ def test_sprat_fit():
             "sample_size": 5,
             "top_n_candidate": 5,
             "filter_close": True,
+            "max_tries": 5000,
+            "candidate_tolerance": 3.0,
         },
     }
 
@@ -403,7 +405,7 @@ def test_sprat_fit():
     c.do_hough_transform()
 
     # Run the wavelength calibration
-    res = c.fit(max_tries=5000, candidate_tolerance=3.0)
+    res = c.fit()
 
     assert np.isclose(
         res["fit_coeff"][:2], sprat_fit_coeff[:2], rtol=0.02
