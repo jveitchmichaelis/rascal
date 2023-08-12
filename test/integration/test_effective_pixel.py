@@ -49,15 +49,6 @@ config = {
 }
 
 
-def run_calibration(config):
-
-    a = AtlasCollection(config)
-    c = Calibrator(atlas_lines=a, config=config)
-    c.fit()
-
-    return results
-
-
 def test_effective_pixel_not_affecting_fit_int_peaks():
     # Set up the calibrator with the pixel values of our
     # wavelengths
