@@ -254,16 +254,6 @@ class Atlas:
 
         for line in lines:
 
-            if line["wavelength"] < self.min_atlas_wavelength:
-                continue
-            elif line["wavelength"] > self.max_atlas_wavelength:
-                continue
-
-            if "intensity" in line and line["intensity"] < self.min_intensity:
-                continue
-            else:
-                line["intensity"] = 0
-
             if not self.vacuum and vacuum:
                 line["wavelength"] = float(
                     vacuum_to_air_wavelength(
@@ -273,6 +263,16 @@ class Atlas:
                         relative_humidity=self.relative_humidity,
                     )
                 )
+
+            if line["wavelength"] < self.min_atlas_wavelength:
+                continue
+            elif line["wavelength"] > self.max_atlas_wavelength:
+                continue
+
+            if "intensity" in line and line["intensity"] < self.min_intensity:
+                continue
+            else:
+                line["intensity"] = 0
 
             self.atlas_lines.append(
                 AtlasLine(
