@@ -1,11 +1,11 @@
 atlases:
   -
-    element: ['Hg']
+    element: 'Hg'
     min_wavelength: 4000
     max_wavelength: 7000
     min_intensity: 50
   -
-    element: ['Ar']
+    element: 'Ar'
     min_wavelength: 7000
     max_wavelength: 9000
     min_intensity: 50
