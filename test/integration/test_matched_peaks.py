@@ -109,12 +109,11 @@ def calibrator(base_dir):
         7967.34,
         8057.258,
     ]
-    element = ["Xe"] * len(wavelengths)
 
     user_atlas = Atlas(
         source="manual",
         wavelengths=wavelengths,
-        elements=element,
+        element="Xe",
         min_wavelength=3500.0,
         max_wavelength=8100.0,
     )
@@ -139,7 +138,7 @@ def calibrator(base_dir):
 
     c.atlas.clear()
     assert len(a.atlas_lines) == 0
-    a.add_user_atlas(elements=elements, wavelengths=wavelengths)
+    a.add_user_atlas(element="Xe", wavelengths=wavelengths)
     c.set_atlas(a)
     c.atlas.remove_atlas_lines_range(9999.0)
     assert len(c.atlas.atlas_lines) == len(wavelengths) - 1

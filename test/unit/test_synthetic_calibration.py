@@ -43,12 +43,12 @@ def test_default():
         min_wavelength=min_wavelength,
         max_wavelength=max_wavelength,
         range_tolerance=100.0,
-        elements=["Test"] * len(waves),
+        element="Test",
     )
     assert len(atlas.atlas_lines) == len(waves)
 
     config = {
-        "data": {
+        "detector": {
             "contiguous_range": None,
             "num_pix": int(max_pix),
             "detector_min_wave": 3000.0,
@@ -61,9 +61,7 @@ def test_default():
             "xbins": 100,
             "ybins": 100,
         },
-        "ransac": {
-            "minimum_fit_error": 1e-25,
-        },
+        "ransac": {"minimum_fit_error": 1e-25, "max_tries": 1000},
     }
 
     # Set up the calibrator with the pixel values of our
@@ -79,7 +77,7 @@ def test_default():
         # idx = np.where((c.pairs.round(2) == point).all(axis=1))[0][0]
 
     # And let's try and fit...
-    res = c.fit(max_tries=1000)
+    res = c.fit()
 
     assert res["success"]
 

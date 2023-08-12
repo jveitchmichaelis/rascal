@@ -2,10 +2,11 @@ import random
 from functools import partialmethod
 
 import numpy as np
-from rascal.ransac import RansacSolver
 
 # Suppress tqdm output
 from tqdm import tqdm
+
+from rascal.ransac import RansacSolver
 
 tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 

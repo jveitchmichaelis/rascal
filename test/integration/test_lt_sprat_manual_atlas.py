@@ -80,7 +80,6 @@ sprat_atlas_lines = [
     7967.34,
     8057.258,
 ]
-element = ["Xe"] * len(sprat_atlas_lines)
 
 user_atlas = Atlas(
     source="manual",
@@ -88,7 +87,7 @@ user_atlas = Atlas(
     min_wavelength=3800.0,
     max_wavelength=8200.0,
     range_tolerance=200.0,
-    elements=element,
+    element="Xe",
     pressure=pressure,
     temperature=temperature,
     relative_humidity=relative_humidity,
@@ -96,7 +95,7 @@ user_atlas = Atlas(
 
 config = {
     "log_level": "INFO",
-    "data": {
+    "detector": {
         "contiguous_range": None,
         "detector_min_wave": 3500.0,
         "detector_max_wave": 8200.0,
@@ -116,7 +115,6 @@ config = {
         "top_n_candidate": 5,
         "filter_close": True,
     },
-    "atlases": {...},
 }
 
 

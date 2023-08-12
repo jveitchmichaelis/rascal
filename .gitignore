@@ -131,11 +131,13 @@ dmypy.json
 iframe_figures/
 
 # test output
-test/*.json
+test*.json
 test/*.npy
 test/*.png
 
-test/test_output/*
+test/unit/test_output/*
+test/integration/test_output/*
+
 
 examples/output
 

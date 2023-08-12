@@ -12,31 +12,40 @@ tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 
 np.random.seed(0)
 
-peaks = np.sort(np.random.random(31) * 1000.0)
+num_pix = 1000
+peaks = np.sort(np.random.random(31) * float(num_pix))
 # Removed the closely spaced peaks
 distance_mask = np.isclose(peaks[:-1], peaks[1:], atol=5.0)
 distance_mask = np.insert(distance_mask, 0, False)
 peaks = peaks[~distance_mask]
 
 # Line list
-wavelengths_linear = 3000.0 + 5.0 * peaks
+linear_grad = 5
+min_wavelength = 3000
+max_wavelength = 3000 + linear_grad * num_pix
+
+wavelengths_linear = 3000.0 + linear_grad * peaks
 wavelengths_quadratic = 3000.0 + 4 * peaks + 1.0e-3 * peaks**2.0
 
-elements_linear = ["Linear"] * len(wavelengths_linear)
-elements_quadratic = ["Quadratic"] * len(wavelengths_quadratic)
+detector_config = {
+    "contiguous_range": None,
+    "num_pix": num_pix,
+    "detector_min_wave": min_wavelength,
+    "detector_max_wave": max_wavelength,
+}
 
 
 def test_linear_fit():
     atlas = Atlas(
         source="manual",
         wavelengths=wavelengths_linear,
-        min_wavelength=3500.0,
+        min_wavelength=3000.0,
         max_wavelength=8000.0,
-        elements=elements_linear,
+        element="linear",
     )
 
     config = {
-        "data": {"contiguous_range": None, "num_pix": 1000},
+        "detector": detector_config,
         "hough": {
             "num_slopes": 1000,
             "range_tolerance": 200.0,
@@ -46,6 +55,8 @@ def test_linear_fit():
         "ransac": {
             "minimum_matches": 20,
             "minimum_fit_error": 1e-25,
+            "max_tries": 500,
+            "degree": 1,
         },
     }
 
@@ -55,11 +66,10 @@ def test_linear_fit():
     c.do_hough_transform(brute_force=False)
 
     # Run the wavelength calibration
-    res = c.fit(max_tries=500, fit_deg=1)
-    print(res)
+    res = c.fit()
+
     # Refine solution
     res = c.match_peaks(res["fit_coeff"], refine=False, robust_refit=True)
-
     assert np.abs(res["fit_coeff"][1] - 5.0) / 5.0 < 0.001
     assert np.abs(res["fit_coeff"][0] - 3000.0) / 3000.0 < 0.001
     assert res["peak_utilisation"] > 0.8
@@ -73,11 +83,11 @@ def test_manual_refit():
         wavelengths=wavelengths_linear,
         min_wavelength=3500.0,
         max_wavelength=8000.0,
-        elements=elements_linear,
+        element="linear",
     )
 
     config = {
-        "data": {"contiguous_range": None, "num_pix": 1000},
+        "detector": detector_config,
         "hough": {
             "num_slopes": 1000,
             "range_tolerance": 500.0,
@@ -87,6 +97,8 @@ def test_manual_refit():
         "ransac": {
             "minimum_matches": 20,
             "minimum_fit_error": 1e-25,
+            "max_tries": 500,
+            "degree": 1,
         },
     }
 
@@ -96,7 +108,7 @@ def test_manual_refit():
     c.do_hough_transform(brute_force=False)
 
     # Run the wavelength calibration
-    res = c.fit(max_tries=500, fit_deg=1)
+    res = c.fit()
 
     # Refine solution
     res = c.match_peaks(res["fit_coeff"], refine=False, robust_refit=True)
@@ -109,13 +121,13 @@ def test_manual_refit_remove_points():
     atlas = Atlas(
         source="manual",
         wavelengths=wavelengths_linear,
-        min_wavelength=3500.0,
+        min_wavelength=3000.0,
         max_wavelength=8000.0,
-        elements=elements_linear,
+        element="linear",
     )
 
     config = {
-        "data": {"contiguous_range": None, "num_pix": 1000},
+        "detector": detector_config,
         "hough": {
             "num_slopes": 1000,
             "range_tolerance": 500.0,
@@ -125,6 +137,8 @@ def test_manual_refit_remove_points():
         "ransac": {
             "minimum_matches": 20,
             "minimum_fit_error": 1e-25,
+            "max_tries": 500,
+            "degree": 1,
         },
     }
 
@@ -134,7 +148,7 @@ def test_manual_refit_remove_points():
     c.do_hough_transform(brute_force=False)
 
     # Run the wavelength calibration
-    res = c.fit(max_tries=500, fit_deg=1)
+    res = c.fit()
 
     # Refine solution
     res = c.match_peaks(res["fit_coeff"], refine=False, robust_refit=True)
@@ -152,11 +166,11 @@ def test_manual_refit_add_points():
         wavelengths=wavelengths_linear,
         min_wavelength=3500.0,
         max_wavelength=8000.0,
-        elements=elements_linear,
+        element="linear",
     )
 
     config = {
-        "data": {"contiguous_range": None, "num_pix": 1000},
+        "detector": detector_config,
         "hough": {
             "num_slopes": 1000,
             "range_tolerance": 500.0,
@@ -166,6 +180,8 @@ def test_manual_refit_add_points():
         "ransac": {
             "minimum_matches": 20,
             "minimum_fit_error": 1e-25,
+            "max_tries": 500,
+            "degree": 1,
         },
     }
 
@@ -175,7 +191,7 @@ def test_manual_refit_add_points():
     c.do_hough_transform(brute_force=False)
 
     # Run the wavelength calibration
-    res = c.fit(max_tries=500, fit_deg=1)
+    res = c.fit()
 
     # Refine solution
     res = c.match_peaks(res["fit_coeff"], refine=False, robust_refit=True)
@@ -190,13 +206,13 @@ def test_quadratic_fit():
     atlas = Atlas(
         source="manual",
         wavelengths=wavelengths_quadratic,
-        min_wavelength=3500.0,
+        min_wavelength=3000.0,
         max_wavelength=8000.0,
-        elements=elements_quadratic,
+        element="quadratic",
     )
 
     config = {
-        "data": {"contiguous_range": None, "num_pix": 1000},
+        "detector": detector_config,
         "hough": {
             "num_slopes": 1000,
             "range_tolerance": 500.0,
@@ -206,6 +222,10 @@ def test_quadratic_fit():
         "ransac": {
             "minimum_matches": 20,
             "minimum_fit_error": 1e-25,
+            "max_tries": 2000,
+            "rms_tolerance": 5.0,
+            "inlier_tolerance": 2.0,
+            "degree": 2,
         },
     }
 
@@ -215,14 +235,12 @@ def test_quadratic_fit():
     c.do_hough_transform(brute_force=False)
 
     # Run the wavelength calibration
-    res = c.fit(
-        max_tries=2000, fit_tolerance=5.0, candidate_tolerance=2.0, fit_deg=2
-    )
+    res = c.fit()
     # Refine solution
     res_robust = c.match_peaks(
         res["fit_coeff"], refine=False, robust_refit=True
     )
-
+    print(res_robust["fit_coeff"])
     assert np.abs(res_robust["fit_coeff"][2] - 1e-3) / 1e-3 < 0.001
     assert np.abs(res_robust["fit_coeff"][1] - 4.0) / 4.0 < 0.001
     assert np.abs(res_robust["fit_coeff"][0] - 3000.0) / 3000.0 < 0.001
@@ -234,13 +252,13 @@ def test_quadratic_fit_legendre():
     atlas = Atlas(
         source="manual",
         wavelengths=wavelengths_quadratic,
-        min_wavelength=3500.0,
+        min_wavelength=3000.0,
         max_wavelength=8000.0,
-        elements=elements_quadratic,
+        element="quadratic",
     )
 
     config = {
-        "data": {"contiguous_range": None, "num_pix": 1000},
+        "detector": detector_config,
         "hough": {
             "num_slopes": 500,
             "range_tolerance": 200.0,
@@ -251,6 +269,11 @@ def test_quadratic_fit_legendre():
             "sample_size": 5,
             "minimum_matches": 10,
             "minimum_fit_error": 1e-25,
+            "max_tries": 10000,
+            "rms_tolerance": 5.0,
+            "inlier_tolerance": 2.0,
+            "degree": 2,
+            "fit_type": "legendre",
         },
     }
 
@@ -260,13 +283,7 @@ def test_quadratic_fit_legendre():
     c.do_hough_transform(brute_force=False)
 
     # Run the wavelength calibration
-    res = c.fit(
-        max_tries=10000,
-        fit_tolerance=5.0,
-        candidate_tolerance=2.0,
-        fit_deg=2,
-        fit_type="legendre",
-    )
+    res = c.fit()
 
     # Legendre 2nd order takes the form
     assert np.abs(res["fit_coeff"][1] - 4.0) / 4.0 < 0.001
@@ -279,13 +296,13 @@ def test_quadratic_fit_chebyshev():
     atlas = Atlas(
         source="manual",
         wavelengths=wavelengths_quadratic,
-        min_wavelength=3500.0,
+        min_wavelength=3000.0,
         max_wavelength=8000.0,
-        elements=elements_quadratic,
+        element="quadratic",
     )
 
     config = {
-        "data": {"contiguous_range": None, "num_pix": 1000},
+        "detector": detector_config,
         "hough": {
             "num_slopes": 500,
             "range_tolerance": 200.0,
@@ -296,6 +313,11 @@ def test_quadratic_fit_chebyshev():
             "sample_size": 5,
             "minimum_matches": 10,
             "minimum_fit_error": 1e-25,
+            "max_tries": 10000,
+            "rms_tolerance": 5.0,
+            "inlier_tolerance": 2.0,
+            "degree": 2,
+            "fit_type": "chebyshev",
         },
     }
 
@@ -305,13 +327,7 @@ def test_quadratic_fit_chebyshev():
     c.do_hough_transform(brute_force=False)
 
     # Run the wavelength calibration
-    res = c.fit(
-        max_tries=10000,
-        fit_tolerance=5.0,
-        candidate_tolerance=2.0,
-        fit_deg=2,
-        fit_type="chebyshev",
-    )
+    res = c.fit()
 
     assert np.abs(res["fit_coeff"][1] - 4.0) / 4.0 < 0.001
     assert np.abs(res["fit_coeff"][0] - 3000.0) / 3000.0 < 0.001
