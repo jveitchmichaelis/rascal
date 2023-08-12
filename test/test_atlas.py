@@ -46,8 +46,12 @@ def test_load_nist_single(elements):
         )
 
         for line in nist_atlas.get_lines():
-            assert line > min_wavelength, "Line is less than min wavelength"
-            assert line < max_wavelength, "Line is greater than max wavelength"
+            assert line > (
+                min_wavelength - nist_atlas.range_tolerance
+            ), "Line is less than min wavelength"
+            assert line < (
+                max_wavelength + nist_atlas.range_tolerance
+            ), "Line is greater than max wavelength"
 
         time_end = time.perf_counter()
         elapsed = time_end - time_start
@@ -68,7 +72,7 @@ def test_load_with_min_intensity():
     )
 
     for i in nist_atlas.get_intensities():
-        assert i > min_intensity, "Line intensity is below minimum"
+        assert i >= min_intensity, "Line intensity is below minimum"
 
 
 def test_load_nist_all(elements):

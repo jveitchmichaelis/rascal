@@ -269,10 +269,11 @@ class Atlas:
             elif line["wavelength"] > self.max_atlas_wavelength:
                 continue
 
-            if "intensity" in line and line["intensity"] < self.min_intensity:
+            if (
+                "intensity" not in line
+                or line["intensity"] < self.min_intensity
+            ):
                 continue
-            else:
-                line["intensity"] = 0
 
             self.atlas_lines.append(
                 AtlasLine(
