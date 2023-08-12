@@ -84,55 +84,56 @@ class DataConfig:
 @dataclass
 class DetectorConfig:
     contiguous_range: Optional[List[float]] = field(default=None)
-    num_pix: Optional[int] = None
-    detector_min_wave: float = 3000.0
-    detector_max_wave: float = 9000.0
     detector_edge_tolerance: float = 200.0
+    detector_max_wave: float = MISSING
+    detector_min_wave: float = MISSING
+    num_pix: Optional[int] = None
 
 
 @dataclass
 class HoughConfig:
+    constrain_poly: bool = False
+    linearity_tolerance: float = 100
+    max_intercept: float = MISSING
+    max_slope: float = MISSING
+    min_intercept: float = MISSING
+    min_slope: float = MISSING
     num_slopes: int = 2000
+    range_tolerance: float = 500
     xbins: int = 100
     ybins: int = 100
-    range_tolerance: float = 500
-    linearity_tolerance: float = 100
-    constrain_poly: bool = False
-    min_intercept: float = MISSING
-    max_intercept: float = MISSING
-    min_slope: float = MISSING
-    max_slope: float = MISSING
 
 
 @dataclass
 class RansacConfig:
-    sample_size: int = 5
-    top_n_candidate: int = 5
-    max_tries: int = 1000
-    linear: bool = True
-    use_msac: bool = True
-    filter_close: bool = False
-    inlier_tolerance: float = 5.0
     candidate_weighted: bool = True
-    hough_weight: float = 1.0
-    minimum_matches: int = 3
-    type: str = "poly"
     degree: int = 4
+    filter_close: bool = False
+    hough_weight: float = 1.0
+    inlier_tolerance: float = 5.0
+    linear: bool = True
+    max_tries: int = 1000
+    minimum_fit_error: float = 1.0e-4
+    minimum_matches: int = 3
+    minimum_peak_utilisation: float = 0.0
     progress: bool = False
     rms_tolerance: float = 4.0
+    sample_size: int = 5
     sampler: str = "probabilistic"
-    minimum_peak_utilisation: float = 0.0
-    minimum_fit_error: float = 1.0e-4
+    top_n_candidate: int = 5
+    type: str = "poly"
+    use_msac: bool = True
 
 
 @dataclass
 class CalibratorConfig:
 
+    hide_progress: bool = False
+    log_level: str = "info"
+    logger_name: str = "rascal"
     plotting_library: str = "matplotlib"
     seed: Optional[int] = None
-    logger_name: str = "rascal"
-    log_level: str = "info"
-    hide_progress: bool = False
+
     atlases: List[Atlas] = MISSING
     data: DataConfig = field(default_factory=DataConfig)
     detector: DetectorConfig = field(default_factory=DetectorConfig)

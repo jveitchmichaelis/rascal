@@ -76,7 +76,7 @@ class Atlas:
 
     min_wavelength: float = MISSING
     max_wavelength: float = MISSING
-    element: Optional[Any] = None
+    element: str = MISSING
     source: str = "nist"
     range_tolerance: float = 0.0
     min_intensity: Optional[float] = 10.0
