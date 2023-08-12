@@ -2,12 +2,13 @@ import logging
 from functools import partialmethod
 
 import numpy as np
-from rascal.atlas import Atlas
-from rascal.calibrator import Calibrator
-from rascal.synthetic import SyntheticSpectrum
 
 # Suppress tqdm output
 from tqdm import tqdm
+
+from rascal.atlas import Atlas
+from rascal.calibrator import Calibrator
+from rascal.synthetic import SyntheticSpectrum
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +38,7 @@ max_pix, _ = s.get_pixels([max_wavelength])
 def test_default():
 
     atlas = Atlas(
-        line_list="manual",
+        source="manual",
         wavelengths=waves,
         min_wavelength=min_wavelength,
         max_wavelength=max_wavelength,

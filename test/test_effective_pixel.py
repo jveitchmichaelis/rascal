@@ -3,12 +3,13 @@ from functools import partialmethod
 import numpy as np
 import pytest
 from matplotlib.font_manager import X11FontDirectories
-from rascal.atlas import Atlas
-from rascal.calibrator import Calibrator
-from rascal.synthetic import SyntheticSpectrum
 
 # Suppress tqdm output
 from tqdm import tqdm
+
+from rascal.atlas import Atlas
+from rascal.calibrator import Calibrator
+from rascal.synthetic import SyntheticSpectrum
 
 tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 
@@ -48,22 +49,36 @@ config = {
 }
 
 
+def run_calibration(config):
+
+    a = AtlasCollection(config)
+    c = Calibrator(atlas_lines=a, config=config)
+    c.fit()
+
+    return results
+
+
 def test_effective_pixel_not_affecting_fit_int_peaks():
     # Set up the calibrator with the pixel values of our
     # wavelengths
     a = Atlas(
         elements="Test",
-        line_list="manual",
+        source="manual",
         wavelengths=np.arange(10),
         min_wavelength=0,
         max_wavelength=10,
     )
+
+    _config = config.copy()
+    _config["ransac"]["max_tries"] = 2000
+    _config["ransac"]["degree"] = 3
+
     c = Calibrator(
-        peaks=peaks.astype("int"), atlas_lines=a.atlas_lines, config=config
+        peaks=peaks.astype("int"), atlas_lines=a.atlas_lines, config=_config
     )
 
     # And let's try and fit...
-    res = c.fit(max_tries=2000, fit_deg=3)
+    res = c.fit()
 
     assert res
 
@@ -91,7 +106,7 @@ def test_effective_pixel_not_affecting_fit_perfect_peaks():
     # wavelengths
     a = Atlas(
         elements="Test",
-        line_list="manual",
+        source="manual",
         wavelengths=np.arange(10),
         min_wavelength=0,
         max_wavelength=10,

@@ -3,10 +3,11 @@ import os
 import numpy as np
 from astropy.io import fits
 from matplotlib import pyplot as plt
+from scipy.signal import find_peaks
+
 from rascal import util
 from rascal.atlas import Atlas
 from rascal.calibrator import Calibrator
-from scipy.signal import find_peaks
 
 # Load the LT SPRAT data
 base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -109,7 +110,7 @@ config = {
 }
 
 atlas = Atlas(
-    line_list="manual",
+    source="manual",
     wavelengths=sprat_atlas_lines,
     min_wavelength=3800.0,
     max_wavelength=8000.0,

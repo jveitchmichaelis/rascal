@@ -4,13 +4,14 @@ from functools import partialmethod
 import numpy as np
 import pytest
 from astropy.io import fits
-from rascal import util
-from rascal.atlas import Atlas
-from rascal.calibrator import Calibrator
 from scipy.signal import find_peaks
 
 # Suppress tqdm output
 from tqdm import tqdm
+
+from rascal import util
+from rascal.atlas import Atlas
+from rascal.calibrator import Calibrator
 
 tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 
@@ -82,7 +83,7 @@ sprat_atlas_lines = [
 element = ["Xe"] * len(sprat_atlas_lines)
 
 user_atlas = Atlas(
-    line_list="manual",
+    source="manual",
     wavelengths=sprat_atlas_lines,
     min_wavelength=3800.0,
     max_wavelength=8200.0,
@@ -115,6 +116,7 @@ config = {
         "top_n_candidate": 5,
         "filter_close": True,
     },
+    "atlases": {...},
 }
 
 

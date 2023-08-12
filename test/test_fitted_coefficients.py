@@ -3,14 +3,15 @@ from functools import partialmethod
 
 import numpy as np
 from astropy.io import fits
-from rascal import util
-from rascal.atlas import Atlas
-from rascal.calibrator import Calibrator
 from scipy import interpolate
 from scipy.signal import find_peaks
 
 # Suppress tqdm output
 from tqdm import tqdm
+
+from rascal import util
+from rascal.atlas import Atlas
+from rascal.calibrator import Calibrator
 
 tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 
@@ -174,7 +175,7 @@ def test_gmos_fit():
     element = ["CuAr"] * len(gmos_atlas_lines)
 
     atlas = Atlas(
-        line_list="manual",
+        source="manual",
         wavelengths=gmos_atlas_lines,
         min_wavelength=5000.0,
         max_wavelength=9500.0,
@@ -231,7 +232,7 @@ def test_osiris_fit():
     element = ["HgAr"] * len(osiris_atlas_lines)
 
     atlas = Atlas(
-        line_list="manual",
+        source="manual",
         wavelengths=osiris_atlas_lines,
         min_wavelength=3500.0,
         max_wavelength=8000.0,
@@ -368,7 +369,7 @@ def test_sprat_fit():
     element = ["Xe"] * len(sprat_atlas_lines)
 
     atlas = Atlas(
-        line_list="manual",
+        source="manual",
         wavelengths=sprat_atlas_lines,
         min_wavelength=3500.0,
         max_wavelength=8000.0,

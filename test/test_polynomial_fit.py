@@ -1,11 +1,12 @@
 from functools import partialmethod
 
 import numpy as np
-from rascal.atlas import Atlas
-from rascal.calibrator import Calibrator
 
 # Suppress tqdm output
 from tqdm import tqdm
+
+from rascal.atlas import Atlas
+from rascal.calibrator import Calibrator
 
 tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 
@@ -27,7 +28,7 @@ elements_quadratic = ["Quadratic"] * len(wavelengths_quadratic)
 
 def test_linear_fit():
     atlas = Atlas(
-        line_list="manual",
+        source="manual",
         wavelengths=wavelengths_linear,
         min_wavelength=3500.0,
         max_wavelength=8000.0,
@@ -68,7 +69,7 @@ def test_linear_fit():
 
 def test_manual_refit():
     atlas = Atlas(
-        line_list="manual",
+        source="manual",
         wavelengths=wavelengths_linear,
         min_wavelength=3500.0,
         max_wavelength=8000.0,
@@ -106,7 +107,7 @@ def test_manual_refit():
 
 def test_manual_refit_remove_points():
     atlas = Atlas(
-        line_list="manual",
+        source="manual",
         wavelengths=wavelengths_linear,
         min_wavelength=3500.0,
         max_wavelength=8000.0,
@@ -147,7 +148,7 @@ def test_manual_refit_remove_points():
 
 def test_manual_refit_add_points():
     atlas = Atlas(
-        line_list="manual",
+        source="manual",
         wavelengths=wavelengths_linear,
         min_wavelength=3500.0,
         max_wavelength=8000.0,
@@ -187,7 +188,7 @@ def test_manual_refit_add_points():
 
 def test_quadratic_fit():
     atlas = Atlas(
-        line_list="manual",
+        source="manual",
         wavelengths=wavelengths_quadratic,
         min_wavelength=3500.0,
         max_wavelength=8000.0,
@@ -231,7 +232,7 @@ def test_quadratic_fit():
 
 def test_quadratic_fit_legendre():
     atlas = Atlas(
-        line_list="manual",
+        source="manual",
         wavelengths=wavelengths_quadratic,
         min_wavelength=3500.0,
         max_wavelength=8000.0,
@@ -276,7 +277,7 @@ def test_quadratic_fit_legendre():
 
 def test_quadratic_fit_chebyshev():
     atlas = Atlas(
-        line_list="manual",
+        source="manual",
         wavelengths=wavelengths_quadratic,
         min_wavelength=3500.0,
         max_wavelength=8000.0,

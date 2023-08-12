@@ -3,10 +3,11 @@ import os
 import numpy as np
 import pytest
 from astropy.io import fits
+from scipy.signal import find_peaks
+
 from rascal import util
 from rascal.atlas import Atlas
 from rascal.calibrator import Calibrator
-from scipy.signal import find_peaks
 
 
 @pytest.fixture(scope="session")
@@ -111,7 +112,7 @@ def calibrator(base_dir):
     element = ["Xe"] * len(wavelengths)
 
     user_atlas = Atlas(
-        line_list="manual",
+        source="manual",
         wavelengths=wavelengths,
         elements=element,
         min_wavelength=3500.0,

@@ -27,7 +27,7 @@ from .util import vacuum_to_air_wavelength
 logger = logging.getLogger(__name__)
 
 
-class LineSource(Enum):
+class NistSource(Enum):
     NIST_STRONG = auto()
     NIST_ALL = auto()
 
@@ -76,8 +76,8 @@ class Atlas:
 
     min_wavelength: float = MISSING
     max_wavelength: float = MISSING
-    elements: Optional[Any] = None
-    line_list: str = "nist"
+    element: Optional[Any] = None
+    source: str = "nist"
     range_tolerance: float = 0.0
     min_intensity: Optional[float] = 10.0
     min_distance: float = 10.0
@@ -90,27 +90,24 @@ class Atlas:
     intensities: Optional[List[float]] = field(default=None)
     use_accurate_lines: Optional[bool] = True
     atlas_lines: Optional[List[AtlasLine]] = field(default=None)
-    nist_source: LineSource = LineSource.NIST_STRONG
+    nist_source: NistSource = NistSource.NIST_STRONG
 
     def __post_init__(self):
-
-        if isinstance(self.elements, str):
-            self.elements = [self.elements]
 
         self.min_atlas_wavelength = self.min_wavelength - self.range_tolerance
         self.max_atlas_wavelength = self.max_wavelength + self.range_tolerance
         self.atlas_lines = []
 
         logger.info(
-            f"Loading lines from {self.line_list} list between {self.min_atlas_wavelength} and {self.max_atlas_wavelength} for elements: {set(self.elements)}"
+            f"Loading lines from {self.source} between {self.min_atlas_wavelength} and {self.max_atlas_wavelength} for element: {set(self.element)}"
         )
         logger.info(
             f"Filtering lines by intensity > {self.min_intensity} and separation > {self.min_distance} Å"
         )
 
-        if self.line_list == "manual":
+        if self.source == "manual":
             self.add_manual()
-        elif self.line_list == "nist":
+        elif self.source == "nist":
             self.add_nist()
         else:
             raise NotImplementedError
@@ -121,23 +118,11 @@ class Atlas:
         if not isinstance(self.wavelengths, list):
             self.wavelengths = list(self.wavelengths)
 
-        # If a single element is provided, assume that
-        # all lines are from this element
-        if len(self.elements) == 1:
-            self.elements = self.elements * len(self.wavelengths)
-
         # Empty intensity
         if self.intensities is None:
             self.intensities = [0] * len(self.wavelengths)
         elif not isinstance(self.intensities, list):
             self.intensities = list(self.intensities)
-
-        assert len(self.elements) == len(self.wavelengths), ValueError(
-            "Input elements and wavelengths have different length."
-        )
-        assert len(self.elements) == len(self.intensities), ValueError(
-            "Input elements and intensities have different length."
-        )
 
         if self.vacuum:
 
@@ -148,8 +133,8 @@ class Atlas:
                 self.relative_humidity,
             )
 
-        for element, wavelength, intensity in list(
-            zip(self.elements, self.wavelengths, self.intensities)
+        for wavelength, intensity in list(
+            zip(self.wavelengths, self.intensities)
         ):
             if wavelength < (self.min_wavelength - self.range_tolerance):
                 logger.warning(
@@ -170,16 +155,15 @@ class Atlas:
             self.atlas_lines.append(
                 AtlasLine(
                     wavelength=wavelength,
-                    element=element,
+                    element=self.element,
                     intensity=intensity,
                     source="user",
                 )
             )
 
     def add_nist(self):
-        assert len(self.elements) == 1
 
-        s = self.elements[0].split(" ")
+        s = self.element.split(" ")
 
         if len(s) == 2:
             states = s[1]
@@ -458,7 +442,7 @@ class AtlasCollection:
 def nist_files(
     element: str,
     states: List[str] = ["I", "II"],
-    source: LineSource = LineSource.NIST_STRONG,
+    source: NistSource = NistSource.NIST_STRONG,
 ) -> List[str]:
     """
     Locate atlas files for a particular element and an optional state. By default, only the I and II
@@ -486,9 +470,9 @@ def nist_files(
 
     get_ref = lambda path: (import_resources.files(__package__) / path)
 
-    if source == LineSource.NIST_ALL:
+    if source == NistSource.NIST_ALL:
         root = f"arc_lines/nist_clean_"
-    elif source == LineSource.NIST_STRONG:
+    elif source == NistSource.NIST_STRONG:
         root = f"arc_lines/strong_lines/"
     else:
         raise NotImplementedError(
@@ -573,7 +557,7 @@ def open_line_list(
 def nist_lines(
     element,
     states=["I", "II"],
-    source=LineSource.NIST_STRONG,
+    source=NistSource.NIST_STRONG,
     only_accurate=True,
 ) -> List[Dict]:
     """Load NIST reference lines for the specified element and ionisation states.
@@ -596,7 +580,7 @@ def nist_lines(
     """
     files = nist_files(element, states, source)
 
-    if (source == LineSource.NIST_STRONG) and only_accurate:
+    if (source == NistSource.NIST_STRONG) and only_accurate:
         only_accurate = False
         logger.debug(
             "Disabling accurate line filter as NIST strong lines do not have an associated accuracy."

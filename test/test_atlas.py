@@ -38,8 +38,8 @@ def test_load_nist_single(elements):
         time_start = time.perf_counter()
 
         nist_atlas = Atlas(
-            elements=[element],
-            line_list="nist",
+            element=element,
+            source="nist",
             min_wavelength=min_wavelength,
             max_wavelength=max_wavelength,
             brightest_n_lines=None,
@@ -63,8 +63,8 @@ def test_load_with_min_intensity():
     min_intensity = 10
 
     nist_atlas = Atlas(
-        elements=["Xe"],
-        line_list="nist",
+        element="Xe",
+        source="nist",
         min_wavelength=4000,
         max_wavelength=8000,
         min_intensity=min_intensity,
@@ -75,24 +75,26 @@ def test_load_with_min_intensity():
         assert i >= min_intensity, "Line intensity is below minimum"
 
 
+"""
+# TODO: Move to Atlas collection
 def test_load_nist_all(elements):
 
+    collection = AtlasCo    
     nist_atlas = Atlas(
-        elements=elements,
+        element=elements,
         line_list="nist",
         min_wavelength=0,
         max_wavelength=8000,
     )
-
-    assert len(nist_atlas) > 0
+"""
 
 
 def test_check_nonzero_length_common_elements_single():
 
     for element in ["Xe", "Kr", "Ar", "Ne", "Cu"]:
         nist_atlas = Atlas(
-            elements=element,
-            line_list="nist",
+            element=element,
+            source="nist",
             min_wavelength=4000,
             max_wavelength=8000,
         )
@@ -102,8 +104,8 @@ def test_check_nonzero_length_common_elements_single():
 
 def test_load_single_line():
     user_atlas = Atlas(
-        elements="Test",
-        line_list="manual",
+        element="Test",
+        source="manual",
         wavelengths=[5.0],
         min_wavelength=0,
         max_wavelength=10,
@@ -113,8 +115,8 @@ def test_load_single_line():
 
 def test_load_mutliple_lines():
     user_atlas = Atlas(
-        elements="Test",
-        line_list="manual",
+        element="Test",
+        source="manual",
         wavelengths=np.arange(10),
         min_wavelength=0,
         max_wavelength=10,
@@ -124,8 +126,8 @@ def test_load_mutliple_lines():
 
 def test_setting_a_known_pair():
     user_atlas = Atlas(
-        elements="Test",
-        line_list="manual",
+        element="Test",
+        source="manual",
         wavelengths=np.arange(10),
         min_wavelength=0,
         max_wavelength=10,
@@ -139,8 +141,8 @@ def test_setting_a_known_pair():
 
 def test_setting_known_pairs():
     user_atlas = Atlas(
-        elements="Test",
-        line_list="manual",
+        element="Test",
+        source="manual",
         wavelengths=np.arange(10),
         min_wavelength=0,
         max_wavelength=10,
@@ -155,8 +157,8 @@ def test_setting_known_pairs():
 @pytest.mark.xfail()
 def test_setting_a_none_to_known_pairs_expect_fail():
     user_atlas = Atlas(
-        elements="Test",
-        line_list="manual",
+        element="Test",
+        source="manual",
         wavelengths=np.arange(10),
         min_wavelength=0,
         max_wavelength=10,
@@ -169,8 +171,8 @@ def test_setting_a_none_to_known_pairs_expect_fail():
 @pytest.mark.xfail()
 def test_setting_nones_to_known_pairs_expect_fail():
     user_atlas = Atlas(
-        elements="Test",
-        line_list="manual",
+        element="Test",
+        source="manual",
         wavelengths=np.arange(10),
         min_wavelength=0,
         max_wavelength=10,
@@ -182,8 +184,8 @@ def test_setting_nones_to_known_pairs_expect_fail():
 
 element_list = ["Hg", "Ar", "Xe", "Kr"]
 user_atlas = Atlas(
-    elements="Test",
-    line_list="manual",
+    element="Test",
+    source="manual",
     wavelengths=np.arange(10),
     min_wavelength=0,
     max_wavelength=10,
