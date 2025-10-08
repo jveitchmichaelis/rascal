@@ -37,9 +37,7 @@ xe_w = np.around(nist_wavelength[xe_idx], decimals=2)
 xe_i = nist_intensity[xe_idx]
 
 # Generate the equally spaced-wavelength array, and the corresponding intensity
-wavelength = np.around(
-    np.arange(min(xe_w) - 500.0, max(xe_w) + 500.01, 0.01), decimals=2
-)
+wavelength = np.around(np.arange(min(xe_w) - 500.0, max(xe_w) + 500.01, 0.01), decimals=2)
 intensity = np.zeros_like(wavelength)
 intensity[np.where(np.isin(wavelength, xe_w))] = xe_i
 

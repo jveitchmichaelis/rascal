@@ -19,9 +19,7 @@ class HoughTransform:
         self.min_intercept = None
         self.max_intercept = None
 
-    def set_constraints(
-        self, min_slope, max_slope, min_intercept, max_intercept
-    ):
+    def set_constraints(self, min_slope, max_slope, min_intercept, max_intercept):
         """
         Define the minimum and maximum of the intercepts (wavelength) and
         gradients (wavelength/pixel) that Hough pairs will be generated.
@@ -39,18 +37,10 @@ class HoughTransform:
 
         """
 
-        assert np.isfinite(min_slope), (
-            "min_slope has to be finite, %s is given " % min_slope
-        )
-        assert np.isfinite(max_slope), (
-            "max_slope has to be finite, %s is given " % max_slope
-        )
-        assert np.isfinite(min_intercept), (
-            "min_intercept has to be finite, %s is given " % min_intercept
-        )
-        assert np.isfinite(max_intercept), (
-            "max_intercept has to be finite, %s is given " % max_intercept
-        )
+        assert np.isfinite(min_slope), "min_slope has to be finite, %s is given " % min_slope
+        assert np.isfinite(max_slope), "max_slope has to be finite, %s is given " % max_slope
+        assert np.isfinite(min_intercept), "min_intercept has to be finite, %s is given " % min_intercept
+        assert np.isfinite(max_intercept), "max_intercept has to be finite, %s is given " % max_intercept
 
         self.min_slope = min_slope
         self.max_slope = max_slope
@@ -82,9 +72,7 @@ class HoughTransform:
         gradients = np.concatenate(np.column_stack([slopes] * len(x)))
 
         # Apply boundaries
-        mask = (self.min_intercept <= intercepts) & (
-            intercepts <= self.max_intercept
-        )
+        mask = (self.min_intercept <= intercepts) & (intercepts <= self.max_intercept)
         intercepts = intercepts[mask]
         gradients = gradients[mask]
 
@@ -188,11 +176,7 @@ class HoughTransform:
 
         # Get the line fit_coeffients from the promising bins in the
         # histogram
-        self.hist_sorted_arg = np.dstack(
-            np.unravel_index(
-                np.argsort(self.hist.ravel())[::-1], self.hist.shape
-            )
-        )[0]
+        self.hist_sorted_arg = np.dstack(np.unravel_index(np.argsort(self.hist.ravel())[::-1], self.hist.shape))[0]
 
         xbin_width = (self.xedges[1] - self.xedges[0]) / 2
         ybin_width = (self.yedges[1] - self.yedges[0]) / 2
@@ -241,19 +225,19 @@ class HoughTransform:
         fileformat_split = fileformat.split(delimiter)
 
         if "npy" in fileformat_split:
-            output_npy = []
-
-            output_npy.append(self.hough_points)
-            output_npy.append(self.hist)
-            output_npy.append(self.xedges)
-            output_npy.append(self.yedges)
-            output_npy.append([self.min_slope])
-            output_npy.append([self.max_slope])
-            output_npy.append([self.min_intercept])
-            output_npy.append([self.max_intercept])
+            output_dict = {
+                "hough_points": self.hough_points,
+                "hist": self.hist,
+                "xedges": self.xedges,
+                "yedges": self.yedges,
+                "min_slope": self.min_slope,
+                "max_slope": self.max_slope,
+                "min_intercept": self.min_intercept,
+                "max_intercept": self.max_intercept,
+            }
 
             if to_disk:
-                np.save(filename + ".npy", output_npy)
+                np.save(filename, output_dict)
 
         if "json" in fileformat_split:
             output_json = {}
@@ -272,18 +256,14 @@ class HoughTransform:
                     json.dump(output_json, f)
 
         if not to_disk:
-            if ("npy" in fileformat_split) and (
-                "json" not in fileformat_split
-            ):
-                return output_npy
+            if ("npy" in fileformat_split) and ("json" not in fileformat_split):
+                return output_dict
 
-            elif ("npy" not in fileformat_split) and (
-                "json" in fileformat_split
-            ):
+            elif ("npy" not in fileformat_split) and ("json" in fileformat_split):
                 return output_json
 
             elif ("npy" in fileformat_split) and ("json" in fileformat_split):
-                return output_npy, output_json
+                return output_dict, output_json
 
             else:
                 return None
@@ -307,16 +287,16 @@ class HoughTransform:
             if filename[-4:] != ".npy":
                 filename += ".npy"
 
-            input_npy = np.load(filename, allow_pickle=True)
+            input_npy = np.load(filename, allow_pickle=True).item()
 
-            self.hough_points = input_npy[0]
-            self.hist = input_npy[1].astype("float")
-            self.xedges = input_npy[2].astype("float")
-            self.yedges = input_npy[3].astype("float")
-            self.min_slope = float(input_npy[4][0])
-            self.max_slope = float(input_npy[5][0])
-            self.min_intercept = float(input_npy[6][0])
-            self.max_intercept = float(input_npy[7][0])
+            self.hough_points = input_npy["hough_points"]
+            self.hist = input_npy["hist"].astype("float")
+            self.xedges = input_npy["xedges"].astype("float")
+            self.yedges = input_npy["yedges"].astype("float")
+            self.min_slope = float(input_npy["min_slope"])
+            self.max_slope = float(input_npy["max_slope"])
+            self.min_intercept = float(input_npy["min_intercept"])
+            self.max_intercept = float(input_npy["max_intercept"])
 
         elif filetype == "json":
             if filename[-5:] != ".json":
@@ -334,6 +314,4 @@ class HoughTransform:
             self.max_intercept = float(input_json["max_intercept"])
 
         else:
-            raise ValueError(
-                "Unknown filetype %s, it has to be npy or json" % filetype
-            )
+            raise ValueError("Unknown filetype %s, it has to be npy or json" % filetype)

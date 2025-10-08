@@ -56,11 +56,7 @@ elements = ["Xe"] * len(wavelengths)
 def run_sprat_calibration(fit_deg):
     # Load the LT SPRAT data
     base_dir = os.path.dirname(__file__)
-    spectrum2D = fits.open(
-        os.path.join(
-            base_dir, "..", "examples/data_lt_sprat/v_a_20190516_57_1_0_1.fits"
-        )
-    )[0].data
+    spectrum2D = fits.open(os.path.join(base_dir, "..", "examples/data_lt_sprat/v_a_20190516_57_1_0_1.fits"))[0].data
 
     # Collapse into 1D spectrum between row 110 and 120
     spectrum = np.median(spectrum2D[110:120], axis=0)
@@ -93,9 +89,7 @@ def run_sprat_calibration(fit_deg):
     c.atlas.list()
 
     # Run the wavelength calibration
-    best_p, x, y, rms, residual, peak_utilisation, atlas_utilisation = c.fit(
-        max_tries=200, fit_deg=fit_deg
-    )
+    best_p, x, y, rms, residual, peak_utilisation, atlas_utilisation = c.fit(max_tries=200, fit_deg=fit_deg)
 
     # Refine solution
     (
@@ -115,10 +109,7 @@ def run_sprat_calibration(fit_deg):
 
 
 def test_sprat_calibration():
-    logger.info(
-        "Test if LT/SPRAT Xe calibration return the order of "
-        "polynomial properly."
-    )
+    logger.info("Test if LT/SPRAT Xe calibration return the order of polynomial properly.")
 
     for i in range(3, 6):
         best_p, _, _, _, _ = run_sprat_calibration(fit_deg=i)

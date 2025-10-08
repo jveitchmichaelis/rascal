@@ -1,3 +1,71 @@
-[build-system]
-requires = ["poetry>=1.1", "setuptools >= 60.6.0", "wheel"]
-build-backend = "setuptools.build_meta"
+[project]
+name = "rascal"
+version = "0.4.0"
+description = "A library for automated spectrometer wavelength calibration."
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "BSD-3-Clause"}
+authors = [
+    {name = "Josh Veitch-Michaelis", email = "j.veitchmichaelis@gmail.com"},
+    {name = "Marco C Lam", email = "lam@mail.tau.ac.il"}
+]
+maintainers = [
+    {name = "Josh Veitch-Michaelis", email = "j.veitchmichaelis@gmail.com"},
+    {name = "Marco C Lam", email = "lam@mail.tau.ac.il"}
+]
+
+urls = { Homepage = "https://rascal.readthedocs.io/en/latest/?badge=latest", Download = "https://github.com/jveitchmichaelis/rascal" }
+
+classifiers = [
+    "License :: OSI Approved :: BSD License",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: OS Independent"
+]
+dependencies = [
+    "kaleido>=1.1.0",
+    "matplotlib>=3.10.6",
+    "numpy>=2.2.6",
+    "pynverse>=0.1.4.6",
+    "scipy>=1.15.3",
+    "tqdm>=4.67.1",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+zip-safe = false
+include-package-data = true
+
+[tool.ruff]
+line-length = 127
+lint.select = ["E", "F"]
+lint.ignore = ["E741"]
+exclude = ["*.ipynb"]
+fix = false
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.coverage.run]
+relative_files = true
+
+[dependency-groups]
+dev = [
+    "astropy>=6.1.7",
+    "coverage>=7.10.7",
+    "plotly>=6.3.1",
+    "pre-commit>=4.3.0",
+    "psutil>=7.1.0",
+    "pytest>=8.4.2",
+    "pytest-cov>=7.0.0",
+    "requests>=2.32.5",
+    "ruff>=0.14.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = "src"
+addopts = [
+    "--import-mode=importlib",
+]

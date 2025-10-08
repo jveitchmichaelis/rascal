@@ -2,7 +2,7 @@ import os
 
 import numpy as np
 from scipy.optimize import curve_fit
-import pkg_resources
+from importlib.resources import files
 
 
 def get_vapour_pressure(temperature):
@@ -36,9 +36,7 @@ def get_vapour_partial_pressure(relative_humidity, vapour_pressure):
     return partial_pressure
 
 
-def edlen_refraction(
-    wavelengths, temperature, pressure, vapour_partial_pressure
-):
+def edlen_refraction(wavelengths, temperature, pressure, vapour_partial_pressure):
     """
     Appendix A.IV of https://emtoolbox.nist.gov/Wavelength/Documentation.asp
 
@@ -70,19 +68,11 @@ def edlen_refraction(
     n_s = 1.0 + 1e-8 * (A + B / (130 - S) + C / (38.9 - S))
     X = (1.0 + 1e-8 * (E - F * t) * pressure) / (1.0 + G * t)
     n_tp = 1.0 + pressure * (n_s - 1.0) * X / D
-    n = (
-        n_tp
-        - 1e-10
-        * (292.75 / T)
-        * (3.7345 - 0.0401 * S)
-        * vapour_partial_pressure
-    )
+    n = n_tp - 1e-10 * (292.75 / T) * (3.7345 - 0.0401 * S) * vapour_partial_pressure
     return n
 
 
-def vacuum_to_air_wavelength(
-    wavelengths, temperature=273.15, pressure=101325, relative_humidity=0
-):
+def vacuum_to_air_wavelength(wavelengths, temperature=273.15, pressure=101325, relative_humidity=0):
     """
 
     The conversion follows the Modified Edlén Equations
@@ -115,17 +105,11 @@ def vacuum_to_air_wavelength(
     t = temperature - 273.15
 
     vapour_pressure = get_vapour_pressure(t)
-    vapour_partial_pressure = get_vapour_partial_pressure(
-        relative_humidity, vapour_pressure
-    )
-    return np.array(wavelengths) / edlen_refraction(
-        wavelengths, t, pressure, vapour_partial_pressure
-    )
+    vapour_partial_pressure = get_vapour_partial_pressure(relative_humidity, vapour_pressure)
+    return np.array(wavelengths) / edlen_refraction(wavelengths, t, pressure, vapour_partial_pressure)
 
 
-def air_to_vacuum_wavelength(
-    wavelengths, temperature=273.15, pressure=101325, relative_humidity=0
-):
+def air_to_vacuum_wavelength(wavelengths, temperature=273.15, pressure=101325, relative_humidity=0):
     """
     The conversion follows the Modified Edlén Equations
     https://emtoolbox.nist.gov/Wavelength/Documentation.asp
@@ -154,12 +138,8 @@ def air_to_vacuum_wavelength(
 
     # get_vapour_pressure takes temperature in Celcius
     vapour_pressure = get_vapour_pressure(t)
-    vapour_partial_pressure = get_vapour_partial_pressure(
-        relative_humidity, vapour_pressure
-    )
-    return np.array(wavelengths) * edlen_refraction(
-        wavelengths, t, pressure, vapour_partial_pressure
-    )
+    vapour_partial_pressure = get_vapour_partial_pressure(relative_humidity, vapour_pressure)
+    return np.array(wavelengths) * edlen_refraction(wavelengths, t, pressure, vapour_partial_pressure)
 
 
 def filter_wavelengths(lines, min_atlas_wavelength, max_atlas_wavelength):
@@ -188,9 +168,7 @@ def filter_wavelengths(lines, min_atlas_wavelength, max_atlas_wavelength):
 
     _, index, _ = np.unique(wavelengths, return_counts=True, return_index=True)
 
-    wavelength_mask = (wavelengths[index] >= min_atlas_wavelength) & (
-        wavelengths[index] <= max_atlas_wavelength
-    )
+    wavelength_mask = (wavelengths[index] >= min_atlas_wavelength) & (wavelengths[index] <= max_atlas_wavelength)
 
     return lines[index][wavelength_mask]
 
@@ -355,16 +333,12 @@ def load_calibration_lines(
     # Element, wavelength, intensity
     if isinstance(linelist, str):
         if linelist.lower() == "nist":
-            file_path = pkg_resources.resource_filename(
-                "rascal", "arc_lines/nist_clean.csv"
-            )
+            file_path = files("rascal").joinpath("arc_lines/nist_clean.csv")
             lines = np.loadtxt(file_path, delimiter=",", dtype=">U12")
         elif os.path.exists(linelist):
             lines = np.loadtxt(linelist, delimiter=",", dtype=">U12")
         else:
-            raise ValueError(
-                f"Unknown string is provided as linelist: {linelist}."
-            )
+            raise ValueError(f"Unknown string is provided as linelist: {linelist}.")
     else:
         raise ValueError("Please provide a valid format of line list.")
 
@@ -382,9 +356,7 @@ def load_calibration_lines(
         )
 
     # Filter wavelengths
-    lines = filter_wavelengths(
-        lines, min_atlas_wavelength, max_atlas_wavelength
-    )
+    lines = filter_wavelengths(lines, min_atlas_wavelength, max_atlas_wavelength)
 
     # Filter intensities
     if isinstance(min_intensity, (float, int, list, np.ndarray)):
@@ -397,9 +369,7 @@ def load_calibration_lines(
     intensity_list = lines[:, 2][intensity_mask].astype("float64")
 
     if brightest_n_lines is not None:
-        to_keep = np.argsort(np.array(intensity_list))[::-1][
-            :brightest_n_lines
-        ]
+        to_keep = np.argsort(np.array(intensity_list))[::-1][:brightest_n_lines]
         element_list = element_list[to_keep]
         intensity_list = intensity_list[to_keep]
         wavelength_list = wavelength_list[to_keep]
@@ -416,9 +386,7 @@ def load_calibration_lines(
 
     # Vacuum to air conversion
     if not vacuum:
-        wavelength_list = vacuum_to_air_wavelength(
-            wavelength_list, temperature, pressure, relative_humidity
-        )
+        wavelength_list = vacuum_to_air_wavelength(wavelength_list, temperature, pressure, relative_humidity)
 
     return element_list, wavelength_list, intensity_list
 
@@ -480,11 +448,7 @@ def refine_peaks(spectrum, peaks, window_width=10, distance=None):
     length = len(spectrum)
 
     for peak in peaks:
-        y = spectrum[
-            max(0, int(peak) - window_width) : min(
-                int(peak) + window_width, length
-            )
-        ]
+        y = spectrum[max(0, int(peak) - window_width) : min(int(peak) + window_width, length)]
         y /= np.nanmax(y)
         x = np.arange(len(y))
 

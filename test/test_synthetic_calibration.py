@@ -29,9 +29,7 @@ def test_default():
     c.set_calibrator_properties(num_pix=768)
 
     # Setup the Hough transform parameters
-    c.set_hough_properties(
-        range_tolerance=100.0, min_wavelength=100.0, max_wavelength=1500.0
-    )
+    c.set_hough_properties(range_tolerance=100.0, min_wavelength=100.0, max_wavelength=1500.0)
 
     # Add our fake lines as the atlas
     a.add_user_atlas(elements=["Test"] * len(waves), wavelengths=waves)
@@ -40,9 +38,7 @@ def test_default():
     assert len(c.atlas.atlas_lines) > 0
 
     # And let's try and fit...
-    best_p, x, y, rms, residual, peak_utilisation, atlas_utilisation = c.fit(
-        max_tries=500
-    )
+    best_p, x, y, rms, residual, peak_utilisation, atlas_utilisation = c.fit(max_tries=500)
 
     (
         best_p,
@@ -87,9 +83,7 @@ def test_get_candidate_points_poly():
     c.set_calibrator_properties(num_pix=768)
 
     # Setup the Hough transform parameters
-    c.set_hough_properties(
-        range_tolerance=100.0, min_wavelength=100.0, max_wavelength=1500.0
-    )
+    c.set_hough_properties(range_tolerance=100.0, min_wavelength=100.0, max_wavelength=1500.0)
 
     c.set_ransac_properties(linear=False, minimum_fit_error=1e-12)
 
@@ -99,9 +93,7 @@ def test_get_candidate_points_poly():
     assert len(c.atlas.atlas_lines) > 0
 
     # And let's try and fit...
-    best_p, x, y, rms, residual, peak_utilisation, atlas_utilisation = c.fit(
-        max_tries=500, fit_coeff=best_p
-    )
+    best_p, x, y, rms, residual, peak_utilisation, atlas_utilisation = c.fit(max_tries=500, fit_coeff=best_p)
 
     (
         best_p,

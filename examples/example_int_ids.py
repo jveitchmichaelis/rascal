@@ -10,9 +10,7 @@ from rascal import util
 
 # Load the LT SPRAT data
 base_dir = os.path.dirname(os.path.abspath(__file__))
-spectrum2D = fits.open(
-    os.path.join(base_dir, "data_int_ids/int20180101_01355922.fits.fz")
-)[1].data
+spectrum2D = fits.open(os.path.join(base_dir, "data_int_ids/int20180101_01355922.fits.fz"))[1].data
 
 # Collapse into 1D spectrum between row 110 and 120
 spectrum = np.flip(spectrum2D.mean(1), 0)
@@ -57,9 +55,7 @@ c.do_hough_transform()
 ) = c.fit(max_tries=100, fit_deg=4)
 
 # Plot the solution
-c.plot_fit(
-    best_p, spectrum, plot_atlas=True, log_spectrum=False, tolerance=5.0
-)
+c.plot_fit(best_p, spectrum, plot_atlas=True, log_spectrum=False, tolerance=5.0)
 
 # Show the parameter space for searching possible solution
 c.plot_search_space()

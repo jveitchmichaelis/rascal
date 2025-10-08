@@ -23,9 +23,7 @@ def test_providing_effective_pixel_not_affecting_fit(mock_show):
     peaks, waves = s.get_pixels(np.linspace(200, 1200, num=25))
 
     effective_pixel = np.arange(987).astype("int")
-    effective_pixel[len(effective_pixel) // 2 :] = (
-        effective_pixel[len(effective_pixel) // 2 :] + 53.37
-    )
+    effective_pixel[len(effective_pixel) // 2 :] = effective_pixel[len(effective_pixel) // 2 :] + 53.37
 
     assert len(peaks) > 0
 
@@ -39,9 +37,7 @@ def test_providing_effective_pixel_not_affecting_fit(mock_show):
     c.set_calibrator_properties(pixel_list=effective_pixel)
 
     # Setup the Hough transform parameters
-    c.set_hough_properties(
-        range_tolerance=100.0, min_wavelength=100.0, max_wavelength=1300.0
-    )
+    c.set_hough_properties(range_tolerance=100.0, min_wavelength=100.0, max_wavelength=1300.0)
 
     c.set_ransac_properties(linear=False, minimum_fit_error=1e-14)
 
@@ -51,9 +47,7 @@ def test_providing_effective_pixel_not_affecting_fit(mock_show):
     assert len(c.atlas.atlas_lines) > 0
 
     # And let's try and fit...
-    best_p, x, y, rms, residual, peak_utilisation, atlas_utilisation = c.fit(
-        max_tries=500, fit_coeff=best_p
-    )
+    best_p, x, y, rms, residual, peak_utilisation, atlas_utilisation = c.fit(max_tries=500, fit_coeff=best_p)
 
     c.plot_fit()
 

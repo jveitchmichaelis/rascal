@@ -152,26 +152,16 @@ class Atlas:
         """
 
         if min_atlas_wavelength is None:
-            min_atlas_wavelength = (
-                self.min_atlas_wavelength - self.range_tolerance
-            )
+            min_atlas_wavelength = self.min_atlas_wavelength - self.range_tolerance
 
         if max_atlas_wavelength is None:
-            max_atlas_wavelength = (
-                self.max_atlas_wavelength + self.range_tolerance
-            )
+            max_atlas_wavelength = self.max_atlas_wavelength + self.range_tolerance
 
         if not np.isfinite(min_atlas_wavelength):
-            raise ValueError(
-                "min_atlas_wavelength has to be finite or None. "
-                "{} is given.".format(min_atlas_wavelength)
-            )
+            raise ValueError("min_atlas_wavelength has to be finite or None. {} is given.".format(min_atlas_wavelength))
 
         if not np.isfinite(max_atlas_wavelength):
-            raise ValueError(
-                "max_atlas_wavelength has to be finite or None. "
-                "{} is given.".format(max_atlas_wavelength)
-            )
+            raise ValueError("max_atlas_wavelength has to be finite or None. {} is given.".format(max_atlas_wavelength))
 
         if isinstance(elements, str):
             elements = [elements]
@@ -196,12 +186,8 @@ class Atlas:
                     brightest_n_lines=brightest_n_lines,
                 )
 
-                for element, line, intensity in list(
-                    zip(atlas_elements_tmp, atlas_tmp, atlas_intensities_tmp)
-                ):
-                    self.atlas_lines.append(
-                        AtlasLine(line, element, intensity, "NIST")
-                    )
+                for element, line, intensity in list(zip(atlas_elements_tmp, atlas_tmp, atlas_intensities_tmp)):
+                    self.atlas_lines.append(AtlasLine(line, element, intensity, "NIST"))
 
     def add_user_atlas(
         self,
@@ -259,24 +245,16 @@ class Atlas:
             if not isinstance(intensities, list):
                 intensities = list(intensities)
 
-        assert len(elements) == len(wavelengths), ValueError(
-            "Input elements and wavelengths have different length."
-        )
-        assert len(elements) == len(intensities), ValueError(
-            "Input elements and intensities have different length."
-        )
+        assert len(elements) == len(wavelengths), ValueError("Input elements and wavelengths have different length.")
+        assert len(elements) == len(intensities), ValueError("Input elements and intensities have different length.")
 
         if vacuum:
-            wavelengths = vacuum_to_air_wavelength(
-                wavelengths, temperature, pressure, relative_humidity
-            )
+            wavelengths = vacuum_to_air_wavelength(wavelengths, temperature, pressure, relative_humidity)
 
         self.min_atlas_wavelength = min(wavelengths)
         self.max_atlas_wavelength = max(wavelengths)
 
-        for element, line, intensity in list(
-            zip(elements, wavelengths, intensities)
-        ):
+        for element, line, intensity in list(zip(elements, wavelengths, intensities)):
             self.atlas_lines.append(AtlasLine(line, element, intensity))
 
     def get_lines(self):
@@ -335,14 +313,7 @@ class Atlas:
         """
 
         for line in self.atlas_lines:
-            print(
-                "Element "
-                + str(line.element)
-                + " at "
-                + str(line.wavelength)
-                + " with intensity "
-                + str(line.intensity)
-            )
+            print("Element " + str(line.element) + " at " + str(line.wavelength) + " with intensity " + str(line.intensity))
 
     def clear(self):
         """

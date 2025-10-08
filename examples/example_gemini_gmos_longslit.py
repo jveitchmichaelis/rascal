@@ -19,17 +19,13 @@ rawpix_to_pix_itp = interpolate.interp1d(np.arange(len(pixels)), pixels)
 
 # Load the GMOS data
 base_dir = os.path.dirname(__file__)
-spectrum2D = fits.open(
-    os.path.join(base_dir, "data_gemini_gmos/N20181115S0215_flattened.fits")
-)[0].data
+spectrum2D = fits.open(os.path.join(base_dir, "data_gemini_gmos/N20181115S0215_flattened.fits"))[0].data
 
 # Collapse into 1D spectrum between row 300 and 310
 spectrum = np.median(spectrum2D[300:310], axis=0)[::-1]
 
 # Identify the peaks
-peaks, _ = find_peaks(
-    spectrum, height=1000, prominence=500, distance=5, threshold=None
-)
+peaks, _ = find_peaks(spectrum, height=1000, prominence=500, distance=5, threshold=None)
 peaks = util.refine_peaks(spectrum, peaks, window_width=3)
 
 peaks_shifted = rawpix_to_pix_itp(peaks)
@@ -73,9 +69,7 @@ c.do_hough_transform()
 ) = c.fit(max_tries=1000, fit_deg=4)
 
 # Plot the solution
-c.plot_fit(
-    best_p, spectrum, plot_atlas=True, log_spectrum=False, tolerance=5.0
-)
+c.plot_fit(best_p, spectrum, plot_atlas=True, log_spectrum=False, tolerance=5.0)
 
 # Show the parameter space for searching possible solution
 c.plot_search_space()
