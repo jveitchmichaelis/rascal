@@ -1314,11 +1314,11 @@ class Calibrator:
         self._generate_pairs()
 
     def do_hough_transform(self, brute_force=False):
-        if len(self.pairs) == 0:
+        if len(list(self.pairs)) == 0:
             logging.warning("pairs list is empty. Try generating now.")
             self._generate_pairs()
 
-            if len(self.pairs) == 0:
+            if len(list(self.pairs)) == 0:
                 logging.error("pairs list is still empty.")
 
         # Generate the hough_points from the pairs
