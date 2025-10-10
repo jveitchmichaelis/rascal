@@ -1574,7 +1574,7 @@ class Calibrator:
         if rms > self.fit_tolerance:
             self.logger.warning("RMS too large {} > {}".format(rms, self.fit_tolerance))
 
-        assert fit_coeff is not None, "Couldn't fit"
+        assert fit_coeff is not None, f"Couldn't fit with {len(self.pairs)} pair(s) / {len(self.peaks)} peaks / {len(self.atlas)} lines."
 
         self.fit_coeff = fit_coeff
         self.rms = rms
