@@ -33,7 +33,7 @@ jobs:
       run: uv sync --all-extras --dev
 
     - name: Lint with ruff using uv
-      run: uv run ruff check
+      run: uv run ruff check --fix
 
     - name: Test with pytest
       run: |
