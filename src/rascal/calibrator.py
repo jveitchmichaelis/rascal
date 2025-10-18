@@ -598,14 +598,14 @@ class Calibrator:
 
                     # Now we do a robust fit
                     try:
-                        coeffs = models.robust_polyfit(matched_peaks, matched_atlas, self.fit_deg)
+                        fit_coeffs = models.robust_polyfit(matched_peaks, matched_atlas, self.fit_deg)
 
                     except np.linalg.LinAlgError:
                         self.logger.warning("Linear algebra error in robust fit")
                         continue
 
                     # Get the residual of the fit
-                    residual = self.polyval(matched_peaks, coeffs) - matched_atlas
+                    residual = self.polyval(matched_peaks, fit_coeffs) - matched_atlas
                     residual[np.abs(residual) > self.ransac_tolerance] = self.ransac_tolerance
 
                     rms_residual = np.sqrt(np.mean(residual**2))
@@ -636,7 +636,7 @@ class Calibrator:
                     # If the best fit is accepted, update the lists
                     best_cost = cost
                     best_inliers = n_inliers
-                    best_p = coeffs
+                    best_p = fit_coeffs
                     best_err = rms_residual
                     best_residual = residual
                     self.matched_peaks = list(copy.deepcopy(matched_peaks))
