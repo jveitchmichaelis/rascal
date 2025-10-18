@@ -581,6 +581,9 @@ class Calibrator:
                     weight = 1.0
 
                 cost = sum(err) / (len(err) - len(fit_coeffs) + 1) / (weight + 1e-9)
+                self.logger.info(
+                    f"Cost: {cost:1.4f}, Weight: {weight:1.4f}, fit_coeffs: {fit_coeffs}"
+                )
 
                 # If this is potentially a new best fit, then handle that first
                 if cost <= best_cost:
@@ -604,6 +607,8 @@ class Calibrator:
                         self.logger.warning("Linear algebra error in robust fit")
                         continue
 
+                    self.logger.info(f"Robust fit_coeffs: {fit_coeffs}")
+
                     # Get the residual of the fit
                     residual = self.polyval(matched_peaks, fit_coeffs) - matched_atlas
                     residual[np.abs(residual) > self.ransac_tolerance] = self.ransac_tolerance
@@ -621,7 +626,9 @@ class Calibrator:
 
                     if n_inliers < self.minimum_matches:
                         self.logger.debug(
-                            "Not enough matched peaks for valid solution, user specified {}.".format(self.minimum_matches)
+                            "Not enough matched peaks for valid solution, user specified {}.".format(
+                                self.minimum_matches
+                            )
                         )
                         continue
 
@@ -648,7 +655,9 @@ class Calibrator:
                     assert len(np.unique(self.matched_atlas)) == len(np.unique(self.matched_peaks))
 
                     if progress:
-                        sampler_list.set_description("Most inliers: {:d}, best error: {:1.4f}".format(best_inliers, best_err))
+                        sampler_list.set_description(
+                            "Most inliers: {:d}, best error: {:1.4f}".format(best_inliers, best_err)
+                        )
 
                     # Break early if all peaks are matched
                     if best_inliers == len(peaks):
@@ -1419,7 +1428,9 @@ class Calibrator:
         wave = np.asarray(wave, dtype="float").reshape(-1)
 
         assert pix.size == wave.size, ValueError(
-            "Please check the length of the input arrays. pix has size {} and wave has size {}.".format(pix.size, wave.size)
+            "Please check the length of the input arrays. pix has size {} and wave has size {}.".format(
+                pix.size, wave.size
+            )
         )
 
         if not all(isinstance(p, (float, int)) & (not np.isnan(p)) for p in pix):
@@ -1574,7 +1585,9 @@ class Calibrator:
         if rms > self.fit_tolerance:
             self.logger.warning("RMS too large {} > {}".format(rms, self.fit_tolerance))
 
-        assert fit_coeff is not None, f"Couldn't fit with {len(self.pairs)} pair(s) / {len(self.peaks)} peaks / {len(self.atlas)} lines."
+        assert (
+            fit_coeff is not None
+        ), f"Couldn't fit with {len(self.pairs)} pair(s) / {len(self.peaks)} peaks / {len(self.atlas)} lines."
 
         self.fit_coeff = fit_coeff
         self.rms = rms
