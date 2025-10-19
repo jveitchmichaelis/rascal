@@ -71,6 +71,8 @@ def test_get_candidate_points_poly():
     waves = np.linspace(200, 1200, num=25)
 
     peaks, waves = s.get_pixels(waves)
+    # add some minimal noise
+    peaks = np.random.normal(peaks, 0.01)
     assert len(peaks) > 0
 
     # Set up the calibrator with the pixel values of our
