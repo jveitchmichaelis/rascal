@@ -543,10 +543,7 @@ class Calibrator:
 
                 # Try to fit the data.
                 # This doesn't need to be robust, it's an exact fit.
-                self.logger.warning(f"x_hat: {x_hat}")
-                self.logger.warning(f"x_hat: {y_hat}")
                 fit_coeffs = self.polyfit(x_hat, y_hat, self.fit_deg)
-                self.logger.warning(f"fit_coeffs: {fit_coeffs}")
 
                 # Check the intercept.
                 if (fit_coeffs[0] < self.min_intercept) | (fit_coeffs[0] > self.max_intercept):
@@ -556,10 +553,10 @@ class Calibrator:
                 # Check monotonicity.
                 pix_min = peaks[0] - np.ptp(peaks) * 0.2
                 pix_max = peaks[-1] + np.ptp(peaks) * 0.2
-                self.logger.warning((pix_min, pix_max))
+                self.logger.debug((pix_min, pix_max))
 
                 if not np.all(np.diff(self.polyval(np.arange(pix_min, pix_max, 1), fit_coeffs)) > 0):
-                    self.logger.warning("Solution is not monotonically increasing.")
+                    self.logger.debug("Solution is not monotonically increasing.")
                     continue
 
                 # Compute error and filter out many-to-one matches
@@ -584,7 +581,7 @@ class Calibrator:
                     weight = 1.0
 
                 cost = sum(err) / (len(err) - len(fit_coeffs) + 1) / (weight + 1e-9)
-                self.logger.warning(
+                self.logger.info(
                     f"Cost: {cost:1.4f}, Weight: {weight:1.4f}, fit_coeffs: {fit_coeffs}"
                 )
 
@@ -610,7 +607,7 @@ class Calibrator:
                         self.logger.warning("Linear algebra error in robust fit")
                         continue
 
-                    self.logger.warning(f"Robust fit_coeffs: {fit_coeffs}")
+                    self.logger.info(f"Robust fit_coeffs: {fit_coeffs}")
 
                     # Get the residual of the fit
                     residual = self.polyval(matched_peaks, fit_coeffs) - matched_atlas
@@ -620,7 +617,7 @@ class Calibrator:
 
                     # Make sure that we don't accept fits with zero error
                     if rms_residual < self.minimum_fit_error:
-                        self.logger.warning("Fit error too small, {:1.2f}.".format(best_err))
+                        self.logger.debug("Fit error too small, {:1.2f}.".format(best_err))
 
                         continue
 
@@ -628,7 +625,7 @@ class Calibrator:
                     # constraints
 
                     if n_inliers < self.minimum_matches:
-                        self.logger.warning(
+                        self.logger.debug(
                             "Not enough matched peaks for valid solution, user specified {}.".format(
                                 self.minimum_matches
                             )
@@ -636,7 +633,7 @@ class Calibrator:
                         continue
 
                     if n_inliers < self.minimum_peak_utilisation * len(self.peaks):
-                        self.logger.warning(
+                        self.logger.debug(
                             "Not enough matched peaks for valid solution, user specified {:1.2f} %.".format(
                                 100 * self.minimum_matches
                             )
