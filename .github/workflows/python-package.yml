@@ -34,7 +34,7 @@ jobs:
 
     - name: Test with pytest
       run: |
-        uv run pytest -v --disable-warnings -p no:warnings test
+        uv run coverage run pytest -v --disable-warnings -p no:warnings test
     - name: Generate Coveralls reports
       if: startsWith(matrix.os, 'ubuntu')
       uses: AndreMiras/coveralls-python-action@develop
