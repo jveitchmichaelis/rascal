@@ -38,20 +38,17 @@ def test_default():
     assert len(c.atlas.atlas_lines) > 0
 
     # And let's try and fit...
-    best_p, x, y, rms, residual, peak_utilisation, atlas_utilisation = c.fit(max_tries=500)
+    best_p, _, _, _, _, _, _ = c.fit(max_tries=500)
 
     (
-        best_p,
-        x_fit,
-        y_fit,
+        _,
+        _,
+        _,
         rms,
-        residual,
+        _,
         peak_utilisation,
         atlas_utilisation,
     ) = c.match_peaks(best_p, refine=False, robust_refit=True)
-
-    fit_diff = c.polyval(x_fit, best_p) - y_fit
-    rms = np.sqrt(np.sum(fit_diff**2 / len(x_fit)))
 
     assert peak_utilisation > 0.7
     assert atlas_utilisation > 0.0
@@ -95,20 +92,17 @@ def test_get_candidate_points_poly():
     assert len(c.atlas.atlas_lines) > 0
 
     # And let's try and fit...
-    best_p, x, y, rms, residual, peak_utilisation, atlas_utilisation = c.fit(max_tries=500, fit_coeff=best_p)
+    best_p, _, _, _, _, _, _ = c.fit(max_tries=500, fit_coeff=best_p)
 
     (
-        best_p,
-        x_fit,
-        y_fit,
+        _,
+        _,
+        _,
         rms,
-        residual,
+        _,
         peak_utilisation,
         atlas_utilisation,
     ) = c.match_peaks(best_p, refine=True, robust_refit=True)
-
-    fit_diff = c.polyval(x_fit, best_p) - y_fit
-    rms = np.sqrt(np.sum(fit_diff**2 / len(x_fit)))
 
     assert peak_utilisation > 0.7
     assert atlas_utilisation > 0.0

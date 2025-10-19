@@ -120,7 +120,7 @@ def test_sprat_manual_atlas():
     c.do_hough_transform(brute_force=True)
 
     # Run the wavelength calibration
-    best_p, x, y, rms, residual, peak_utilisation, atlas_utilisation = c.fit(max_tries=250)
+    best_p, _, _, rms, residual, peak_utilisation, atlas_utilisation = c.fit(max_tries=250)
 
     # Plot the solution
     c.plot_fit(
