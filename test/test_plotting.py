@@ -35,9 +35,7 @@ def test_save_plot_calibration_lines_1_element():
         label=True,
         display=False,
         save_fig=True,
-        filename=os.path.join(
-            base_dir, "test_output", "example_CuNeAr_calibration_lines"
-        ),
+        filename=os.path.join(base_dir, "test_output", "example_CuNeAr_calibration_lines"),
         fig_kwarg={"figsize": (30, 8)},
     )
 
@@ -52,8 +50,6 @@ def test_save_plot_calibration_lines_3_elements():
         label=False,
         display=False,
         save_fig=True,
-        filename=os.path.join(
-            base_dir, "test_output", "example_CuNeAr_calibration_lines"
-        ),
+        filename=os.path.join(base_dir, "test_output", "example_CuNeAr_calibration_lines"),
         fig_kwarg={"figsize": (30, 8)},
     )

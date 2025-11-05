@@ -11,9 +11,7 @@ temperature = np.array([20, 20, 20, 10, 30, 20, 20, 20])
 relative_humidity = np.array([0, 0, 0, 0, 0, 25, 50, 75])
 # These values are from 1996
 # http://jupiter.chem.uoa.gr/thanost/papers/papers4/Metrol_30(1993)155.pdf
-elden = np.array(
-    [21459.0, 26826.2, 32193.8, 27776.1, 25938.5, 26804.6, 26783.4, 26761.9]
-)
+elden = np.array([21459.0, 26826.2, 32193.8, 27776.1, 25938.5, 26804.6, 26783.4, 26761.9])
 
 
 def test_edlen_refractive_index():
@@ -23,18 +21,14 @@ def test_edlen_refractive_index():
                 6330.0,
                 t,
                 p,
-                util.get_vapour_partial_pressure(
-                    h, util.get_vapour_pressure(t)
-                ),
+                util.get_vapour_partial_pressure(h, util.get_vapour_pressure(t)),
             )
             - 1
         ) * 1e8
         # We accept large errors because the set of coefficients for the
         # Edlen equations changes all the time and we onlyl need 2 S.F.
         # accuracy
-        assert np.isclose(
-            nm1e8, e, rtol=0.1, atol=1000
-        ), "{} istaed of {}.".format(nm1e8, e)
+        assert np.isclose(nm1e8, e, rtol=0.1, atol=1000), "{} istaed of {}.".format(nm1e8, e)
 
 
 def test_vacuum_to_air_wavelength():
@@ -74,9 +68,7 @@ def test_vacuum_to_air_wavelength():
     )
     assert np.isclose(
         wave_air,
-        util.vacuum_to_air_wavelength(
-            wave_vacuum, temperature=288.15, pressure=101325
-        ),
+        util.vacuum_to_air_wavelength(wave_vacuum, temperature=288.15, pressure=101325),
         atol=0.1,
         rtol=0.01,
     ).all()

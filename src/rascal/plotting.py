@@ -161,11 +161,7 @@ def plot_calibration_lines(
     i = np.zeros_like(w)
 
     for e in elements:
-        i[
-            np.isin(
-                w, np.around(wavelength_list[element_list == e], decimals=3)
-            )
-        ] += intensity_list[element_list == e]
+        i[np.isin(w, np.around(wavelength_list[element_list == e], decimals=3))] += intensity_list[element_list == e]
     # Convolve to simulate the arc spectrum
     model_spectrum = signal.convolve(i, gaussian, mode="same")
 
@@ -179,9 +175,7 @@ def plot_calibration_lines(
     intensity_list = intensity_list[intensity_mask]
     element_list = element_list[intensity_mask]
 
-    distance_mask = filter_separation(
-        wavelength_list, min_separation=min_distance
-    )
+    distance_mask = filter_separation(wavelength_list, min_separation=min_distance)
     wavelength_list = wavelength_list[distance_mask]
     intensity_list = intensity_list[distance_mask]
     element_list = element_list[distance_mask]
@@ -315,22 +309,16 @@ def plot_search_space(
     # Get the search space boundaries
     x = calibrator.pixel_list
 
-    m_1 = (
-        calibrator.max_wavelength - calibrator.min_wavelength
-    ) / calibrator.pixel_list.max()
+    m_1 = (calibrator.max_wavelength - calibrator.min_wavelength) / calibrator.pixel_list.max()
     y_1 = m_1 * x + calibrator.min_wavelength
 
     m_2 = (
-        calibrator.max_wavelength
-        + calibrator.range_tolerance
-        - (calibrator.min_wavelength + calibrator.range_tolerance)
+        calibrator.max_wavelength + calibrator.range_tolerance - (calibrator.min_wavelength + calibrator.range_tolerance)
     ) / calibrator.pixel_list.max()
     y_2 = m_2 * x + calibrator.min_wavelength + calibrator.range_tolerance
 
     m_3 = (
-        calibrator.max_wavelength
-        - calibrator.range_tolerance
-        - (calibrator.min_wavelength - calibrator.range_tolerance)
+        calibrator.max_wavelength - calibrator.range_tolerance - (calibrator.min_wavelength - calibrator.range_tolerance)
     ) / calibrator.pixel_list.max()
     y_3 = m_3 * x + (calibrator.min_wavelength - calibrator.range_tolerance)
 
@@ -340,9 +328,7 @@ def plot_search_space(
         fig = plt.figure(figsize=(10, 10))
 
         # Plot all-pairs
-        plt.scatter(
-            *calibrator.pairs.T, alpha=0.2, color="C0", label="All pairs"
-        )
+        plt.scatter(*calibrator.pairs.T, alpha=0.2, color="C0", label="All pairs")
 
         plt.scatter(
             calibrator._merge_candidates(calibrator.candidates)[:, 0],
@@ -414,9 +400,7 @@ def plot_search_space(
         # (last pixel, maximum wavelength), and the two lines defining the
         # tolerance region.
         plt.plot(x, y_1, label="Linear Fit", color="C3")
-        plt.plot(
-            x, y_2, linestyle="dashed", label="Tolerance Region", color="C3"
-        )
+        plt.plot(x, y_2, linestyle="dashed", label="Tolerance Region", color="C3")
         plt.plot(x, y_3, linestyle="dashed", color="C3")
 
         if fit_coeff is not None:
@@ -476,9 +460,7 @@ def plot_search_space(
                 y=calibrator.pairs[:, 1],
                 mode="markers",
                 name="All Pairs",
-                marker=dict(
-                    color=pio.templates["CN"].layout.colorway[0], opacity=0.2
-                ),
+                marker=dict(color=pio.templates["CN"].layout.colorway[0], opacity=0.2),
             )
         )
 
@@ -488,9 +470,7 @@ def plot_search_space(
                 y=calibrator._merge_candidates(calibrator.candidates)[:, 1],
                 mode="markers",
                 name="Candidate Pairs",
-                marker=dict(
-                    color=pio.templates["CN"].layout.colorway[1], opacity=0.2
-                ),
+                marker=dict(color=pio.templates["CN"].layout.colorway[1], opacity=0.2),
             )
         )
         fig.add_trace(
@@ -627,10 +607,8 @@ def plot_search_space(
             yaxis=dict(
                 title="Pixel",
                 range=[
-                    calibrator.min_wavelength
-                    - calibrator.range_tolerance * 1.1,
-                    calibrator.max_wavelength
-                    + calibrator.range_tolerance * 1.1,
+                    calibrator.min_wavelength - calibrator.range_tolerance * 1.1,
+                    calibrator.max_wavelength + calibrator.range_tolerance * 1.1,
                 ],
                 showgrid=True,
             ),
@@ -736,9 +714,7 @@ def plot_fit(
 
         except Exception as e:
             calibrator.logger.error(e)
-            calibrator.logger.error(
-                "Spectrum is not provided, it cannot be " "plotted."
-            )
+            calibrator.logger.error("Spectrum is not provided, it cannot be plotted.")
 
     if spectrum is not None:
         if log_spectrum:
@@ -760,9 +736,7 @@ def plot_fit(
     if calibrator.plot_with_matplotlib:
         _import_matplotlib()
 
-        fig, (ax1, ax2, ax3) = plt.subplots(
-            nrows=3, sharex=True, gridspec_kw={"hspace": 0.0}, figsize=(15, 9)
-        )
+        fig, (ax1, ax2, ax3) = plt.subplots(nrows=3, sharex=True, gridspec_kw={"hspace": 0.0}, figsize=(15, 9))
         fig.tight_layout()
 
         # Plot fitted spectrum
@@ -770,9 +744,7 @@ def plot_fit(
             ax1.plot(wave, spectrum, label="Arc Spectrum")
             ax1.vlines(
                 calibrator.polyval(calibrator.peaks, fit_coeff),
-                np.array(spectrum)[
-                    calibrator.pix_to_rawpix(calibrator.peaks).astype("int")
-                ],
+                np.array(spectrum)[calibrator.pix_to_rawpix(calibrator.peaks).astype("int")],
                 vline_max,
                 linestyles="dashed",
                 colors="C1",
@@ -806,9 +778,7 @@ def plot_fit(
 
             fitted_peaks.append(p)
             fitted_diff.append(diff[idx])
-            calibrator.logger.info(
-                "- matched to {} A".format(calibrator.atlas.get_lines()[idx])
-            )
+            calibrator.logger.info("- matched to {} A".format(calibrator.atlas.get_lines()[idx]))
 
             if spectrum is not None:
                 if first_one:
@@ -870,9 +840,7 @@ def plot_fit(
             color="k",
             label="RMS",
         )
-        ax2.hlines(
-            -rms, wave.min(), wave.max(), linestyles="dashed", color="k"
-        )
+        ax2.hlines(-rms, wave.min(), wave.max(), linestyles="dashed", color="k")
         ax2.grid(linestyle=":")
         ax2.set_ylabel("Residual / A")
         ax2.legend()
@@ -960,9 +928,7 @@ def plot_fit(
                 y0=0,
                 x1=x,
                 y1=spec_max,
-                line=dict(
-                    color=pio.templates["CN"].layout.colorway[1], width=1
-                ),
+                line=dict(color=pio.templates["CN"].layout.colorway[1], width=1),
             )
 
             diff = calibrator.atlas.get_lines() - x
@@ -974,15 +940,9 @@ def plot_fit(
             if np.abs(diff[idx]) < tolerance:
                 fitted_peaks.append(p)
                 if spectrum is not None:
-                    fitted_peaks_adu.append(
-                        spectrum[int(calibrator.pix_to_rawpix(p))]
-                    )
+                    fitted_peaks_adu.append(spectrum[int(calibrator.pix_to_rawpix(p))])
                 fitted_diff.append(diff[idx])
-                calibrator.logger.info(
-                    "- matched to {} A".format(
-                        calibrator.atlas.get_lines()[idx]
-                    )
-                )
+                calibrator.logger.info("- matched to {} A".format(calibrator.atlas.get_lines()[idx]))
 
         x_fitted = calibrator.polyval(fitted_peaks, fit_coeff)
 
@@ -1014,9 +974,7 @@ def plot_fit(
                 x=[wave.min(), wave.max()],
                 y=[0, 0],
                 mode="lines",
-                line=dict(
-                    color=pio.templates["CN"].layout.colorway[0], dash="dash"
-                ),
+                line=dict(color=pio.templates["CN"].layout.colorway[0], dash="dash"),
                 yaxis="y2",
                 showlegend=False,
             )
@@ -1146,12 +1104,8 @@ def plot_fit(
             return fig.to_json()
 
     else:
-        assert calibrator.matplotlib_imported, (
-            "matplotlib package not available. " + "Plot cannot be generated."
-        )
-        assert calibrator.plotly_imported, (
-            "plotly package is not available. " + "Plot cannot be generated."
-        )
+        assert calibrator.matplotlib_imported, "matplotlib package not available. " + "Plot cannot be generated."
+        assert calibrator.plotly_imported, "plotly package is not available. " + "Plot cannot be generated."
 
 
 def plot_arc(
@@ -1218,9 +1172,7 @@ def plot_arc(
                     np.log10(calibrator.spectrum / calibrator.spectrum.max()),
                     label="Arc Spectrum",
                 )
-                plt.vlines(
-                    calibrator.peaks, -2, 0, label="Detected Peaks", color="C1"
-                )
+                plt.vlines(calibrator.peaks, -2, 0, label="Detected Peaks", color="C1")
                 plt.ylabel("log(Normalised Count)")
                 plt.ylim(-2, 0)
             else:
@@ -1276,21 +1228,13 @@ def plot_arc(
             fig.add_trace(
                 go.Scatter(
                     x=list(pixel_list),
-                    y=list(
-                        np.log10(
-                            calibrator.spectrum / calibrator.spectrum.max()
-                        )
-                    ),
+                    y=list(np.log10(calibrator.spectrum / calibrator.spectrum.max())),
                     mode="lines",
                     name="Arc",
                 )
             )
-            xmin = min(
-                np.log10(calibrator.spectrum / calibrator.spectrum.max())
-            )
-            xmax = max(
-                np.log10(calibrator.spectrum / calibrator.spectrum.max())
-            )
+            xmin = min(np.log10(calibrator.spectrum / calibrator.spectrum.max()))
+            xmax = max(np.log10(calibrator.spectrum / calibrator.spectrum.max()))
 
         else:
             # Plot all-pairs
@@ -1315,16 +1259,12 @@ def plot_arc(
                 y0=0,
                 x1=i,
                 y1=1.05,
-                line=dict(
-                    color=pio.templates["CN"].layout.colorway[1], width=1
-                ),
+                line=dict(color=pio.templates["CN"].layout.colorway[1], width=1),
             )
 
         fig.update_layout(
             autosize=True,
-            yaxis=dict(
-                title="Normalised Count", range=[xmin, xmax], showgrid=True
-            ),
+            yaxis=dict(title="Normalised Count", range=[xmin, xmax], showgrid=True),
             xaxis=dict(
                 title="Pixel",
                 zeroline=False,
@@ -1337,13 +1277,9 @@ def plot_arc(
             width=1000,
         )
 
-        fig.update_xaxes(
-            showline=True, linewidth=1, linecolor="black", mirror=True
-        )
+        fig.update_xaxes(showline=True, linewidth=1, linecolor="black", mirror=True)
 
-        fig.update_yaxes(
-            showline=True, linewidth=1, linecolor="black", mirror=True
-        )
+        fig.update_yaxes(showline=True, linewidth=1, linecolor="black", mirror=True)
 
         if save_fig:
             fig_type = fig_type.split("+")

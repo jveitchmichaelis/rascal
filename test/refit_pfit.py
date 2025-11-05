@@ -32,9 +32,7 @@ def adjust_pfit_coefficient(delta, x, y, pfit):
 
 delta_trial = [0.0, 0.0, 0.0, 0.0]
 
-delta = minimize(
-    adjust_pfit_coefficient, delta_trial, args=(x_shifted, y_shifted, pfit)
-).x
+delta = minimize(adjust_pfit_coefficient, delta_trial, args=(x_shifted, y_shifted, pfit)).x
 pfit_new = pfit.copy()
 for i, d in enumerate(delta):
     pfit_new[i] += d
