@@ -21,7 +21,8 @@ plt.imshow(np.log10(spectrum2D), aspect="auto", origin="lower")
 plt.xlabel("Spectral Direction / Pix")
 plt.ylabel("Spatial Direction / Pix")
 plt.tight_layout()
-plt.savefig("output/lt-sprat-arc-image.png")
+os.makedirs(os.path.join(base_dir, "output"), exist_ok=True)
+plt.savefig(os.path.join(base_dir, "output", "lt-sprat-arc-image.png"))
 
 # Collapse into 1D spectrum between row 110 and 120
 spectrum = np.median(spectrum2D[110:120], axis=0)
@@ -126,7 +127,7 @@ print("Peaks utilisation rate: {}%".format(peak_utilisation * 100))
 print("Atlas utilisation rate: {}%".format(atlas_utilisation * 100))
 
 c.use_matplotlib()
-c.plot_arc(save_fig="png", filename="output/lt-sprat-arc-spectrum")
+c.plot_arc(save_fig="png", filename=os.path.join(base_dir, "output", "lt-sprat-arc-spectrum"))
 
 # Plot the solution
 c.plot_fit(
@@ -136,8 +137,8 @@ c.plot_fit(
     log_spectrum=False,
     tolerance=5.0,
     save_fig="png",
-    filename="output/lt-sprat-wavelength-calibration",
+    filename=os.path.join(base_dir, "output", "lt-sprat-wavelength-calibration"),
 )
 
 # Show the parameter space for searching possible solution
-c.plot_search_space(save_fig="png", filename="output/lt-sprat-search-space")
+c.plot_search_space(save_fig="png", filename=os.path.join(base_dir, "output", "lt-sprat-search-space"))
