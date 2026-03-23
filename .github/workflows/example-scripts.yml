@@ -1,0 +1,39 @@
+name: Example scripts
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  run-examples:
+    runs-on: ubuntu-latest
+
+    env:
+      MPLBACKEND: Agg
+
+    steps:
+    - uses: actions/checkout@v5
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v6
+      with:
+        python-version: "3.11"
+
+    - name: Setup venv
+      run: uv python install
+
+    - name: Install dependencies
+      run: uv sync --all-extras --dev
+
+    - name: Run example scripts
+      run: |
+        for f in examples/*.py; do
+          echo "Running $f"
+          uv run python "$f" || exit 1
+        done
+
+    - name: Run example notebooks
+      run: |
+        uv run --with nbconvert jupyter nbconvert --to notebook --execute --inplace examples/*.ipynb

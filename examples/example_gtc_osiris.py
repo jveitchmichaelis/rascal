@@ -83,7 +83,7 @@ c.set_ransac_properties(
 
 c.do_hough_transform()
 
-c.plot_arc(save_fig="png", filename="output/gtc-osiris-arc-spectrum")
+c.plot_arc(save_fig="png", filename=os.path.join(base_dir, "output", "gtc-osiris-arc-spectrum"))
 
 c.do_hough_transform()
 
@@ -105,7 +105,7 @@ c.plot_fit(
     log_spectrum=False,
     tolerance=5.0,
     save_fig="png",
-    filename="output/gtc-osiris-wavelength-calibration",
+    filename=os.path.join(base_dir, "output", "gtc-osiris-wavelength-calibration"),
 )
 
 # Show the parameter space for searching possible solution
@@ -114,4 +114,4 @@ print("Stdev error: {} A".format(np.abs(residual).std()))
 print("Peaks utilisation rate: {}%".format(peak_utilisation * 100))
 print("Atlas utilisation rate: {}%".format(atlas_utilisation * 100))
 
-c.plot_search_space(save_fig="png", filename="output/gtc-osiris-search-space")
+c.plot_search_space(save_fig="png", filename=os.path.join(base_dir, "output", "gtc-osiris-search-space"))

@@ -12,7 +12,11 @@ from rascal import util
 
 sys.path.append("../../bhtomspec/GMOS")
 
-from gmos_fieldflattening import create_pixel_array
+try:
+    from gmos_fieldflattening import create_pixel_array
+except ImportError:
+    print("Skipping: gmos_fieldflattening module not available")
+    sys.exit(0)
 
 pixels = create_pixel_array("north", 2)
 rawpix_to_pix_itp = interpolate.interp1d(np.arange(len(pixels)), pixels)

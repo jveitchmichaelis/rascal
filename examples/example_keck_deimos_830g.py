@@ -1,4 +1,5 @@
 import json
+import os
 
 import numpy as np
 from scipy.signal import find_peaks
@@ -8,7 +9,9 @@ from rascal.atlas import Atlas
 from rascal.util import refine_peaks
 
 # Load the 1D Spectrum from Pypeit
-spectrum_json = json.load(open("data_keck_deimos/keck_deimos_830g_l_PYPIT.json"))
+base_dir = os.path.dirname(__file__)
+os.makedirs(os.path.join(base_dir, "output"), exist_ok=True)
+spectrum_json = json.load(open(os.path.join(base_dir, "data_keck_deimos/keck_deimos_830g_l_PYPIT.json")))
 spectrum = np.array(spectrum_json["spec"])
 
 # Identify the arc lines
@@ -16,7 +19,7 @@ peaks, _ = find_peaks(spectrum, prominence=200, distance=10)
 peaks = refine_peaks(spectrum, peaks, window_width=3)
 
 c = Calibrator(peaks, spectrum=spectrum)
-c.plot_arc(save_fig="png", filename="output/keck-deimos-arc-spectrum")
+c.plot_arc(save_fig="png", filename=os.path.join(base_dir, "output", "keck-deimos-arc-spectrum"))
 c.set_hough_properties(
     num_slopes=10000.0,
     range_tolerance=500.0,
@@ -66,7 +69,7 @@ c.plot_fit(
     log_spectrum=False,
     tolerance=5.0,
     save_fig="png",
-    filename="output/keck-deimos-wavelength-calibration",
+    filename=os.path.join(base_dir, "output", "keck-deimos-wavelength-calibration"),
 )
 
 # Show the parameter space for searching possible solution
@@ -75,4 +78,4 @@ print("Stdev error: {} A".format(np.abs(residual).std()))
 print("Peaks utilisation rate: {}%".format(peak_utilisation * 100))
 print("Atlas utilisation rate: {}%".format(atlas_utilisation * 100))
 
-c.plot_search_space(save_fig="png", filename="output/keck-deimos-search-space")
+c.plot_search_space(save_fig="png", filename=os.path.join(base_dir, "output", "keck-deimos-search-space"))

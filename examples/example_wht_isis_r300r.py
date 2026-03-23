@@ -22,7 +22,8 @@ plt.imshow(np.log10(spectrum2D), aspect="auto", origin="lower")
 plt.xlabel("Spectral Direction / Pix")
 plt.ylabel("Spatial Direction / Pix")
 plt.tight_layout()
-plt.savefig("output/wht-isis-arc-image.png")
+os.makedirs(os.path.join(base_dir, "output"), exist_ok=True)
+plt.savefig(os.path.join(base_dir, "output", "wht-isis-arc-image.png"))
 
 # Identify the peaks
 peaks, _ = find_peaks(spectrum, height=500, prominence=100, distance=5, threshold=None)
@@ -30,7 +31,7 @@ peaks = util.refine_peaks(spectrum, peaks, window_width=3)
 
 # Initialise the calibrator
 c = Calibrator(peaks, spectrum=spectrum)
-c.plot_arc(log_spectrum=True, save_fig="png", filename="output/wht-isis-arc-spectrum")
+c.plot_arc(log_spectrum=True, save_fig="png", filename=os.path.join(base_dir, "output", "wht-isis-arc-spectrum"))
 c.set_hough_properties(
     num_slopes=10000,
     xbins=500,
@@ -75,11 +76,11 @@ c.plot_fit(
     log_spectrum=False,
     tolerance=5.0,
     save_fig="png",
-    filename="output/wht-isis-wavelength-calibration",
+    filename=os.path.join(base_dir, "output", "wht-isis-wavelength-calibration"),
 )
 
 # Show the parameter space for searching possible solution
-c.plot_search_space(save_fig="png", filename="output/wht-isis-search-space")
+c.plot_search_space(save_fig="png", filename=os.path.join(base_dir, "output", "wht-isis-search-space"))
 
 print("Stdev error: {} A".format(residual.std()))
 print("Peaks utilisation rate: {}%".format(peak_utilisation * 100))
