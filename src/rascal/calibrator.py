@@ -99,15 +99,15 @@ class Calibrator:
         # fitting properties
         self.progress = None
 
-        if self.config.ransac.type == "poly":
+        if self.config.ransac.fit_type == "poly":
             self.polyfit = np.polynomial.polynomial.polyfit
             self.polyval = np.polynomial.polynomial.polyval
 
-        elif self.config.ransac.type == "legendre":
+        elif self.config.ransac.fit_type == "legendre":
             self.polyfit = np.polynomial.legendre.legfit
             self.polyval = np.polynomial.legendre.legval
 
-        elif self.config.ransac.type == "chebyshev":
+        elif self.config.ransac.fit_type == "chebyshev":
             self.polyfit = np.polynomial.chebyshev.chebfit
             self.polyval = np.polynomial.chebyshev.chebval
 
@@ -174,7 +174,7 @@ class Calibrator:
 
         """
 
-        if self.config.seed is not None:
+        if self.config.seed is None:
             self.config.seed = random.randint(0, 1000000)
 
         np.random.seed(self.config.seed)
@@ -219,6 +219,10 @@ class Calibrator:
 
         # Check atlas
         for line in self.atlas_lines:
+            if OmegaConf.is_missing(
+                self.config.detector, "detector_min_wave"
+            ) or OmegaConf.is_missing(self.config.detector, "detector_max_wave"):
+                break
             if (
                 line.wavelength < 0
                 or line.wavelength < self.config.detector.detector_min_wave
@@ -366,13 +370,13 @@ class Calibrator:
                         - self.config.hough.linearity_tolerance,
                     ),
                     (
-                        self.contiguous_pixel.max(),
+                        max(self.contiguous_pixel),
                         self.max_wavelength
                         - self.config.hough.range_tolerance
                         - self.config.hough.linearity_tolerance,
                     ),
                     (
-                        self.contiguous_pixel.max(),
+                        max(self.contiguous_pixel),
                         self.max_wavelength
                         + self.config.hough.range_tolerance
                         + self.config.hough.linearity_tolerance,
@@ -568,7 +572,7 @@ class Calibrator:
 
                 out_peaks.extend([peak] * num)
                 out_wavelengths.extend(
-                    wavelengths_matched[np.argsort(-aggregated_count)[:num]]
+                    unique_wavelengths[np.argsort(-aggregated_count)[:num]]
                 )
 
         return out_peaks, out_wavelengths
@@ -750,6 +754,29 @@ class Calibrator:
 
         return lsq
 
+    def load_config(self, yaml_config, y_type: str = "file"):
+        """
+        Load configuration from a YAML file or object.
+
+        Parameters
+        ----------
+        yaml_config : str or dict
+            Path to YAML file or pre-loaded yaml dict.
+        y_type : str
+            "file" to load from path, "object" to use a pre-loaded dict.
+
+        """
+        if y_type == "file":
+            loaded = OmegaConf.load(yaml_config)
+        elif y_type == "object":
+            loaded = OmegaConf.create(yaml_config)
+        else:
+            raise ValueError("y_type must be 'file' or 'object'")
+
+        OmegaConf.set_readonly(self.config, False)
+        self.config = OmegaConf.merge(self.config, loaded)
+        OmegaConf.set_readonly(self.config, True)
+
     def save_config(self, filename: str):
         """
         Save the current configuration to a YAML file. Will create
@@ -765,7 +792,7 @@ class Calibrator:
         os.makedirs(os.path.dirname(filename), exist_ok=True)
 
         with open(filename, "w") as fp:
-            OmegaConf.save(config=self.confiog, f=fp)
+            OmegaConf.save(config=self.config, f=fp)
 
     def which_plotting_library(self):
         """
@@ -1056,7 +1083,7 @@ class Calibrator:
         if self.config.ransac.linear:
             self.logger.debug("Using linear candidate points")
             self._get_candidate_points_linear(
-                self.config.ransac.inlier_tolerance
+                self.config.hough.linearity_tolerance
             )
 
         else:
@@ -1086,7 +1113,14 @@ class Calibrator:
         )
 
         self.logger.debug("Starting RANSAC")
-        solver = RansacSolver(_x, _y, config=self.config.ransac)
+        solver = RansacSolver(
+            _x,
+            _y,
+            config=self.config.ransac,
+            polyfit_fn=self.polyfit,
+            polyval_fn=self.polyval,
+            fit_valid_fn=self._fit_valid,
+        )
         solver.solve()
 
         if solver.valid_solution:
@@ -1169,47 +1203,37 @@ class Calibrator:
             self.logger.debug("Solution is not monotonically increasing.")
             return False
 
-        # Check ends of fit:
-        if self.min_wavelength is not None:
-            min_wavelength_px = self.polyval(0, result.fit_coeffs)
-
-            if min_wavelength_px < (
-                self.config.detector.detector_min_wave
-                - self.config.detector.detector_edge_tolerance
-            ) or min_wavelength_px > (
-                self.config.detector.detector_min_wave
-                + self.config.detector.detector_edge_tolerance
-            ):
-                self.logger.debug(
-                    "Lower wavelength of fit too small, "
-                    + f"{min_wavelength_px:1.2f}."
-                )
-
-                return False
-
-        if self.max_wavelength is not None:
-            if self.spectrum is not None:
-                fit_max_wavelength = len(self.spectrum)
-            else:
-                fit_max_wavelength = self.num_pix
-
-            max_wavelength_px = self.polyval(
-                fit_max_wavelength, result.fit_coeffs
+        # Check ends of fit — use the same range_tolerance that defined the
+        # Hough search space so the validity check is consistent.
+        wave_tol = self.config.hough.range_tolerance
+        min_wavelength_px = self.polyval(0, result.fit_coeffs)
+        if min_wavelength_px < (
+            self.config.detector.detector_min_wave - wave_tol
+        ) or min_wavelength_px > (
+            self.config.detector.detector_min_wave + wave_tol
+        ):
+            self.logger.debug(
+                "Lower wavelength of fit out of bounds, "
+                + f"{min_wavelength_px:1.2f}."
             )
+            return False
 
-            if max_wavelength_px > (
-                self.config.detector.detector_max_wave
-                + self.detector_edge_tolerance
-            ) or max_wavelength_px < (
-                self.config.detector.detector_max_wave
-                - self.detector_edge_tolerance
-            ):
-                self.logger.debug(
-                    "Upper wavelength of fit too large, "
-                    + f"{max_wavelength_px:1.2f}."
-                )
+        if self.spectrum is not None:
+            fit_max_wavelength = len(self.spectrum)
+        else:
+            fit_max_wavelength = self.config.detector.num_pix
 
-                return False
+        max_wavelength_px = self.polyval(fit_max_wavelength, result.fit_coeffs)
+        if max_wavelength_px > (
+            self.config.detector.detector_max_wave + wave_tol
+        ) or max_wavelength_px < (
+            self.config.detector.detector_max_wave - wave_tol
+        ):
+            self.logger.debug(
+                "Upper wavelength of fit out of bounds, "
+                + f"{max_wavelength_px:1.2f}."
+            )
+            return False
 
         # Make sure that we don't accept fits with zero error
         if result.rms_residual < self.config.ransac.minimum_fit_error:
@@ -1222,19 +1246,20 @@ class Calibrator:
         # Check that we have enough inliers based on user specified
         # constraints
         n_inliers = len(result.inliers_x)
-        if n_inliers < self.minimum_matches:
+        minimum_matches = self.config.ransac.minimum_matches
+        if n_inliers < minimum_matches:
             self.logger.debug(
                 "Not enough matched peaks for valid solution, "
-                + f"user specified {self.minimum_matches}."
+                + f"user specified {minimum_matches}."
             )
             return False
 
-        if n_inliers < self.minimum_peak_utilisation * len(
+        if n_inliers < self.config.ransac.minimum_peak_utilisation * len(
             self.peaks_effective
         ):
             self.logger.debug(
                 "Not enough matched peaks for valid solution, user specified "
-                + f"{100 * self.minimum_peak_utilisation:1.2f} %."
+                + f"{100 * self.config.ransac.minimum_peak_utilisation:1.2f} %."
             )
             return False
 

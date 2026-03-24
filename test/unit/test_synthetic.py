@@ -39,10 +39,9 @@ def test_constant_model():
     s.get_pixels(wave1)
 
 
-@pytest.mark.xfail()
 def test_linear_model():
     s = SyntheticSpectrum(np.arange(2))
-    assert s.degree == 2
+    assert s.degree == 1
 
 
 def test_cubic_model():
@@ -50,7 +49,7 @@ def test_cubic_model():
     assert s.degree == 3
 
     p, _ = s.get_pixels(wave1)
-    assert len(p) == np.sum((wave1 > 200.0) & (wave1 < 1200.0))
+    assert len(p) == np.sum((wave1 >= 200.0) & (wave1 <= 1200.0))
 
 
 def test_switching_model():
@@ -58,13 +57,13 @@ def test_switching_model():
     assert s.degree == 2
 
     p, _ = s.get_pixels(wave1)
-    assert len(p) == np.sum((wave1 > 200.0) & (wave1 < 1200.0))
+    assert len(p) == np.sum((wave1 >= 200.0) & (wave1 <= 1200.0))
 
     s.set_model(np.arange(5))
     assert s.degree == 4
 
     p, _ = s.get_pixels(wave1)
-    assert len(p) == np.sum((wave1 > 200.0) & (wave1 < 1200.0))
+    assert len(p) == np.sum((wave1 >= 200.0) & (wave1 <= 1200.0))
 
 
 def test_switching_wavelength_ranges():
@@ -72,49 +71,49 @@ def test_switching_wavelength_ranges():
     assert s.degree == 2
 
     p, _ = s.get_pixels(wave1)
-    assert len(p) == np.sum((wave1 > 200.0) & (wave1 < 1200.0))
+    assert len(p) == np.sum((wave1 >= 200.0) & (wave1 <= 1200.0))
 
     s.set_wavelength_limit(min_wavelength=500.0)
     p, _ = s.get_pixels(wave1)
-    assert len(p) == np.sum((wave1 > 500.0) & (wave1 < 1200.0))
+    assert len(p) == np.sum((wave1 >= 500.0) & (wave1 <= 1200.0))
 
     s.set_wavelength_limit(max_wavelength=1000.0)
     p, _ = s.get_pixels(wave1)
-    assert len(p) == np.sum((wave1 > 500.0) & (wave1 < 1000.0))
+    assert len(p) == np.sum((wave1 >= 500.0) & (wave1 <= 1000.0))
 
 
-@pytest.mark.xfail()
 def test_wrong_coefficients():
-    SyntheticSpectrum(1.0)
+    with pytest.raises(TypeError):
+        SyntheticSpectrum(1.0)
 
 
-@pytest.mark.xfail()
 def test_set_wrong_wavelength_limit():
     s = SyntheticSpectrum(np.arange(3))
     assert s.degree == 2
 
-    s.set_wavelength_limit(min_wavelength=500.0, max_wavelength=300.0)
+    with pytest.raises(RuntimeError):
+        s.set_wavelength_limit(min_wavelength=500.0, max_wavelength=300.0)
 
 
-@pytest.mark.xfail()
 def test_set_wrong_min_wavelength_limit():
     s = SyntheticSpectrum(np.arange(3))
     assert s.degree == 2
 
-    s.set_wavelength_limit(min_wavelength="Hellow")
+    with pytest.raises(TypeError):
+        s.set_wavelength_limit(min_wavelength="Hellow")
 
 
-@pytest.mark.xfail()
 def test_set_wrong_max_wavelength_limit():
     s = SyntheticSpectrum(np.arange(3))
     assert s.degree == 2
 
-    s.set_wavelength_limit(max_wavelength="World")
+    with pytest.raises(TypeError):
+        s.set_wavelength_limit(max_wavelength="World")
 
 
-@pytest.mark.xfail()
 def test_wrong_wavelengths_to_be_inverted():
     s = SyntheticSpectrum(np.arange(3))
     assert s.degree == 2
 
-    s.get_pixels(1.0)
+    with pytest.raises(TypeError):
+        s.get_pixels(1.0)

@@ -12,8 +12,6 @@ from rascal.calibrator import Calibrator, HoughTransform
 
 tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 
-HERE = os.path.dirname(os.path.realpath(__file__))
-
 ht = HoughTransform()
 ht.set_constraints(
     min_slope=1, max_slope=4, min_intercept=3000.0, max_intercept=5000.0
@@ -26,28 +24,29 @@ ht.generate_hough_points(
 ht.bin_hough_points(xbins=100, ybins=100)
 
 
-def test_save_as_npy():
+@pytest.fixture(scope="module")
+def tmp_output(tmp_path_factory):
+    return tmp_path_factory.mktemp("output")
+
+
+def test_save_as_npy(tmp_output):
     ht.save(
-        filename=os.path.join(HERE, "test_output", "test_hough_transform_npy"),
+        filename=str(tmp_output / "test_hough_transform_npy"),
         fileformat="npy",
     )
 
 
-def test_save_as_json():
+def test_save_as_json(tmp_output):
     ht.save(
-        filename=os.path.join(
-            HERE, "test_output", "test_hough_transform_json"
-        ),
+        filename=str(tmp_output / "test_hough_transform_json"),
         fileformat="json",
     )
 
 
-def test_load_npy():
+def test_load_npy(tmp_output):
     ht_loaded = HoughTransform()
     ht_loaded.load(
-        filename=os.path.join(
-            HERE, "test_output", "test_hough_transform_npy.npy"
-        ),
+        filename=str(tmp_output / "test_hough_transform_npy.npy"),
         filetype="npy",
     )
 
@@ -61,12 +60,10 @@ def test_load_npy():
     assert ht_loaded.max_intercept == ht.max_intercept
 
 
-def test_load_json():
+def test_load_json(tmp_output):
     ht_loaded = HoughTransform()
     ht_loaded.load(
-        filename=os.path.join(
-            HERE, "test_output", "test_hough_transform_json.json"
-        ),
+        filename=str(tmp_output / "test_hough_transform_json.json"),
         filetype="json",
     )
 
@@ -80,12 +77,10 @@ def test_load_json():
     assert ht_loaded.max_intercept == ht.max_intercept
 
 
-def test_load_json_without_extension():
+def test_load_json_without_extension(tmp_output):
     ht_loaded = HoughTransform()
     ht_loaded.load(
-        filename=os.path.join(
-            HERE, "test_output", "test_hough_transform_json"
-        ),
+        filename=str(tmp_output / "test_hough_transform_json"),
         filetype="json",
     )
 
@@ -99,35 +94,33 @@ def test_load_json_without_extension():
     assert ht_loaded.max_intercept == ht.max_intercept
 
 
-@pytest.mark.xfail()
-def test_load_fail():
+def test_load_fail(tmp_output):
     ht_fail = HoughTransform()
-    ht_fail.load(
-        filename=os.path.join(
-            HERE, "test_output", "test_hough_transform_json.json"
-        ),
-        filetype="lalala",
-    )
+    with pytest.raises(ValueError):
+        ht_fail.load(
+            filename=str(tmp_output / "test_hough_transform_json.json"),
+            filetype="lalala",
+        )
 
 
-def test_ht_not_saved_to_disk():
+def test_ht_not_saved_to_disk(tmp_output):
     a = ht.save(
-        filename=os.path.join(HERE, "test_output", "test_hough_transform_npy"),
+        filename=str(tmp_output / "test_hough_transform_npy"),
         fileformat="npy",
         to_disk=False,
     )
     b = ht.save(
-        filename=os.path.join(HERE, "test_output", "test_hough_transform_npy"),
+        filename=str(tmp_output / "test_hough_transform_npy"),
         fileformat="json",
         to_disk=False,
     )
     c, d = ht.save(
-        filename=os.path.join(HERE, "test_output", "test_hough_transform_npy"),
+        filename=str(tmp_output / "test_hough_transform_npy"),
         fileformat="npy+json",
         to_disk=False,
     )
     e = ht.save(
-        filename=os.path.join(HERE, "test_output", "test_hough_transform_npy"),
+        filename=str(tmp_output / "test_hough_transform_npy"),
         fileformat="blabla",
         to_disk=False,
     )
@@ -161,13 +154,12 @@ def test_extending_ht():
     assert np.shape(ht2.hough_points) == (shape_now[0] + 100, 2)
 
 
-@pytest.mark.xfail()
 def test_extending_ht_expect_fail():
+    with pytest.raises(TypeError):
+        ht.add_hough_points("hello")
 
-    ht.add_hough_points("hello")
 
-
-def test_loading_ht_into_calibrator():
+def test_loading_ht_into_calibrator(tmp_output):
     user_atlas = Atlas(
         element="Test",
         source="manual",
@@ -182,12 +174,18 @@ def test_loading_ht_into_calibrator():
             1000.0,
         ),
         user_atlas.atlas_lines,
+        config={
+            "detector": {
+                "detector_min_wave": 3000.0,
+                "detector_max_wave": 8000.0,
+            }
+        },
     )
     c.load_hough_transform(
-        os.path.join(HERE, "test_output", "test_hough_transform_npy")
+        str(tmp_output / "test_hough_transform_npy")
     )
     c.save_hough_transform(
-        os.path.join(HERE, "test_output", "test_hough_transform_npy_2")
+        str(tmp_output / "test_hough_transform_npy_2")
     )
 
 

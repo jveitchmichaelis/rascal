@@ -50,7 +50,7 @@ def test_default():
     config = {
         "detector": {
             "contiguous_range": None,
-            "num_pix": int(max_pix),
+            "num_pix": int(max_pix[0]),
             "detector_min_wave": 3000.0,
             "detector_max_wave": 9000.0,
             "detector_edge_tolerance": 500.0,

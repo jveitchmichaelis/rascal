@@ -110,7 +110,11 @@ def test_load_single_line():
         min_wavelength=0,
         max_wavelength=10,
     )
-    cal = Calibrator(peaks=np.arange(10), atlas_lines=user_atlas.atlas_lines)
+    cal = Calibrator(
+        peaks=np.arange(10),
+        atlas_lines=user_atlas.atlas_lines,
+        config={"detector": {"detector_min_wave": 0.0, "detector_max_wave": 10.0}},
+    )
 
 
 def test_load_mutliple_lines():
@@ -121,7 +125,11 @@ def test_load_mutliple_lines():
         min_wavelength=0,
         max_wavelength=10,
     )
-    cal = Calibrator(peaks=np.arange(10), atlas_lines=user_atlas.atlas_lines)
+    cal = Calibrator(
+        peaks=np.arange(10),
+        atlas_lines=user_atlas.atlas_lines,
+        config={"detector": {"detector_min_wave": 0.0, "detector_max_wave": 10.0}},
+    )
 
 
 def test_setting_a_known_pair():
@@ -133,7 +141,11 @@ def test_setting_a_known_pair():
         max_wavelength=10,
     )
     logger.info("Testing adding a known pair.")
-    cal = Calibrator(peaks=np.arange(10), atlas_lines=user_atlas.atlas_lines)
+    cal = Calibrator(
+        peaks=np.arange(10),
+        atlas_lines=user_atlas.atlas_lines,
+        config={"detector": {"detector_min_wave": 0.0, "detector_max_wave": 10.0}},
+    )
     cal.set_known_pairs(123, 456)
     assert cal.pix_known == 123
     assert cal.wave_known == 456
@@ -148,13 +160,16 @@ def test_setting_known_pairs():
         max_wavelength=10,
     )
     logger.info("Testing adding known pairs.")
-    cal = Calibrator(peaks=np.arange(10), atlas_lines=user_atlas.atlas_lines)
+    cal = Calibrator(
+        peaks=np.arange(10),
+        atlas_lines=user_atlas.atlas_lines,
+        config={"detector": {"detector_min_wave": 0.0, "detector_max_wave": 10.0}},
+    )
     cal.set_known_pairs([123, 234], [456, 567])
     assert len(cal.pix_known) == 2
     assert len(cal.wave_known) == 2
 
 
-@pytest.mark.xfail()
 def test_setting_a_none_to_known_pairs_expect_fail():
     user_atlas = Atlas(
         element="Test",
@@ -164,11 +179,15 @@ def test_setting_a_none_to_known_pairs_expect_fail():
         max_wavelength=10,
     )
     logger.info("Testing adding None as known pairs.")
-    cal = Calibrator(peaks=np.arange(10), atlas_lines=user_atlas.atlas_lines)
-    cal.set_known_pairs([1.0], [None])
+    cal = Calibrator(
+        peaks=np.arange(10),
+        atlas_lines=user_atlas.atlas_lines,
+        config={"detector": {"detector_min_wave": 0.0, "detector_max_wave": 10.0}},
+    )
+    with pytest.raises(ValueError):
+        cal.set_known_pairs([1.0], [None])
 
 
-@pytest.mark.xfail()
 def test_setting_nones_to_known_pairs_expect_fail():
     user_atlas = Atlas(
         element="Test",
@@ -178,8 +197,13 @@ def test_setting_nones_to_known_pairs_expect_fail():
         max_wavelength=10,
     )
     logger.info("Testing adding None as known pairs.")
-    cal = Calibrator(peaks=np.arange(10), atlas_lines=user_atlas.atlas_lines)
-    cal.set_known_pairs([None], [None])
+    cal = Calibrator(
+        peaks=np.arange(10),
+        atlas_lines=user_atlas.atlas_lines,
+        config={"detector": {"detector_min_wave": 0.0, "detector_max_wave": 10.0}},
+    )
+    with pytest.raises(ValueError):
+        cal.set_known_pairs([None], [None])
 
 
 element_list = ["Hg", "Ar", "Xe", "Kr"]
@@ -191,62 +215,8 @@ user_atlas = Atlas(
     max_wavelength=10,
 )
 
-cal = Calibrator(np.arange(10), user_atlas.atlas_lines)
-
-"""
-def test_get_summary_executive():
-    cal.atlas_summary(mode="executive")
-
-
-def test_get_summary_full():
-    cal.atlas_summary(mode="full")
-
-
-def test_get_summary_executive_return_string():
-    something = cal.atlas_summary(mode="executive", return_string=True)
-    assert type(something) == str
-
-
-def test_get_summary_full_return_string():
-    something = cal.atlas_summary(mode="full", return_string=True)
-    assert type(something) == str
-
-
-def test_save_executive_summary():
-    filepath = os.path.join(
-        HERE, "test_output", "test_save_atlas_executive_summary.txt"
-    )
-    cal.save_atlas_summary(
-        mode="executive",
-        filename=filepath,
-    )
-    assert os.path.exists(filepath)
-    os.remove(filepath)
-
-
-def test_save_full_summary():
-    filepath = os.path.join(
-        HERE, "test_output", "test_save_atlas_full_summary.txt"
-    )
-    cal.save_atlas_summary(
-        mode="full",
-        filename=filepath,
-    )
-    assert os.path.exists(filepath)
-    os.remove(filepath)
-
-
-
-def test_save_executive_summary_default():
-    output_path = cal.save_atlas_summary(
-        mode="executive",
-    )
-    os.remove(output_path)
-
-
-def test_save_full_summary_default():
-    output_path = cal.save_atlas_summary(
-        mode="full",
-    )
-    os.remove(output_path)
-"""
+cal = Calibrator(
+    np.arange(10),
+    user_atlas.atlas_lines,
+    config={"detector": {"detector_min_wave": 0.0, "detector_max_wave": 10.0}},
+)

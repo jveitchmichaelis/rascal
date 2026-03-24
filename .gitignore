@@ -139,8 +139,9 @@ test/unit/test_output/*
 test/integration/test_output/*
 
 
-examples/output
+examples/output_*
 
 .vscode
 
 rascal_arc.png
+scratch/*

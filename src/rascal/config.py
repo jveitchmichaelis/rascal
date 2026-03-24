@@ -109,6 +109,7 @@ class RansacConfig:
     candidate_weighted: bool = True
     degree: int = 4
     filter_close: bool = False
+    fit_type: str = "poly"
     hough_weight: float = 1.0
     inlier_tolerance: float = 5.0
     linear: bool = True
@@ -119,9 +120,9 @@ class RansacConfig:
     progress: bool = False
     rms_tolerance: float = 4.0
     sample_size: int = 5
+    match_method: str = "hungarian"
     sampler: str = "probabilistic"
     top_n_candidate: int = 5
-    type: str = "poly"
     use_msac: bool = True
 
 

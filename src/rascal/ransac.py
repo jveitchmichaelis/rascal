@@ -14,6 +14,7 @@ import numpy as np
 from dotmap import DotMap
 from omegaconf import OmegaConf
 from scipy import interpolate
+from scipy.optimize import linear_sum_assignment
 from tqdm.auto import tqdm
 
 from . import models
@@ -284,44 +285,75 @@ class RansacSolver:
 
         """
 
-        err = []
+        if self.config.match_method == "greedy":
+            return self._match_greedy(y_for_x, x, fit_coeff)
+        else:
+            return self._match_hungarian(y_for_x, x, fit_coeff)
+
+    def _match_hungarian(
+        self,
+        y_for_x: Union[list, np.ndarray],
+        x: Union[list, np.ndarray],
+        fit_coeff: Union[list, np.ndarray],
+    ):
+        # Collect all unique atlas lines that are candidates for any peak
+        all_y = np.unique(np.concatenate([y_for_x[x_i] for x_i in x]))
+        y_to_idx = {y: i for i, y in enumerate(all_y)}
+
+        n_peaks = len(x)
+        n_atlas = len(all_y)
+
+        # Build cost matrix: cost[i,j] = |polyval(x_i, coeff) - all_y[j]|
+        # Non-candidate pairs get a large sentinel value.
+        LARGE = 1e9
+        cost_matrix = np.full((n_peaks, n_atlas), LARGE)
+
+        for i, x_i in enumerate(x):
+            fit = self.polyval(x_i, fit_coeff)
+            for y in y_for_x[x_i]:
+                j = y_to_idx[y]
+                cost_matrix[i, j] = np.abs(fit - y)
+
+        # Globally optimal bijective assignment (Hungarian algorithm)
+        row_ind, col_ind = linear_sum_assignment(cost_matrix)
+
+        # Drop assignments that were to sentinel (non-candidate) slots
+        costs = cost_matrix[row_ind, col_ind]
+        valid = costs < LARGE
+
+        matched_x = x[row_ind[valid]]
+        matched_y = all_y[col_ind[valid]]
+        err = costs[valid]
+
+        assert len(np.unique(matched_x)) == len(np.unique(matched_y))
+
+        return err, matched_x, matched_y
+
+    def _match_greedy(
+        self,
+        y_for_x: Union[list, np.ndarray],
+        x: Union[list, np.ndarray],
+        fit_coeff: Union[list, np.ndarray],
+    ):
         matched_x = []
         matched_y = []
+        err = []
+        used_y = set()
 
         for x_i in x:
-
             fit = self.polyval(x_i, fit_coeff)
-
-            # Get closest match for this peak
-            errs = (fit - y_for_x[x_i]) ** 2
-            idx = np.argmin(errs)
-
-            err.append(errs[idx])
+            candidates = [(np.abs(fit - y), y) for y in y_for_x[x_i] if y not in used_y]
+            if not candidates:
+                continue
+            best_err, best_y = min(candidates)
             matched_x.append(x_i)
-            matched_y.append(y_for_x[x_i][idx])
+            matched_y.append(best_y)
+            err.append(best_err)
+            used_y.add(best_y)
 
-        err = np.array(err)
-        matched_x = np.array(matched_x)
-        matched_y = np.array(matched_y)
-
-        # Now we also need to resolve duplicate y's
-        filtered_x = []
-        filtered_y = []
-        filtered_err = []
-
-        for wavelength in np.unique(matched_y):
-
-            mask = matched_y == wavelength
-            filtered_y.append(wavelength)
-
-            err_idx = np.argmin(err[mask])
-            filtered_x.append(matched_x[mask][err_idx])
-            filtered_err.append(err[mask][err_idx])
-
-        # overwrite
-        err = np.array(filtered_err)
-        matched_x = np.array(filtered_x)
-        matched_y = np.array(filtered_y)
+        matched_x = np.asarray(matched_x)
+        matched_y = np.asarray(matched_y)
+        err = np.asarray(err)
 
         assert len(np.unique(matched_x)) == len(np.unique(matched_y))
 
@@ -379,12 +411,12 @@ class RansacSolver:
 
             tolerance = 1.96 * result.residual.std()
 
-            result.residual[result.residual > tolerance] = tolerance
+            clipped = np.minimum(result.residual, tolerance)
 
             # Remove for now: / (len(result.residual) - len(result.fit_coeffs) + 1)
             # / (weight + 1e-16)
 
-            cost = sum(result.residual) + 1e-16
+            cost = sum(clipped) + 1e-16
 
         else:
 
@@ -422,7 +454,7 @@ class RansacSolver:
                 return False
 
             # Now we do a robust fit
-            if self.config.type == "poly":
+            if self.config.fit_type == "poly":
                 try:
 
                     coeffs = models.robust_polyfit(
@@ -437,9 +469,27 @@ class RansacSolver:
             else:
                 coeffs = self.polyfit(inliers_x, inliers_y, self.config.degree)
 
-            if self._fit_valid(result):
+            # Validate using the new coefficients
+            robust_result = SolveResult(
+                fit_coeffs=coeffs,
+                residual=result.residual,
+                x=result.x,
+                y=result.y,
+                rms_tolerance=self.config.rms_tolerance,
+            )
+            if self._fit_valid(robust_result):
 
-                # Get the residual of the inliers
+                # Re-expand inliers using the robust fit coefficients - more candidates
+                # may now be within tolerance.
+                residual_robust, inliers_x, inliers_y = self._match_bijective(
+                    self.sampler.y_for_x, self.unique_x, coeffs
+                )
+                mask_robust = residual_robust < self.config.rms_tolerance
+                inliers_x = inliers_x[mask_robust]
+                inliers_y = inliers_y[mask_robust]
+                n_inliers = len(inliers_x)
+
+                # Get the residual of the (re-expanded) inliers
                 residual = self.polyval(inliers_x, coeffs) - inliers_y
                 residual[
                     np.abs(residual) > self.config.rms_tolerance

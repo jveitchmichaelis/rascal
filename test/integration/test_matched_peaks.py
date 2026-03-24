@@ -60,7 +60,7 @@ def calibrator(base_dir):
     # Load the LT SPRAT data
     spectrum2D = fits.open(
         os.path.join(
-            base_dir, "..", "examples/data_lt_sprat/v_a_20190516_57_1_0_1.fits"
+            base_dir, "..", "..", "examples", "data_lt_sprat", "v_a_20190516_57_1_0_1.fits"
         )
     )[0].data
 
@@ -217,14 +217,14 @@ def test_match_peaks_robust_refit_different_fit_deg(calibrator, result):
         check_fit(calibrator, result)
 
 
-def test_match_peaks_output(calibrator, base_dir):
+def test_match_peaks_output(calibrator, tmp_path):
     calibrator.save_matches(
-        filename=os.path.join(base_dir, "test_output", "matches"),
+        filename=str(tmp_path / "matches"),
         file_format="csv",
     )
-    assert os.path.exists(os.path.join(base_dir, "test_output", "matches.csv"))
+    assert (tmp_path / "matches.csv").exists()
     calibrator.save_matches(
-        filename=os.path.join(base_dir, "test_output", "matches"),
+        filename=str(tmp_path / "matches"),
         file_format="npy",
     )
-    assert os.path.exists(os.path.join(base_dir, "test_output", "matches.npy"))
+    assert (tmp_path / "matches.npy").exists()

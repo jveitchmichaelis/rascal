@@ -13,13 +13,11 @@ tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 logger = logging.getLogger("test_samples")
 
 
-@pytest.mark.xfail()
 def test_mismatch_length():
-
-    x = range(10)
-    y = range(5)
-
-    _ = Sampler(x, y, 3)
+    with pytest.raises(AssertionError):
+        x = range(10)
+        y = range(5)
+        _ = Sampler(x, y, 3)
 
 
 def test_exhaust_brute_sampler():

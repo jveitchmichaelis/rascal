@@ -1,9 +1,9 @@
+import importlib.resources
 import os
 from functools import partialmethod
 from unittest.mock import patch
 
 import numpy as np
-import pkg_resources
 import pytest
 
 # Suppress tqdm output
@@ -155,15 +155,14 @@ def test_load_calibration_lines_vacuum_vs_air():
 def test_load_calibration_lines_from_file():
     lines_manual = util.load_calibration_lines(
         elements="He",
-        linelist=pkg_resources.resource_filename(
-            "rascal", "arc_lines/nist_clean.csv"
+        linelist=str(
+            importlib.resources.files("rascal") / "arc_lines/nist_clean.csv"
         ),
     )
     lines = util.load_calibration_lines(elements="He")
     assert (lines[1] == lines_manual[1]).all()
 
 
-@pytest.mark.xfail()
 def test_load_calibration_lines_from_unknown_file():
     lines_manual = util.load_calibration_lines(
         elements="He",
@@ -173,7 +172,6 @@ def test_load_calibration_lines_from_unknown_file():
     assert (lines[1] == lines_manual[1]).all()
 
 
-@pytest.mark.xfail()
 def test_load_calibration_lines_from_unknown_type():
     lines_manual = util.load_calibration_lines(
         element="He",
@@ -206,7 +204,6 @@ def test_filter_multiple_element_linelist_list_min_intensity():
     )
 
 
-@pytest.mark.xfail()
 def test_filter_multiple_element_linelist_list_min_intensity_expect_fail():
     util.load_calibration_lines(
         elements=["He", "Xe", "Cu", "Ar"], min_intensity=[10.0, 50.0, 100.0]
@@ -239,7 +236,7 @@ def test_display_plot_calibration_lines_1_element(mock_show):
     )
 
 
-def test_save_plot_calibration_lines_1_element():
+def test_save_plot_calibration_lines_1_element(tmp_path):
 
     plotting.plot_calibration_lines(
         elements=["He"],
@@ -250,14 +247,12 @@ def test_save_plot_calibration_lines_1_element():
         label=True,
         display=False,
         save_fig=True,
-        filename=os.path.join(
-            base_dir, "test_output", "example_CuNeAr_calibration_lines"
-        ),
+        filename=str(tmp_path / "example_CuNeAr_calibration_lines"),
         fig_kwarg={"figsize": (30, 8)},
     )
 
 
-def test_save_plot_calibration_lines_3_elements():
+def test_save_plot_calibration_lines_3_elements(tmp_path):
 
     plotting.plot_calibration_lines(
         elements=["Cu", "Ne", "Ar"],
@@ -268,8 +263,6 @@ def test_save_plot_calibration_lines_3_elements():
         label=False,
         display=False,
         save_fig=True,
-        filename=os.path.join(
-            base_dir, "test_output", "example_CuNeAr_calibration_lines"
-        ),
+        filename=str(tmp_path / "example_CuNeAr_calibration_lines"),
         fig_kwarg={"figsize": (30, 8)},
     )

@@ -2,7 +2,6 @@ import os
 from functools import partialmethod
 
 import numpy as np
-import pkg_resources
 import pytest
 import yaml
 
@@ -34,12 +33,10 @@ def test_load_atlas_config_user_linelist():
     pass
 
 
-@pytest.mark.xfail()
 def test_load_atlas_config_expect_fail_ytype():
     pass
 
 
-@pytest.mark.xfail()
 def test_load_atlas_config_expect_fail_linelist_type():
     pass
 

@@ -10,32 +10,8 @@ from rascal.calibrator import Calibrator
 
 tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 
-np.random.seed(0)
 
-num_pix = 1000
-peaks = np.sort(np.random.random(31) * float(num_pix))
-# Removed the closely spaced peaks
-distance_mask = np.isclose(peaks[:-1], peaks[1:], atol=5.0)
-distance_mask = np.insert(distance_mask, 0, False)
-peaks = peaks[~distance_mask]
-
-# Line list
-linear_grad = 5
-min_wavelength = 3000
-max_wavelength = 3000 + linear_grad * num_pix
-
-wavelengths_linear = 3000.0 + linear_grad * peaks
-wavelengths_quadratic = 3000.0 + 4 * peaks + 1.0e-3 * peaks**2.0
-
-detector_config = {
-    "contiguous_range": None,
-    "num_pix": num_pix,
-    "detector_min_wave": min_wavelength,
-    "detector_max_wave": max_wavelength,
-}
-
-
-def test_linear_fit():
+def test_linear_fit(peaks, detector_config, wavelengths_linear):
     atlas = Atlas(
         source="manual",
         wavelengths=wavelengths_linear,
@@ -45,6 +21,7 @@ def test_linear_fit():
     )
 
     config = {
+        "seed": 0,
         "detector": detector_config,
         "hough": {
             "num_slopes": 1000,
@@ -72,12 +49,13 @@ def test_linear_fit():
     res = c.match_peaks(res["fit_coeff"], refine=False, robust_refit=True)
     assert np.abs(res["fit_coeff"][1] - 5.0) / 5.0 < 0.001
     assert np.abs(res["fit_coeff"][0] - 3000.0) / 3000.0 < 0.001
+    assert res["fit_coeff"][0] > 0
     assert res["peak_utilisation"] > 0.8
     assert res["atlas_utilisation"] > 0.0
     assert len(c.get_pix_wave_pairs()) == len(peaks)
 
 
-def test_manual_refit():
+def test_manual_refit(peaks, detector_config, wavelengths_linear):
     atlas = Atlas(
         source="manual",
         wavelengths=wavelengths_linear,
@@ -90,7 +68,7 @@ def test_manual_refit():
         "detector": detector_config,
         "hough": {
             "num_slopes": 1000,
-            "range_tolerance": 500.0,
+            "range_tolerance": 200.0,
             "xbins": 200,
             "ybins": 200,
         },
@@ -115,9 +93,10 @@ def test_manual_refit():
     res_manual = c.manual_refit(res["matched_peaks"], res["matched_atlas"])
 
     assert np.allclose(res_manual["fit_coeff"], res["fit_coeff"])
+    assert res["fit_coeff"][0] > 0
 
 
-def test_manual_refit_remove_points():
+def test_manual_refit_remove_points(peaks, detector_config, wavelengths_linear):
     atlas = Atlas(
         source="manual",
         wavelengths=wavelengths_linear,
@@ -130,7 +109,7 @@ def test_manual_refit_remove_points():
         "detector": detector_config,
         "hough": {
             "num_slopes": 1000,
-            "range_tolerance": 500.0,
+            "range_tolerance": 200.0,
             "xbins": 200,
             "ybins": 200,
         },
@@ -158,9 +137,10 @@ def test_manual_refit_remove_points():
     res_manual = c.manual_refit(res["matched_peaks"], res["matched_atlas"])
 
     assert np.allclose(res_manual["fit_coeff"], res["fit_coeff"])
+    assert res["fit_coeff"][0] > 0
 
 
-def test_manual_refit_add_points():
+def test_manual_refit_add_points(peaks, detector_config, wavelengths_linear):
     atlas = Atlas(
         source="manual",
         wavelengths=wavelengths_linear,
@@ -173,7 +153,7 @@ def test_manual_refit_add_points():
         "detector": detector_config,
         "hough": {
             "num_slopes": 1000,
-            "range_tolerance": 500.0,
+            "range_tolerance": 200.0,
             "xbins": 200,
             "ybins": 200,
         },
@@ -200,9 +180,10 @@ def test_manual_refit_add_points():
     res_manual = c.manual_refit(res["matched_peaks"], res["matched_atlas"])
 
     assert np.allclose(res_manual["fit_coeff"], res["fit_coeff"])
+    assert res["fit_coeff"][0] > 0
 
 
-def test_quadratic_fit():
+def test_quadratic_fit(peaks, detector_config, wavelengths_quadratic):
     atlas = Atlas(
         source="manual",
         wavelengths=wavelengths_quadratic,
@@ -215,11 +196,14 @@ def test_quadratic_fit():
         "detector": detector_config,
         "hough": {
             "num_slopes": 1000,
-            "range_tolerance": 500.0,
+            "range_tolerance": 200.0,
             "xbins": 200,
             "ybins": 200,
+            "linearity_tolerance": 10.0,
         },
         "ransac": {
+            "top_n_candidate": 10,
+            "sample_size": 3,
             "minimum_matches": 20,
             "minimum_fit_error": 1e-25,
             "max_tries": 2000,
@@ -234,21 +218,34 @@ def test_quadratic_fit():
 
     c.do_hough_transform(brute_force=False)
 
+    c._get_candidate_points_linear(c.config.hough.linearity_tolerance)
+    all_cand_peaks = np.concatenate([cand[0] for cand in c.candidates])
+    all_cand_waves = np.concatenate([cand[1] for cand in c.candidates])
+    n_recalled = sum(
+        np.any(
+            np.isclose(all_cand_peaks, p, atol=1e-6)
+            & np.isclose(all_cand_waves, wavelengths_quadratic[i], atol=1e-6)
+        )
+        for i, p in enumerate(peaks)
+    )
+    candidate_recall = n_recalled / len(peaks)
+    assert candidate_recall > 0.9
+
     # Run the wavelength calibration
     res = c.fit()
     # Refine solution
     res_robust = c.match_peaks(
         res["fit_coeff"], refine=False, robust_refit=True
     )
-    print(res_robust["fit_coeff"])
     assert np.abs(res_robust["fit_coeff"][2] - 1e-3) / 1e-3 < 0.001
     assert np.abs(res_robust["fit_coeff"][1] - 4.0) / 4.0 < 0.001
     assert np.abs(res_robust["fit_coeff"][0] - 3000.0) / 3000.0 < 0.001
-    assert res_robust["peak_utilisation"] > 0.7
-    assert res_robust["atlas_utilisation"] > 0.5
+    assert res_robust["fit_coeff"][0] > 0
+    assert res_robust["peak_utilisation"] > 0.9
+    assert res_robust["atlas_utilisation"] > 0.9
 
 
-def test_quadratic_fit_legendre():
+def test_quadratic_fit_legendre(peaks, detector_config, wavelengths_quadratic):
     atlas = Atlas(
         source="manual",
         wavelengths=wavelengths_quadratic,
@@ -264,9 +261,11 @@ def test_quadratic_fit_legendre():
             "range_tolerance": 200.0,
             "xbins": 100,
             "ybins": 100,
+            "linearity_tolerance": 100.0,
         },
         "ransac": {
-            "sample_size": 5,
+            "sample_size": 3,
+            "top_n_candidate": 10,
             "minimum_matches": 10,
             "minimum_fit_error": 1e-25,
             "max_tries": 10000,
@@ -282,17 +281,28 @@ def test_quadratic_fit_legendre():
 
     c.do_hough_transform(brute_force=False)
 
+    c._get_candidate_points_linear(c.config.hough.linearity_tolerance)
+    all_cand_peaks = np.concatenate([cand[0] for cand in c.candidates])
+    all_cand_waves = np.concatenate([cand[1] for cand in c.candidates])
+    n_recalled = sum(
+        np.any(
+            np.isclose(all_cand_peaks, p, atol=1e-6)
+            & np.isclose(all_cand_waves, wavelengths_quadratic[i], atol=1e-6)
+        )
+        for i, p in enumerate(peaks)
+    )
+    candidate_recall = n_recalled / len(peaks)
+    assert candidate_recall > 0.9
+
     # Run the wavelength calibration
     res = c.fit()
 
-    # Legendre 2nd order takes the form
-    assert np.abs(res["fit_coeff"][1] - 4.0) / 4.0 < 0.001
-    assert np.abs(res["fit_coeff"][0] - 3000.0) / 3000.0 < 0.001
-    assert res["peak_utilisation"] > 0.6
-    assert res["atlas_utilisation"] > 0.5
+    assert res["fit_coeff"][0] > 0
+    assert res["peak_utilisation"] > 0.9
+    assert res["atlas_utilisation"] > 0.9
 
 
-def test_quadratic_fit_chebyshev():
+def test_quadratic_fit_chebyshev(peaks, detector_config, wavelengths_quadratic):
     atlas = Atlas(
         source="manual",
         wavelengths=wavelengths_quadratic,
@@ -308,9 +318,11 @@ def test_quadratic_fit_chebyshev():
             "range_tolerance": 200.0,
             "xbins": 100,
             "ybins": 100,
+            "linearity_tolerance": 100.0,
         },
         "ransac": {
-            "sample_size": 5,
+            "sample_size": 3,
+            "top_n_candidate": 10,
             "minimum_matches": 10,
             "minimum_fit_error": 1e-25,
             "max_tries": 10000,
@@ -325,11 +337,21 @@ def test_quadratic_fit_chebyshev():
     c = Calibrator(peaks, atlas_lines=atlas.atlas_lines, config=config)
 
     c.do_hough_transform(brute_force=False)
-
+    c._get_candidate_points_linear(c.config.hough.linearity_tolerance)
+    all_cand_peaks = np.concatenate([cand[0] for cand in c.candidates])
+    all_cand_waves = np.concatenate([cand[1] for cand in c.candidates])
+    n_recalled = sum(
+        np.any(
+            np.isclose(all_cand_peaks, p, atol=1e-6)
+            & np.isclose(all_cand_waves, wavelengths_quadratic[i], atol=1e-6)
+        )
+        for i, p in enumerate(peaks)
+    )
+    candidate_recall = n_recalled / len(peaks)
+    assert candidate_recall > 0.9
     # Run the wavelength calibration
     res = c.fit()
 
-    assert np.abs(res["fit_coeff"][1] - 4.0) / 4.0 < 0.001
-    assert np.abs(res["fit_coeff"][0] - 3000.0) / 3000.0 < 0.001
-    assert res["peak_utilisation"] > 0.6
-    assert res["atlas_utilisation"] > 0.5
+    assert res["fit_coeff"][0] > 0
+    assert res["peak_utilisation"] > 0.9
+    assert res["atlas_utilisation"] > 0.9

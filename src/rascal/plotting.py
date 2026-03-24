@@ -137,35 +137,35 @@ def plot_search_space(
     x = np.array(calibrator.contiguous_pixel)
 
     m_1 = (
-        calibrator.config.data.detector_max_wave
-        - calibrator.config.data.detector_min_wave
+        calibrator.config.detector.detector_max_wave
+        - calibrator.config.detector.detector_min_wave
     ) / max(x)
-    y_1 = m_1 * x + calibrator.config.data.detector_min_wave
+    y_1 = m_1 * x + calibrator.config.detector.detector_min_wave
 
     m_2 = (
-        calibrator.config.data.detector_max_wave
+        calibrator.config.detector.detector_max_wave
         + calibrator.config.hough.range_tolerance
         - (
-            calibrator.config.data.detector_min_wave
+            calibrator.config.detector.detector_min_wave
             + calibrator.config.hough.range_tolerance
         )
     ) / max(x)
     y_2 = (
         m_2 * x
-        + calibrator.config.data.detector_min_wave
+        + calibrator.config.detector.detector_min_wave
         + calibrator.config.hough.range_tolerance
     )
 
     m_3 = (
-        calibrator.config.data.detector_max_wave
+        calibrator.config.detector.detector_max_wave
         - calibrator.config.hough.range_tolerance
         - (
-            calibrator.config.data.detector_min_wave
+            calibrator.config.detector.detector_min_wave
             - calibrator.config.hough.range_tolerance
         )
     ) / max(x)
     y_3 = m_3 * x + (
-        calibrator.config.data.detector_min_wave
+        calibrator.config.detector.detector_min_wave
         - calibrator.config.hough.range_tolerance
     )
 
@@ -190,17 +190,17 @@ def plot_search_space(
         # Tolerance region around the minimum wavelength
         plt.text(
             5,
-            calibrator.config.data.detector_min_wave + 100,
+            calibrator.config.detector.detector_min_wave + 100,
             "Min wavelength (user-supplied)",
         )
         plt.hlines(
-            calibrator.config.data.detector_min_wave,
+            calibrator.config.detector.detector_min_wave,
             0,
             max(x),
             color="k",
         )
         plt.hlines(
-            calibrator.config.data.detector_min_wave
+            calibrator.config.detector.detector_min_wave
             + calibrator.config.hough.range_tolerance,
             0,
             max(x),
@@ -209,7 +209,7 @@ def plot_search_space(
             color="k",
         )
         plt.hlines(
-            calibrator.config.data.detector_min_wave
+            calibrator.config.detector.detector_min_wave
             - calibrator.config.hough.range_tolerance,
             0,
             max(x),
@@ -221,17 +221,17 @@ def plot_search_space(
         # Tolerance region around the maximum wavelength
         plt.text(
             5,
-            calibrator.config.data.detector_max_wave + 100,
+            calibrator.config.detector.detector_max_wave + 100,
             "Max wavelength (user-supplied)",
         )
         plt.hlines(
-            calibrator.config.data.detector_max_wave,
+            calibrator.config.detector.detector_max_wave,
             0,
             max(x),
             color="k",
         )
         plt.hlines(
-            calibrator.config.data.detector_max_wave
+            calibrator.config.detector.detector_max_wave
             + calibrator.config.hough.range_tolerance,
             0,
             max(x),
@@ -240,7 +240,7 @@ def plot_search_space(
             color="k",
         )
         plt.hlines(
-            calibrator.config.data.detector_max_wave
+            calibrator.config.detector.detector_max_wave
             - calibrator.config.hough.range_tolerance,
             0,
             max(x),
@@ -276,9 +276,9 @@ def plot_search_space(
 
         plt.xlim(0, max(x))
         plt.ylim(
-            calibrator.config.data.detector_min_wave
+            calibrator.config.detector.detector_min_wave
             - calibrator.config.hough.range_tolerance,
-            calibrator.config.data.detector_max_wave
+            calibrator.config.detector.detector_max_wave
             + calibrator.config.hough.range_tolerance,
         )
 
@@ -352,8 +352,8 @@ def plot_search_space(
             go.Scatter(
                 x=[0, max(x)],
                 y=[
-                    calibrator.config.data.detector_min_wave,
-                    calibrator.config.data.detector_min_wave,
+                    calibrator.config.detector.detector_min_wave,
+                    calibrator.config.detector.detector_min_wave,
                 ],
                 name="Min/Maximum",
                 mode="lines",
@@ -364,9 +364,9 @@ def plot_search_space(
             go.Scatter(
                 x=[0, max(x)],
                 y=[
-                    calibrator.config.data.detector_min_wave
+                    calibrator.config.detector.detector_min_wave
                     + calibrator.config.hough.range_tolerance,
-                    calibrator.config.data.detector_min_wave
+                    calibrator.config.detector.detector_min_wave
                     + calibrator.config.hough.range_tolerance,
                 ],
                 name="Tolerance Range",
@@ -378,9 +378,9 @@ def plot_search_space(
             go.Scatter(
                 x=[0, max(x)],
                 y=[
-                    calibrator.config.data.detector_min_wave
+                    calibrator.config.detector.detector_min_wave
                     - calibrator.config.hough.range_tolerance,
-                    calibrator.config.data.detector_min_wave
+                    calibrator.config.detector.detector_min_wave
                     - calibrator.config.hough.range_tolerance,
                 ],
                 showlegend=False,
@@ -394,8 +394,8 @@ def plot_search_space(
             go.Scatter(
                 x=[0, max(x)],
                 y=[
-                    calibrator.config.data.detector_max_wave,
-                    calibrator.config.data.detector_max_wave,
+                    calibrator.config.detector.detector_max_wave,
+                    calibrator.config.detector.detector_max_wave,
                 ],
                 showlegend=False,
                 mode="lines",
@@ -406,9 +406,9 @@ def plot_search_space(
             go.Scatter(
                 x=[0, max(x)],
                 y=[
-                    calibrator.config.data.detector_max_wave
+                    calibrator.config.detector.detector_max_wave
                     + calibrator.config.hough.range_tolerance,
-                    calibrator.config.data.detector_max_wave
+                    calibrator.config.detector.detector_max_wave
                     + calibrator.config.hough.range_tolerance,
                 ],
                 showlegend=False,
@@ -420,9 +420,9 @@ def plot_search_space(
             go.Scatter(
                 x=[0, max(x)],
                 y=[
-                    calibrator.config.data.detector_max_wave
+                    calibrator.config.detector.detector_max_wave
                     - calibrator.config.hough.range_tolerance,
-                    calibrator.config.data.detector_max_wave
+                    calibrator.config.detector.detector_max_wave
                     - calibrator.config.hough.range_tolerance,
                 ],
                 showlegend=False,
@@ -486,9 +486,9 @@ def plot_search_space(
             yaxis=dict(
                 title="Wavelength / A",
                 range=[
-                    calibrator.config.data.detector_min_wave
+                    calibrator.config.detector.detector_min_wave
                     - calibrator.config.hough.range_tolerance * 1.1,
-                    calibrator.config.data.detector_max_wave
+                    calibrator.config.detector.detector_max_wave
                     + calibrator.config.hough.range_tolerance * 1.1,
                 ],
                 showgrid=True,
@@ -525,7 +525,7 @@ def plot_search_space(
 
                 elif t in ["jpg", "png", "svg", "pdf"]:
 
-                    pio.write_image(fig, filename_output + "." + t)
+                    logging.warning(f"Static image export ({t}) via kaleido is deprecated and no longer supported. Use fig_type='iframe' to save as HTML instead.")
 
         if display:
 
@@ -689,9 +689,10 @@ def plot_fit(
             calibrator.matched_peaks, calibrator.matched_atlas, matched_idx
         ):
 
-            p_idx = int(
-                calibrator.peaks[np.where(calibrator.peaks_effective == p)[0]]
-            )
+            _matches = np.where(calibrator.peaks_effective == p)[0]
+            if len(_matches) == 0:
+                continue
+            p_idx = int(calibrator.peaks[_matches[0]])
 
             if spectrum is not None:
 
@@ -847,9 +848,8 @@ def plot_fit(
 
             x = calibrator.polyval(p, calibrator.res["fit_coeff"])
 
-            p_idx = int(
-                calibrator.peaks[np.where(calibrator.peaks_effective == p)[0]]
-            )
+            _matches = np.where(calibrator.peaks_effective == p)[0]
+            p_idx = int(calibrator.peaks[_matches[0]])
 
             # Add vlines
             fig.add_shape(
@@ -1033,7 +1033,7 @@ def plot_fit(
 
                 elif t in ["jpg", "png", "svg", "pdf"]:
 
-                    pio.write_image(fig, filename_output + "." + t)
+                    logging.warning(f"Static image export ({t}) via kaleido is deprecated and no longer supported. Use fig_type='iframe' to save as HTML instead.")
 
         if display:
 
@@ -1283,7 +1283,7 @@ def plot_arc(
 
                 elif t in ["jpg", "png", "svg", "pdf"]:
 
-                    pio.write_image(fig, filename_output + "." + t)
+                    logging.warning(f"Static image export ({t}) via kaleido is deprecated and no longer supported. Use fig_type='iframe' to save as HTML instead.")
 
         if display:
 
