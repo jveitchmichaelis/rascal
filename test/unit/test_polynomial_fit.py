@@ -21,7 +21,6 @@ def test_linear_fit(peaks, detector_config, wavelengths_linear):
     )
 
     config = {
-        "seed": 0,
         "detector": detector_config,
         "hough": {
             "num_slopes": 1000,
@@ -34,6 +33,7 @@ def test_linear_fit(peaks, detector_config, wavelengths_linear):
             "minimum_fit_error": 1e-25,
             "max_tries": 500,
             "degree": 1,
+            "sample_size": 3
         },
     }
 
@@ -77,6 +77,7 @@ def test_manual_refit(peaks, detector_config, wavelengths_linear):
             "minimum_fit_error": 1e-25,
             "max_tries": 500,
             "degree": 1,
+            "sample_size": 3
         },
     }
 
@@ -118,6 +119,7 @@ def test_manual_refit_remove_points(peaks, detector_config, wavelengths_linear):
             "minimum_fit_error": 1e-25,
             "max_tries": 500,
             "degree": 1,
+            "sample_size": 3
         },
     }
 
@@ -162,6 +164,7 @@ def test_manual_refit_add_points(peaks, detector_config, wavelengths_linear):
             "minimum_fit_error": 1e-25,
             "max_tries": 500,
             "degree": 1,
+            "sample_size": 3
         },
     }
 
@@ -203,7 +206,7 @@ def test_quadratic_fit(peaks, detector_config, wavelengths_quadratic):
         },
         "ransac": {
             "top_n_candidate": 10,
-            "sample_size": 3,
+            "sample_size": 4,
             "minimum_matches": 20,
             "minimum_fit_error": 1e-25,
             "max_tries": 2000,
@@ -264,11 +267,11 @@ def test_quadratic_fit_legendre(peaks, detector_config, wavelengths_quadratic):
             "linearity_tolerance": 100.0,
         },
         "ransac": {
-            "sample_size": 3,
+            "sample_size": 4,
             "top_n_candidate": 10,
             "minimum_matches": 10,
             "minimum_fit_error": 1e-25,
-            "max_tries": 10000,
+            "max_tries": 500,
             "rms_tolerance": 5.0,
             "inlier_tolerance": 2.0,
             "degree": 2,
@@ -321,11 +324,11 @@ def test_quadratic_fit_chebyshev(peaks, detector_config, wavelengths_quadratic):
             "linearity_tolerance": 100.0,
         },
         "ransac": {
-            "sample_size": 3,
+            "sample_size": 4,
             "top_n_candidate": 10,
             "minimum_matches": 10,
             "minimum_fit_error": 1e-25,
-            "max_tries": 10000,
+            "max_tries": 500,
             "rms_tolerance": 5.0,
             "inlier_tolerance": 2.0,
             "degree": 2,
