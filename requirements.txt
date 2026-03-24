@@ -1,6 +1,5 @@
 astropy
 dotmap
-kaleido
 matplotlib
 numpy
 omegaconf
