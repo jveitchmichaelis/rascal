@@ -16,31 +16,25 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
 
     steps:
-    - uses: actions/checkout@v2
-    - uses: s-weigand/setup-conda@v1
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+    - uses: actions/checkout@v5
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v6
       with:
-        python-version: ${{ matrix.python-version }}
+          python-version: ${{ matrix.python-version }}
+
+    - name: Setup venv
+      run: uv python install
+
     - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        python -m pip install flake8 coverage psutil requests kaleido
-        python -m pip install -r requirements.txt
-        python -m pip install -r test-requirements.txt
-        python -m pip install -e .
-    - name: Lint with flake8
-      run: |
-        # stop the build if there are Python syntax errors or undefined names
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      run: uv sync --all-extras --dev
+
     - name: Test with pytest
       run: |
-        coverage run -m pytest --disable-warnings -p no:warnings test
+        uv run python -m coverage run -m pytest -v --disable-warnings -p no:warnings test
     - name: Generate Coveralls reports
       if: startsWith(matrix.os, 'ubuntu')
       uses: AndreMiras/coveralls-python-action@develop

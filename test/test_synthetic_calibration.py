@@ -29,9 +29,7 @@ def test_default():
     c.set_calibrator_properties(num_pix=768)
 
     # Setup the Hough transform parameters
-    c.set_hough_properties(
-        range_tolerance=100.0, min_wavelength=100.0, max_wavelength=1500.0
-    )
+    c.set_hough_properties(range_tolerance=100.0, min_wavelength=100.0, max_wavelength=1500.0)
 
     # Add our fake lines as the atlas
     a.add_user_atlas(elements=["Test"] * len(waves), wavelengths=waves)
@@ -40,22 +38,17 @@ def test_default():
     assert len(c.atlas.atlas_lines) > 0
 
     # And let's try and fit...
-    best_p, x, y, rms, residual, peak_utilisation, atlas_utilisation = c.fit(
-        max_tries=500
-    )
+    best_p, _, _, _, _, _, _ = c.fit(max_tries=500)
 
     (
-        best_p,
-        x_fit,
-        y_fit,
+        _,
+        _,
+        _,
         rms,
-        residual,
+        _,
         peak_utilisation,
         atlas_utilisation,
     ) = c.match_peaks(best_p, refine=False, robust_refit=True)
-
-    fit_diff = c.polyval(x_fit, best_p) - y_fit
-    rms = np.sqrt(np.sum(fit_diff**2 / len(x_fit)))
 
     assert peak_utilisation > 0.7
     assert atlas_utilisation > 0.0
@@ -75,6 +68,8 @@ def test_get_candidate_points_poly():
     waves = np.linspace(200, 1200, num=25)
 
     peaks, waves = s.get_pixels(waves)
+    # add some minimal noise
+    peaks = np.random.normal(peaks, 0.01)
     assert len(peaks) > 0
 
     # Set up the calibrator with the pixel values of our
@@ -87,9 +82,7 @@ def test_get_candidate_points_poly():
     c.set_calibrator_properties(num_pix=768)
 
     # Setup the Hough transform parameters
-    c.set_hough_properties(
-        range_tolerance=100.0, min_wavelength=100.0, max_wavelength=1500.0
-    )
+    c.set_hough_properties(range_tolerance=100.0, min_wavelength=100.0, max_wavelength=1500.0)
 
     c.set_ransac_properties(linear=False, minimum_fit_error=1e-12)
 
@@ -99,22 +92,17 @@ def test_get_candidate_points_poly():
     assert len(c.atlas.atlas_lines) > 0
 
     # And let's try and fit...
-    best_p, x, y, rms, residual, peak_utilisation, atlas_utilisation = c.fit(
-        max_tries=500, fit_coeff=best_p
-    )
+    best_p, _, _, _, _, _, _ = c.fit(max_tries=500, fit_coeff=best_p)
 
     (
-        best_p,
-        x_fit,
-        y_fit,
+        _,
+        _,
+        _,
         rms,
-        residual,
+        _,
         peak_utilisation,
         atlas_utilisation,
     ) = c.match_peaks(best_p, refine=True, robust_refit=True)
-
-    fit_diff = c.polyval(x_fit, best_p) - y_fit
-    rms = np.sqrt(np.sum(fit_diff**2 / len(x_fit)))
 
     assert peak_utilisation > 0.7
     assert atlas_utilisation > 0.0

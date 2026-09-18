@@ -1,12 +1,4 @@
 repos:
--   repo: https://github.com/psf/black
-    rev: 23.1.0
-    hooks:
-    - id: black
-      language_version: python3
-      args: # arguments to configure black
-        - --line-length=79
-
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.4.0
     hooks:
@@ -23,20 +15,12 @@ repos:
     - id: debug-statements
     - id: requirements-txt-fixer
 
--   repo: local
-    hooks:
-    - id: remarklint
-      name: remarklint
-      language: node
-      entry: remark
-      types: [markdown]
-      args: ["--frail", "--quiet"]
-      additional_dependencies:
-        [
-          remark,
-          remark-lint,
-          remark-cli,
-          remark-preset-lint-recommended,
-          remark-lint-list-item-indent,
-          remark-lint-no-undefined-references,
-        ]
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  # Ruff version.
+  rev: v0.14.0
+  hooks:
+    # Run the linter.
+    - id: ruff-check
+      args: [ --fix ]
+    # Run the formatter.
+    - id: ruff-format

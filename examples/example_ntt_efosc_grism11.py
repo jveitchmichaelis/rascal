@@ -15,9 +15,7 @@ peaks, _ = find_peaks(spectrum, prominence=200, distance=10, threshold=None)
 peaks_refined = refine_peaks(spectrum, peaks, window_width=3)
 
 c = Calibrator(peaks_refined, spectrum)
-c.set_calibrator_properties(
-    num_pix=len(spectrum), plotting_library="matplotlib", log_level="info"
-)
+c.set_calibrator_properties(num_pix=len(spectrum), plotting_library="matplotlib", log_level="info")
 
 c.plot_arc()
 
