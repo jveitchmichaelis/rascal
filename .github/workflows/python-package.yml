@@ -38,12 +38,20 @@ jobs:
         run: uv sync --all-extras --dev --locked
 
       - name: Test with pytest
+        env:
+          MPLBACKEND: Agg
         run: uv run python -m coverage run -m pytest -v --disable-warnings -p no:warnings test
+
+      - name: Generate coverage report
+        if: startsWith(matrix.os, 'ubuntu')
+        run: uv run python -m coverage xml
 
       - name: Generate Coveralls reports
         if: startsWith(matrix.os, 'ubuntu')
         uses: coverallsapp/github-action@v2
         with:
+          file: coverage.xml
+          format: cobertura
           parallel: true
           flag-name: Test with pytest
 
