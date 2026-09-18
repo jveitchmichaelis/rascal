@@ -1024,7 +1024,7 @@ class Calibrator:
             - (self.min_intercept - self.range_tolerance - self.linearity_tolerance)
         ) / np.ptp(self.pixel_list)
 
-        if self.atlas is not None:
+        if (self.atlas is not None) and (self.peaks is not None):
             self._generate_pairs()
 
     def set_ransac_properties(

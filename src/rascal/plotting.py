@@ -714,7 +714,9 @@ def plot_fit(
 
         except Exception as e:
             calibrator.logger.error(e)
-            calibrator.logger.error("Spectrum is not provided, it cannot be plotted.")
+            calibrator.logger.error(
+                "Spectrum is not provided, it cannot be plotted."
+            )
 
     if spectrum is not None:
         if log_spectrum:
@@ -769,7 +771,8 @@ def plot_fit(
         all_diff = []
 
         first_one = True
-        for p, x in zip(calibrator.matched_peaks, calibrator.matched_atlas):
+        for p in calibrator.peaks:
+            x = calibrator.polyval(p, fit_coeff)
             diff = calibrator.atlas.get_lines() - x
             idx = np.argmin(np.abs(diff))
             all_diff.append(diff[idx])
@@ -942,7 +945,27 @@ def plot_fit(
                 if spectrum is not None:
                     fitted_peaks_adu.append(spectrum[int(calibrator.pix_to_rawpix(p))])
                 fitted_diff.append(diff[idx])
-                calibrator.logger.info("- matched to {} A".format(calibrator.atlas.get_lines()[idx]))
+                calibrator.logger.info(
+                    "- matched to {} A".format(
+                        calibrator.atlas.get_lines()[idx]
+                    )
+                )
+
+            fig.add_annotation(
+                x=x,
+                y=text_box_pos,
+                xref="x",
+                yref="y3",
+                text="{}:{:1.2f}".format(
+                    calibrator.atlas.get_elements()[idx],
+                    calibrator.atlas.get_lines()[idx],
+                ),
+                textangle=-90,
+                showarrow=False,
+                bordercolor="#000000",
+                borderwidth=1,
+                bgcolor="#FFFFFF",
+            )
 
         x_fitted = calibrator.polyval(fitted_peaks, fit_coeff)
 

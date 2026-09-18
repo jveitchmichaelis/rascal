@@ -1,5 +1,4 @@
-# This workflow will install Python dependencies, run tests and lint with a variety of Python versions
-# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+# This workflow installs dependencies and runs tests across supported Python versions.
 
 name: Python package
 
@@ -9,44 +8,58 @@ on:
   pull_request:
     branches: [main, dev-0.3.X]
 
+permissions:
+  contents: read
+
 jobs:
   build:
 
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: ["3.10", "3.11", "3.12", "3.13"]
 
     steps:
-    - uses: actions/checkout@v5
+      - uses: actions/checkout@v5
 
-    - name: Install uv
-      uses: astral-sh/setup-uv@v6
-      with:
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
           python-version: ${{ matrix.python-version }}
 
-    - name: Setup venv
-      run: uv python install
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
 
-    - name: Install dependencies
-      run: uv sync --all-extras --dev
+      - name: Install dependencies
+        run: uv sync --all-extras --dev --locked
 
-    - name: Test with pytest
-      run: |
-        uv run python -m coverage run -m pytest -v --disable-warnings -p no:warnings test
-    - name: Generate Coveralls reports
-      if: startsWith(matrix.os, 'ubuntu')
-      uses: AndreMiras/coveralls-python-action@develop
-      with:
-        parallel: true
-        flag-name: Test with pytest
+      - name: Test with pytest
+        env:
+          MPLBACKEND: Agg
+        run: uv run python -m coverage run -m pytest -v --disable-warnings -p no:warnings test
+
+      - name: Generate coverage report
+        if: startsWith(matrix.os, 'ubuntu')
+        run: uv run python -m coverage xml
+
+      - name: Generate Coveralls reports
+        if: startsWith(matrix.os, 'ubuntu')
+        uses: coverallsapp/github-action@v2
+        with:
+          file: coverage.xml
+          format: cobertura
+          parallel: true
+          flag-name: Test with pytest
 
   coveralls_finish:
     needs: build
     runs-on: ubuntu-latest
     steps:
-    - name: Coveralls Finished
-      uses: AndreMiras/coveralls-python-action@develop
-      with:
-        parallel-finished: true
+      - name: Coveralls Finished
+        uses: coverallsapp/github-action@v2
+        with:
+          parallel-finished: true
