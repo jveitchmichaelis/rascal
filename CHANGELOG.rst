@@ -1,3 +1,12 @@
+Version 0.3.10
+-------------
+
+:Date: 4 Jun 2023
+
+* `@cylammarco <https://github.com/cylammarco>`__:
+
+  * Calibrator can be initialised if peaks is None
+
 Version 0.3.9
 -------------
 

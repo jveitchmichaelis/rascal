@@ -1,8 +1,8 @@
 import os
+from importlib.resources import as_file, files
 
 import numpy as np
 from scipy.optimize import curve_fit
-from importlib.resources import files
 
 
 def get_vapour_pressure(temperature):
@@ -333,8 +333,9 @@ def load_calibration_lines(
     # Element, wavelength, intensity
     if isinstance(linelist, str):
         if linelist.lower() == "nist":
-            file_path = files("rascal").joinpath("arc_lines/nist_clean.csv")
-            lines = np.loadtxt(file_path, delimiter=",", dtype=">U12")
+            resource = files("rascal").joinpath("arc_lines/nist_clean.csv")
+            with as_file(resource) as file_path:
+                lines = np.loadtxt(file_path, delimiter=",", dtype=">U12")
         elif os.path.exists(linelist):
             lines = np.loadtxt(linelist, delimiter=",", dtype=">U12")
         else:
@@ -448,7 +449,7 @@ def refine_peaks(spectrum, peaks, window_width=10, distance=None):
     length = len(spectrum)
 
     for peak in peaks:
-        y = spectrum[max(0, int(peak) - window_width) : min(int(peak) + window_width, length)]
+        y = spectrum[max(0, int(peak) - window_width):min(int(peak) + window_width, length)]
         y /= np.nanmax(y)
         x = np.arange(len(y))
 

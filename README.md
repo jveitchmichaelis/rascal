@@ -6,7 +6,7 @@
 [![PyPI version](https://badge.fury.io/py/rascal.svg)](https://badge.fury.io/py/rascal)
 [![Downloads](https://pepy.tech/badge/rascal/month)](https://pepy.tech/project/rascal)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4117514.svg)](https://doi.org/10.5281/zenodo.4117514)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Code style: Ruff](https://img.shields.io/badge/code%20style-Ruff-261230.svg)](https://docs.astral.sh/ruff/)
 
 Rascal is a library for automated spectrometer wavelength calibration. It has been designed primarily for astrophysics applications, but should be usable with spectra captured from any similar spectrometer.
 
@@ -24,16 +24,17 @@ More background information can be referred to this [arXiv article](https://ui.a
 
 ## Dependencies
 
-*   python >= 3.7
-*   numpy>=1.16,<1.24
-*   scipy>=1.3.3
-*   pynverse>=0.1.4
-*   matplotlib>=3.0.3
-*   tqdm>=4.48.0
+*   Python 3.10 to 3.13
+*   kaleido>=1.1.0
+*   matplotlib>=3.10.6
+*   numpy>=2.2.6
+*   pynverse>=0.1.4.6
+*   scipy>=1.15.3
+*   tqdm>=4.67.1
 
 ## Optional Dependencies
 
-*   [plotly](https://github.com/plotly/plotly.py) >= 4.0
+*   [plotly](https://github.com/plotly/plotly.py)
 
 ## Installation
 
@@ -51,7 +52,7 @@ The [quickstart guide](https://rascal.readthedocs.io/en/latest/tutorial/quicksta
 
 If you are interested in contributing code to the project, thank you! For those unfamiliar with the process of contributing to an open-source project, you may want to read through Github’s own short informational section on how to submit a [contribution](https://opensource.guide/how-to-contribute/#how-to-submit-a-contribution) or send me a message.
 
-Style -- we now use black for formatting, you can easily set this up using a pre-commit hook.
+Style -- we use Ruff for linting and formatting, which you can easily set up using a pre-commit hook.
 
     pip install pre-commit
     pre-commit install
