@@ -22,7 +22,11 @@ import numpy as np
 import yaml
 from omegaconf import OmegaConf
 
-from .util import filter_distance, vacuum_to_air_wavelength
+from .util import (
+    air_to_vacuum_wavelength,
+    filter_distance,
+    vacuum_to_air_wavelength,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +87,7 @@ class Atlas:
     min_distance: float = 10.0
     brightest_n_lines: Optional[int] = field(default=None)
     vacuum: bool = False
+    input_vacuum: bool = False
     pressure: float = 101325.0
     temperature: float = 273.15
     relative_humidity: float = 0.0
@@ -124,9 +129,15 @@ class Atlas:
         elif not isinstance(self.intensities, list):
             self.intensities = list(self.intensities)
 
-        if self.vacuum:
-
+        if self.input_vacuum and not self.vacuum:
             self.wavelengths = vacuum_to_air_wavelength(
+                self.wavelengths,
+                self.temperature,
+                self.pressure,
+                self.relative_humidity,
+            )
+        elif not self.input_vacuum and self.vacuum:
+            self.wavelengths = air_to_vacuum_wavelength(
                 self.wavelengths,
                 self.temperature,
                 self.pressure,

@@ -258,3 +258,68 @@ def test_atlas_min_distance_filtering():
     diffs = np.diff(lines)
     assert np.all(diffs >= 50.0)
 
+
+def test_atlas_vacuum_consistent_manual_and_nist():
+    # NIST: vacuum=True returns longer (vacuum) wavelengths than vacuum=False (air)
+    nist_air = Atlas(
+        element="He I",
+        source="nist",
+        min_wavelength=4000.0,
+        max_wavelength=7000.0,
+        min_distance=0.0,
+        vacuum=False,
+    )
+    nist_vac = Atlas(
+        element="He I",
+        source="nist",
+        min_wavelength=4000.0,
+        max_wavelength=7000.0,
+        min_distance=0.0,
+        vacuum=True,
+    )
+    assert len(nist_air) == len(nist_vac) > 0
+    assert (np.array(nist_vac.get_lines()) > np.array(nist_air.get_lines())).all()
+
+    # Manual: vacuum=True also returns longer (vacuum) wavelengths than vacuum=False (air)
+    man_air = Atlas(
+        element="Test",
+        source="manual",
+        wavelengths=[5000.0, 6000.0],
+        min_wavelength=4000.0,
+        max_wavelength=7000.0,
+        vacuum=False,
+    )
+    man_vac = Atlas(
+        element="Test",
+        source="manual",
+        wavelengths=[5000.0, 6000.0],
+        min_wavelength=4000.0,
+        max_wavelength=7000.0,
+        vacuum=True,
+    )
+    assert (np.array(man_vac.get_lines()) > np.array(man_air.get_lines())).all()
+
+    # Manual with input_vacuum=True, vacuum=False converts vacuum -> air
+    man_vac_to_air = Atlas(
+        element="Test",
+        source="manual",
+        wavelengths=[5000.0, 6000.0],
+        min_wavelength=4000.0,
+        max_wavelength=7000.0,
+        input_vacuum=True,
+        vacuum=False,
+    )
+    assert (np.array(man_vac_to_air.get_lines()) < np.array([5000.0, 6000.0])).all()
+
+    # Manual with input_vacuum=True, vacuum=True leaves vacuum wavelengths unchanged
+    man_vac_keep = Atlas(
+        element="Test",
+        source="manual",
+        wavelengths=[5000.0, 6000.0],
+        min_wavelength=4000.0,
+        max_wavelength=7000.0,
+        input_vacuum=True,
+        vacuum=True,
+    )
+    assert np.allclose(man_vac_keep.get_lines(), [5000.0, 6000.0])
+
