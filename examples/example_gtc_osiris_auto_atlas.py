@@ -5,7 +5,7 @@ import numpy as np
 from astropy.io import fits
 from scipy.signal import find_peaks
 
-from rascal.atlas import AtlasCollection
+from rascal.atlas import AtlasCollection, NistSource
 from rascal.calibrator import Calibrator
 from rascal.util import refine_peaks
 
@@ -45,6 +45,7 @@ atlas = AtlasCollection(
             "range_tolerance": 200.0,
             "min_wavelength": 3600.0,
             "max_wavelength": 7900.0,
+            "nist_source": NistSource.NIST_ALL,
         }
         for el in ["Hg", "Ar"]
     ]
