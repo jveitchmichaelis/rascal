@@ -61,8 +61,8 @@ config = {
     },
     "hough": {
         "num_slopes": 10000,
-        "xbins": 500,
-        "ybins": 500,
+        "xbins": 200,
+        "ybins": 200,
         "range_tolerance": 500.0,
         "linearity_tolerance": 50.0,
         "constrain_poly": False,
@@ -73,7 +73,7 @@ config = {
         "filter_close": True,
         "minimum_matches": 20,
         "inlier_tolerance": 5.0,
-        "max_tries": 1000,
+        "max_tries": 5000,
     },
 }
 

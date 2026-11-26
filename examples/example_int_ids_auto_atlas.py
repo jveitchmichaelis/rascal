@@ -68,7 +68,7 @@ config = {
     "ransac": {
         "sample_size": 5,
         "top_n_candidate": 5,
-        "max_tries": 200,
+        "max_tries": 5000,
         "degree": 4,
     },
 }

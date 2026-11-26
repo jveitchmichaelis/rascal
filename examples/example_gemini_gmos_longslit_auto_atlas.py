@@ -108,7 +108,7 @@ config = {
         "sample_size": 5,
         "top_n_candidate": 10,
         "minimum_matches": 18,
-        "max_tries": 1000,
+        "max_tries": 5000,
         "degree": 4,
     },
 }

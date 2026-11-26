@@ -55,15 +55,17 @@ config = {
     "hough": {
         "num_slopes": 2000,
         "range_tolerance": 200.0,
-        "xbins": 200,
-        "ybins": 200,
+        "xbins": 100,
+        "ybins": 100,
     },
     "ransac": {
         "max_tries": 5000,
-        "inlier_tolerance": 8.0,
+        "rms_tolerance": 5.0,
+        "inlier_tolerance": 5.0,
         "sample_size": 5,
         "top_n_candidate": 5,
         "filter_close": False,
+        "minimum_matches": 10,
     },
 }
 

@@ -56,12 +56,12 @@ config = {
         "ybins": 100,
     },
     "ransac": {
-        "sample_size": 5,
+        "sample_size": 4,
         "top_n_candidate": 5,
         "rms_tolerance": 10.0,
         "inlier_tolerance": 5.0,
         "minimum_matches": 10,
-        "max_tries": 1000,
+        "max_tries": 5000,
         "degree": 3,
     },
 }

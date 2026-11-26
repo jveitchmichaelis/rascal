@@ -61,10 +61,11 @@ config = {
         "filter_close": True,
         "rms_tolerance": 5.0,
         "inlier_tolerance": 5.0,
+        "candidate_tolerance": 5.0,
         "candidate_weighted": True,
         "hough_weight": 1.0,
         "minimum_matches": 10,
-        "max_tries": 1000,
+        "max_tries": 5000,
     },
 }
 
