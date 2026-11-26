@@ -1372,26 +1372,68 @@ def plot_calibration_lines(
 
     _import_matplotlib()
 
+    from .atlas import Atlas, NistSource
+
+    if isinstance(elements, str):
+        elements = [elements]
+
     # the min_intensity and min_distance are set to 0.0 because the
     # simulated spectrum would contain them. These arguments only
     # affect the labelling.
-    (
-        element_list,
-        wavelength_list,
-        intensity_list,
-    ) = util.load_calibration_lines(
-        elements=elements,
-        linelist=linelist,
-        min_atlas_wavelength=min_atlas_wavelength,
-        max_atlas_wavelength=max_atlas_wavelength,
-        min_intensity=0.0,
-        min_distance=0.0,
-        brightest_n_lines=brightest_n_lines,
-        vacuum=vacuum,
-        pressure=pressure,
-        temperature=temperature,
-        relative_humidity=relative_humidity,
-    )
+    raw_elements = []
+    raw_wavelengths = []
+    raw_intensities = []
+
+    for el in elements:
+        if isinstance(linelist, str) and linelist.lower() in [
+            "nist",
+            "nist_strong",
+        ]:
+            nist_source = (
+                NistSource.NIST_STRONG
+                if linelist.lower() == "nist_strong"
+                else NistSource.NIST_ALL
+            )
+            atlas = Atlas(
+                element=el,
+                source="nist",
+                nist_source=nist_source,
+                min_wavelength=min_atlas_wavelength,
+                max_wavelength=max_atlas_wavelength,
+                min_intensity=0.0,
+                min_distance=0.0,
+                brightest_n_lines=brightest_n_lines,
+                vacuum=vacuum,
+                pressure=pressure,
+                temperature=temperature,
+                relative_humidity=relative_humidity,
+            )
+            for line in atlas.atlas_lines:
+                raw_elements.append(el)
+                raw_wavelengths.append(line.wavelength)
+                raw_intensities.append(line.intensity)
+        else:
+            lines = util.load_calibration_lines(
+                element=el,
+                linelist=linelist,
+                min_atlas_wavelength=min_atlas_wavelength,
+                max_atlas_wavelength=max_atlas_wavelength,
+                min_intensity=0.0,
+                min_distance=0.0,
+                brightest_n_lines=brightest_n_lines,
+                vacuum=vacuum,
+                pressure=pressure,
+                temperature=temperature,
+                relative_humidity=relative_humidity,
+            )
+            for line in lines:
+                raw_elements.append(el)
+                raw_wavelengths.append(line["wavelength"])
+                raw_intensities.append(line["intensity"])
+
+    element_list = np.asarray(raw_elements)
+    wavelength_list = np.asarray(raw_wavelengths, dtype=float)
+    intensity_list = np.asarray(raw_intensities, dtype=float)
 
     # Nyquist sampling rate (2.5) for CCD at seeing of 1 arcsec
     sigma = pixel_scale * 2.5 * 1.0
@@ -1407,23 +1449,28 @@ def plot_calibration_lines(
     i = np.zeros_like(w)
 
     for e in elements:
-        i[
-            np.isin(
-                w, np.around(wavelength_list[element_list == e], decimals=3)
-            )
-        ] += intensity_list[element_list == e]
+        e_mask = element_list == e
+        if not np.any(e_mask):
+            continue
+        rounded = np.around(wavelength_list[e_mask], decimals=3)
+        idx = np.searchsorted(w, rounded)
+        in_bounds = (idx >= 0) & (idx < len(w))
+        idx = idx[in_bounds]
+        matched = np.isclose(w[idx], rounded[in_bounds], atol=1e-4)
+        np.add.at(i, idx[matched], intensity_list[e_mask][in_bounds][matched])
     # Convolve to simulate the arc spectrum
     model_spectrum = signal.convolve(i, gaussian, mode="same")
 
     # now clean up by min_intensity and min_distance
-    intensity_mask = util.filter_intensity(
-        elements,
-        np.column_stack((element_list, wavelength_list, intensity_list)),
-        min_intensity=min_intensity,
-    )
+    intensity_mask = intensity_list >= min_intensity
     wavelength_list = wavelength_list[intensity_mask]
     intensity_list = intensity_list[intensity_mask]
     element_list = element_list[intensity_mask]
+
+    order = np.argsort(wavelength_list)
+    wavelength_list = wavelength_list[order]
+    intensity_list = intensity_list[order]
+    element_list = element_list[order]
 
     distance_mask = util.filter_distance(
         wavelength_list, min_distance=min_distance

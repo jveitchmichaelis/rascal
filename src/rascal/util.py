@@ -478,6 +478,8 @@ def load_calibration_lines(
                 f"Unknown string is provided as linelist: {linelist}."
             )
 
+        if lines_raw and lines_raw[0].startswith("#"):
+            lines_raw[0] = lines_raw[0].lstrip("#")
         line_reader = csv.DictReader(lines_raw)
 
     else:
@@ -637,27 +639,60 @@ def print_calibration_lines(
 
     """
 
-    elements, lines, intensities = load_calibration_lines(
-        elements=elements,
-        linelist=linelist,
-        min_atlas_wavelength=min_atlas_wavelength,
-        max_atlas_wavelength=max_atlas_wavelength,
-        min_intensity=min_intensity,
-        min_distance=min_distance,
-        brightest_n_lines=brightest_n_lines,
-        vacuum=vacuum,
-        pressure=pressure,
-        temperature=temperature,
-        relative_humidity=relative_humidity,
-    )
+    from .atlas import Atlas, NistSource
+
+    if isinstance(elements, str):
+        elements = [elements]
 
     output = ""
-    for element, line, intensity in zip(elements, lines, intensities):
-
-        output += (
-            f"Element: {element} at {line} Angstrom with intensity "
-            + f"{intensity}.{os.linesep}"
-        )
+    for el in elements:
+        if isinstance(linelist, str) and linelist.lower() in [
+            "nist",
+            "nist_strong",
+        ]:
+            nist_source = (
+                NistSource.NIST_STRONG
+                if linelist.lower() == "nist_strong"
+                else NistSource.NIST_ALL
+            )
+            atlas = Atlas(
+                element=el,
+                source="nist",
+                nist_source=nist_source,
+                min_wavelength=min_atlas_wavelength,
+                max_wavelength=max_atlas_wavelength,
+                min_intensity=min_intensity,
+                min_distance=min_distance,
+                brightest_n_lines=brightest_n_lines,
+                vacuum=vacuum,
+                pressure=pressure,
+                temperature=temperature,
+                relative_humidity=relative_humidity,
+            )
+            for line in atlas.atlas_lines:
+                output += (
+                    f"Element: {line.element} at {line.wavelength} Angstrom "
+                    + f"with intensity {line.intensity}.{os.linesep}"
+                )
+        else:
+            lines = load_calibration_lines(
+                element=el,
+                linelist=linelist,
+                min_atlas_wavelength=min_atlas_wavelength,
+                max_atlas_wavelength=max_atlas_wavelength,
+                min_intensity=min_intensity,
+                min_distance=min_distance,
+                brightest_n_lines=brightest_n_lines,
+                vacuum=vacuum,
+                pressure=pressure,
+                temperature=temperature,
+                relative_humidity=relative_humidity,
+            )
+            for line in lines:
+                output += (
+                    f"Element: {line['element']} at {line['wavelength']} "
+                    + f"Angstrom with intensity {line['intensity']}.{os.linesep}"
+                )
 
     logger.info(output)
 

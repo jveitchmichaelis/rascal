@@ -24,9 +24,6 @@ elden = np.array(
     [21459.0, 26826.2, 32193.8, 27776.1, 25938.5, 26804.6, 26783.4, 26761.9]
 )
 
-# TODO CHECK THIS AND REMOVE WHEN FIXED
-pytest.skip(allow_module_level=True)
-
 
 def test_edlen_refractive_index():
     for t, p, h, e in zip(temperature, pressure, relative_humidity, elden):
@@ -42,11 +39,11 @@ def test_edlen_refractive_index():
             - 1
         ) * 1e8
         # We accept large errors because the set of coefficients for the
-        # Edlen equations changes all the time and we onlyl need 2 S.F.
+        # Edlen equations changes all the time and we only need 2 S.F.
         # accuracy
         assert np.isclose(
             nm1e8, e, rtol=0.1, atol=1000
-        ), "{} istaed of {}.".format(nm1e8, e)
+        ), "{} instead of {}.".format(nm1e8, e)
 
 
 def test_vacuum_to_air_wavelength():
@@ -94,126 +91,113 @@ def test_vacuum_to_air_wavelength():
     ).all()
 
 
+def test_air_to_vacuum_roundtrip():
+    wave_vacuum = np.array([4000.0, 5500.0, 7000.0, 9000.0])
+    wave_air = util.vacuum_to_air_wavelength(
+        wave_vacuum, temperature=288.15, pressure=101325
+    )
+    recovered = util.air_to_vacuum_wavelength(
+        wave_air, temperature=288.15, pressure=101325
+    )
+    assert np.allclose(recovered, wave_vacuum, atol=1e-3)
+
+
 def test_load_calibration_lines():
-    assert (
-        len(util.load_calibration_lines(element="He", min_intensity=5)[0])
-        == 28
+    lines_strong = util.load_calibration_lines(
+        linelist="nist_strong", element="He I", min_intensity=5
     )
-    assert (
-        len(util.load_calibration_lines(elements="He", min_intensity=0)[0])
-        == 49
+    assert len(lines_strong) == 38
+    assert all(
+        {"element", "wavelength", "intensity"}.issubset(line.keys())
+        for line in lines_strong
     )
-    assert (
-        len(util.load_calibration_lines(elements="He", min_distance=0)[0])
-        == 28
+
+    lines_all = util.load_calibration_lines(
+        linelist="nist", element="He I", min_intensity=5
     )
-    assert (
-        len(
-            util.load_calibration_lines(
-                elements="He", min_intensity=0, min_distance=0
-            )[0]
-        )
-        == 49
+    assert len(lines_all) == 112
+
+    lines_dist = util.load_calibration_lines(
+        linelist="nist_strong", element="He I", min_distance=50.0
     )
+    assert 0 < len(lines_dist) < len(lines_strong)
 
 
 def test_load_calibration_lines_top_10_only():
-    assert (
-        len(
-            util.load_calibration_lines(
-                elements="He", min_intensity=10, brightest_n_lines=10
-            )[0]
-        )
-        <= 10
+    lines = util.load_calibration_lines(
+        linelist="nist_strong",
+        element="He I",
+        min_intensity=10,
+        brightest_n_lines=10,
     )
-    assert (
-        len(
-            util.load_calibration_lines(
-                elements="He", min_intensity=0, brightest_n_lines=10
-            )[0]
-        )
-        <= 10
+    assert len(lines) <= 10
+
+    lines_zero = util.load_calibration_lines(
+        linelist="nist_strong",
+        element="He I",
+        min_intensity=0,
+        brightest_n_lines=10,
     )
-    assert (
-        len(
-            util.load_calibration_lines(
-                elements="He", min_distance=0, brightest_n_lines=10
-            )[0]
-        )
-        <= 10
-    )
+    assert len(lines_zero) <= 10
 
 
 def test_load_calibration_lines_vacuum_vs_air():
-    wave_air = util.load_calibration_lines(elements="He", min_intensity=10)[1]
-    wave_vacuum = util.load_calibration_lines(
-        elements="He", min_intensity=10, vacuum=True
-    )[1]
+    wave_air = [
+        line["wavelength"]
+        for line in util.load_calibration_lines(
+            linelist="nist_strong", element="He I", min_intensity=10
+        )
+    ]
+    wave_vacuum = [
+        line["wavelength"]
+        for line in util.load_calibration_lines(
+            linelist="nist_strong",
+            element="He I",
+            min_intensity=10,
+            vacuum=True,
+        )
+    ]
     assert (np.array(wave_air) < np.array(wave_vacuum)).all()
 
 
 def test_load_calibration_lines_from_file():
     lines_manual = util.load_calibration_lines(
-        elements="He",
+        element="He I",
         linelist=str(
-            importlib.resources.files("rascal") / "arc_lines/nist_clean.csv"
+            importlib.resources.files("rascal")
+            / "arc_lines/nist_clean_He_I.csv"
         ),
     )
-    lines = util.load_calibration_lines(elements="He")
-    assert (lines[1] == lines_manual[1]).all()
+    lines = util.load_calibration_lines(element="He I")
+    assert [l["wavelength"] for l in lines] == [
+        l["wavelength"] for l in lines_manual
+    ]
 
 
 def test_load_calibration_lines_from_unknown_file():
-    lines_manual = util.load_calibration_lines(
-        elements="He",
-        linelist="blabla",
-    )
-    lines = util.load_calibration_lines(element="He")
-    assert (lines[1] == lines_manual[1]).all()
+    with pytest.raises(ValueError):
+        util.load_calibration_lines(
+            element="He I",
+            linelist="blabla",
+        )
 
 
 def test_load_calibration_lines_from_unknown_type():
-    lines_manual = util.load_calibration_lines(
-        element="He",
-        linelist=np.ones(10),
-    )
-    lines = util.load_calibration_lines(element="He")
-    assert (lines[1] == lines_manual[1]).all()
+    with pytest.raises(ValueError):
+        util.load_calibration_lines(
+            element="He I",
+            linelist=np.ones(10),
+        )
 
 
 def test_print_calibration_lines(capfd):
     util.print_calibration_lines(elements=["He"])
     out, err = capfd.readouterr()
-    assert type(out) == str
+    assert isinstance(out, str)
 
 
 def test_derivative():
     assert util._derivative([2, 3, 4, 5]) == [3, 8, 15]
-
-
-def test_filter_multiple_element_linelist_number_min_intensity():
-    util.load_calibration_lines(
-        elements=["He", "Xe", "Cu", "Ar"], min_intensity=0
-    )
-
-
-def test_filter_multiple_element_linelist_list_min_intensity():
-    util.load_calibration_lines(
-        elements=["He", "Xe", "Cu", "Ar"],
-        min_intensity=[10.0, 50.0, 100.0, 500.0],
-    )
-
-
-def test_filter_multiple_element_linelist_list_min_intensity_expect_fail():
-    util.load_calibration_lines(
-        elements=["He", "Xe", "Cu", "Ar"], min_intensity=[10.0, 50.0, 100.0]
-    )
-
-
-def test_filter_multiple_element_linelist_wrong_min_intensity_dtype():
-    util.load_calibration_lines(
-        elements=["He", "Xe", "Cu", "Ar"], min_intensity="[10.0, 50.0, 100.0]"
-    )
 
 
 @patch("matplotlib.pyplot.show")
@@ -223,7 +207,6 @@ def test_plot_calibration_lines(mock_show):
 
 @patch("matplotlib.pyplot.show")
 def test_display_plot_calibration_lines_1_element(mock_show):
-
     plotting.plot_calibration_lines(
         elements=["He"],
         min_atlas_wavelength=2900,
@@ -237,7 +220,6 @@ def test_display_plot_calibration_lines_1_element(mock_show):
 
 
 def test_save_plot_calibration_lines_1_element(tmp_path):
-
     plotting.plot_calibration_lines(
         elements=["He"],
         min_atlas_wavelength=2900,
@@ -253,7 +235,6 @@ def test_save_plot_calibration_lines_1_element(tmp_path):
 
 
 def test_save_plot_calibration_lines_3_elements(tmp_path):
-
     plotting.plot_calibration_lines(
         elements=["Cu", "Ne", "Ar"],
         min_atlas_wavelength=2900,
