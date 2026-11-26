@@ -83,6 +83,8 @@ class RansacSolver:
         polyfit_fn: Callable = np.polynomial.polynomial.polyfit,
         polyval_fn: Callable = np.polynomial.polynomial.polyval,
         fit_valid_fn: Callable = lambda x: True,
+        fixed_x: Optional[Union[list, np.ndarray]] = None,
+        fixed_y: Optional[Union[list, np.ndarray]] = None,
     ):
         """
         Josh will write something here.
@@ -101,6 +103,22 @@ class RansacSolver:
 
         self.x = x
         self.y = y
+        self.fixed_x = (
+            np.asarray(fixed_x, dtype=float).reshape(-1)
+            if fixed_x is not None
+            else None
+        )
+        self.fixed_y = (
+            np.asarray(fixed_y, dtype=float).reshape(-1)
+            if fixed_y is not None
+            else None
+        )
+        if (self.fixed_x is None) != (self.fixed_y is None):
+            raise ValueError(
+                "Both fixed_x and fixed_y must be provided together."
+            )
+        if self.fixed_x is not None and len(self.fixed_x) != len(self.fixed_y):
+            raise ValueError("fixed_x and fixed_y must have the same length.")
         self.polyfit = polyfit_fn
         self.polyval = polyval_fn
         self.hough = hough
@@ -162,7 +180,7 @@ class RansacSolver:
             )
             self._filter_close()
 
-        if self.hough is not None:
+        if self.hough is not None and self.hough.hist is not None:
             self.logger.debug("Using hough weighting")
             ht = self.hough
 
@@ -176,6 +194,8 @@ class RansacSolver:
                     ht.yedges[1:] - ybin_size,
                     ht.hist,
                 )
+            else:
+                self.twoditp = None
 
         else:
             self.twoditp = None
@@ -376,6 +396,9 @@ class RansacSolver:
 
         # Try to fit the data.
         # This doesn't need to be robust, it's an exact fit.
+        if self.fixed_x is not None and len(self.fixed_x) > 0:
+            x_hat = np.concatenate([x_hat, self.fixed_x])
+            y_hat = np.concatenate([y_hat, self.fixed_y])
         return self.polyfit(x_hat, y_hat, self.config.degree)
 
     def _cost(self, result: SolveResult):

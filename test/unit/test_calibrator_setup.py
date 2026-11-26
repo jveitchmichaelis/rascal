@@ -68,3 +68,54 @@ def test_generate_pairs_uses_effective_pixels():
 
     pair_pixels = set(np.round(c.pairs[:, 0], 6))
     assert pair_pixels == {100.0, 650.0}
+
+
+def test_ransac_solver_accepts_fixed_pairs():
+    x = np.arange(2, 12, dtype=float)
+    y = 3000.0 + 5.0 * x
+    fixed_x = np.array([0.0, 1.0])
+    fixed_y = np.array([3000.0, 3005.0])
+
+    solver = RansacSolver(
+        x,
+        y,
+        config={"degree": 1, "sample_size": 2, "max_tries": 50},
+        fixed_x=fixed_x,
+        fixed_y=fixed_y,
+    )
+    assert solver.solve()
+    assert np.allclose(solver.best_result.fit_coeffs, [3000.0, 5.0], atol=1e-2)
+
+
+def test_calibrator_fit_passes_known_pairs_and_hough(
+    peaks, detector_config, wavelengths_linear
+):
+    atlas = Atlas(
+        source="manual",
+        element="linear",
+        wavelengths=wavelengths_linear,
+        min_wavelength=3000.0,
+        max_wavelength=8000.0,
+    )
+    config = {
+        "seed": 0,
+        "detector": detector_config,
+        "hough": {"num_slopes": 500, "xbins": 50, "ybins": 50},
+        "ransac": {"degree": 1, "sample_size": 3, "max_tries": 50},
+    }
+    c = Calibrator(peaks, atlas_lines=atlas.atlas_lines, config=config)
+    c.set_known_pairs([peaks[0]], [wavelengths_linear[0]])
+
+    captured = {}
+    orig_init = RansacSolver.__init__
+
+    def spy_init(self, *args, **kwargs):
+        captured.update(kwargs)
+        return orig_init(self, *args, **kwargs)
+
+    with patch.object(RansacSolver, "__init__", spy_init):
+        c.fit()
+
+    assert captured.get("hough") is c.hough_transformer
+    assert np.array_equal(captured.get("fixed_x"), c.pix_known)
+    assert np.array_equal(captured.get("fixed_y"), c.wave_known)

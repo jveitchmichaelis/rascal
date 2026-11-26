@@ -1117,10 +1117,13 @@ class Calibrator:
         solver = RansacSolver(
             _x,
             _y,
+            hough=self.hough_transformer,
             config=self.config.ransac,
             polyfit_fn=self.polyfit,
             polyval_fn=self.polyval,
             fit_valid_fn=self._fit_valid,
+            fixed_x=self.pix_known,
+            fixed_y=self.wave_known,
         )
         solver.solve()
 
