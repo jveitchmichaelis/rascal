@@ -115,3 +115,70 @@ def test_match_hungarian_outlier_does_not_steal_inlier():
     inlier_mask = err < 4.0
     matched_pairs = set(zip(matched_x[inlier_mask], matched_y[inlier_mask]))
     assert matched_pairs == {(0.0, 1000.0), (1.0, 1010.0)}
+
+
+def test_hough_weight_zero_disables_hough_weighting():
+    from rascal.houghtransform import HoughTransform
+
+    x = np.linspace(0, 100, 12)
+    y = 3000.0 + 2.0 * x
+    y[-3:] += 50.0  # 3 outliers so M-SAC clipped sum > 0
+    ht = HoughTransform()
+    ht.set_constraints(min_slope=1.0, max_slope=3.0, min_intercept=2900.0, max_intercept=3100.0)
+    ht.generate_hough_points(x, y, num_slopes=50)
+    ht.bin_hough_points(xbins=10, ybins=10)
+
+    solver = RansacSolver(
+        x,
+        y,
+        hough=ht,
+        config={"degree": 1, "sample_size": 2, "hough_weight": 0.0, "max_tries": 50},
+    )
+    solver.solve()
+    assert solver.valid_solution
+    expected_msac = 3 * solver.config.rms_tolerance / (len(x) - 2 + 1)
+    assert np.isclose(solver.best_result.cost, expected_msac, rtol=1e-3)
+
+
+def test_hough_weight_scales_relative_preference():
+    from rascal.houghtransform import HoughTransform
+
+    x = np.linspace(0, 100, 12)
+    y = 3000.0 + 2.0 * x
+    ht = HoughTransform()
+    ht.set_constraints(
+        min_slope=1.0, max_slope=3.0, min_intercept=2900.0, max_intercept=3100.0
+    )
+    ht.generate_hough_points(x, y, num_slopes=50)
+    ht.bin_hough_points(xbins=10, ybins=10)
+
+    # Two models with identical M-SAC residuals: one aligned with the Hough peak
+    # and one shifted away into a lower-density Hough region.
+    res_peak = SolveResult(
+        fit_coeffs=np.array([3000.0, 2.0]),
+        x=x,
+        y=y,
+        residual=np.full(len(x), 1.0),
+        rms_tolerance=4.0,
+    )
+    res_off = SolveResult(
+        fit_coeffs=np.array([3015.0, 2.0]),
+        x=x,
+        y=y,
+        residual=np.full(len(x), 1.0),
+        rms_tolerance=4.0,
+    )
+
+    ratios = []
+    for hw in [0.0, 1.0, 5.0]:
+        solver = RansacSolver(
+            x, y, hough=ht, config={"degree": 1, "sample_size": 2, "hough_weight": hw}
+        )
+        ratios.append(solver._cost(res_off) / solver._cost(res_peak))
+
+    # At hw=0 the ratio is 1.0 (pure M-SAC); larger hw must strictly increase
+    # the preference for the high-Hough-density model rather than cancelling out,
+    # while remaining bounded (no 1e9 explosion when density is low/zero).
+    assert np.isclose(ratios[0], 1.0)
+    assert ratios[0] < ratios[1] < 10.0
+    assert ratios[2] > ratios[1] * 1.1

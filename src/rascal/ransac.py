@@ -205,11 +205,15 @@ class RansacSolver:
                     ht.yedges[1:] - ybin_size,
                     ht.hist,
                 )
+                hough_max = float(np.max(ht.hist))
+                self.hough_max = hough_max if hough_max > 0.0 else 1.0
             else:
                 self.twoditp = None
+                self.hough_max = 1.0
 
         else:
             self.twoditp = None
+            self.hough_max = 1.0
 
     def _filter_close(self):
         """
@@ -459,16 +463,23 @@ class RansacSolver:
         """
 
         # modified cost function weighted by the Hough space density
-        if (self.hough is not None) and (self.twoditp is not None):
+        if (
+            (self.hough is not None)
+            and (self.twoditp is not None)
+            and (self.config.hough_weight > 0)
+        ):
 
-            wave = self.polyval(self.x, result.fit_coeffs)
-            gradient = self.polyval(self.x, _derivative(result.fit_coeffs))
-            intercept = wave - gradient * self.x
+            wave = self.polyval(self.unique_x, result.fit_coeffs)
+            gradient = self.polyval(
+                self.unique_x, _derivative(result.fit_coeffs)
+            )
+            intercept = wave - gradient * self.unique_x
 
             hough_density = np.maximum(
                 0.0, self.twoditp(gradient, intercept, grid=False)
             )
-            weight = self.config.hough_weight * np.sum(hough_density)
+            mean_norm_density = np.mean(hough_density) / self.hough_max
+            weight = 1.0 + self.config.hough_weight * mean_norm_density
 
         else:
 
