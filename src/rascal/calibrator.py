@@ -351,7 +351,8 @@ class Calibrator:
         pairs = [
             pair
             for pair in itertools.product(
-                self.peaks, [line.wavelength for line in self.atlas_lines]
+                self.peaks_effective,
+                [line.wavelength for line in self.atlas_lines],
             )
         ]
 
@@ -371,13 +372,13 @@ class Calibrator:
                     ),
                     (
                         max(self.contiguous_pixel),
-                        self.max_wavelength
+                        self.config.detector.detector_max_wave
                         - self.config.hough.range_tolerance
                         - self.config.hough.linearity_tolerance,
                     ),
                     (
                         max(self.contiguous_pixel),
-                        self.max_wavelength
+                        self.config.detector.detector_max_wave
                         + self.config.hough.range_tolerance
                         + self.config.hough.linearity_tolerance,
                     ),
