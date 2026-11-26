@@ -3,10 +3,11 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 from astropy.io import fits
+from scipy.signal import find_peaks
+
 from rascal.atlas import Atlas
 from rascal.calibrator import Calibrator
 from rascal.util import refine_peaks
-from scipy.signal import find_peaks
 
 atlas_lines = [
     3650.153,
@@ -30,9 +31,10 @@ atlas_lines = [
     7635.106,
     7723.98,
 ]
-element = ["HgAr"] * len(atlas_lines)
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
+output_dir = os.path.join(base_dir, "output")
+os.makedirs(output_dir, exist_ok=True)
 
 data = fits.open(
     os.path.join(
@@ -47,11 +49,8 @@ plt.imshow(np.log10(data.data.T), aspect="auto", origin="lower")
 plt.xlabel("Spectral Direction / Pix")
 plt.ylabel("Spatial Direction / Pix")
 plt.tight_layout()
-
-os.makedirs(os.path.join(base_dir, "output"), exist_ok=True)
-plt.savefig(
-    os.path.join(base_dir, "output", "gtc-osiris-manual-atlas-arc-image.png")
-)
+plt.savefig(os.path.join(output_dir, "gtc-osiris-manual-atlas-arc-image.png"))
+plt.close()
 
 spectrum = np.median(data.data.T[550:570], axis=0)
 
@@ -61,69 +60,83 @@ peaks, _ = find_peaks(
 )
 peaks_refined = refine_peaks(spectrum, peaks, window_width=3)
 
-c = Calibrator(peaks_refined, spectrum=spectrum)
-
-c.set_hough_properties(
-    num_slopes=2000,
-    xbins=100,
-    ybins=100,
+atlas = Atlas(
+    source="manual",
+    element="HgAr",
+    wavelengths=atlas_lines,
     min_wavelength=3500.0,
     max_wavelength=8000.0,
     range_tolerance=500.0,
-    linearity_tolerance=50,
 )
 
-atlas = Atlas(range_tolerance=500.0)
-atlas.add_user_atlas(elements=element, wavelengths=atlas_lines)
-c.set_atlas(atlas, constrain_poly=True)
+config = {
+    "detector": {
+        "detector_min_wave": 3500.0,
+        "detector_max_wave": 8000.0,
+    },
+    "hough": {
+        "num_slopes": 2000,
+        "xbins": 100,
+        "ybins": 100,
+        "range_tolerance": 500.0,
+        "linearity_tolerance": 50.0,
+        "constrain_poly": True,
+    },
+    "ransac": {
+        "sample_size": 5,
+        "top_n_candidate": 5,
+        "linear": True,
+        "filter_close": True,
+        "rms_tolerance": 10.0,
+        "inlier_tolerance": 5.0,
+        "candidate_weighted": True,
+        "hough_weight": 1.0,
+        "minimum_matches": 11,
+        "max_tries": 1000,
+        "degree": 4,
+    },
+}
 
-c.set_ransac_properties(
-    sample_size=5,
-    top_n_candidate=5,
-    linear=True,
-    filter_close=True,
-    ransac_tolerance=5,
-    candidate_weighted=True,
-    hough_weight=1.0,
-    minimum_matches=11,
+c = Calibrator(
+    peaks_refined, atlas_lines=atlas.atlas_lines, config=config, spectrum=spectrum
 )
-
-c.do_hough_transform()
 
 c.plot_arc(
-    save_fig="png",
+    save_fig=True,
     display=False,
-    filename=os.path.join(
-        base_dir, "output", "gtc-osiris-manual-atlas-arc-spectrum"
-    ),
+    filename=os.path.join(output_dir, "gtc-osiris-manual-atlas-arc-spectrum"),
 )
 
 c.do_hough_transform()
 
 # Run the wavelength calibration
-res = c.fit(max_tries=1000, fit_tolerance=10.0, fit_deg=4)
+res = c.fit()
 
-# Plot the solution
-c.plot_fit(
-    res["fit_coeff"],
-    plot_atlas=True,
-    log_spectrum=False,
-    display=False,
-    save_fig="png",
-    filename=os.path.join(
-        base_dir, "output", "gtc-osiris-manual-atlas-wavelength-calibration"
-    ),
-)
+if res["success"]:
+    # Plot the solution
+    c.plot_fit(
+        res["fit_coeff"],
+        plot_atlas=True,
+        log_spectrum=False,
+        display=False,
+        save_fig=True,
+        filename=os.path.join(
+            output_dir, "gtc-osiris-manual-atlas-wavelength-calibration"
+        ),
+    )
 
-# Show the parameter space for searching possible solution
-print("RMS: {}".format(res["rms"]))
-print("Stdev error: {} A".format(res["residual"].std()))
-print("Peaks utilisation rate: {}%".format(res["peak_utilisation"] * 100))
-print("Atlas utilisation rate: {}%".format(res["atlas_utilisation"] * 100))
+    # Show the parameter space for searching possible solution
+    print("RMS: {}".format(res["rms"]))
+    print("Stdev error: {} A".format(res["residual"].std()))
+    print("Peaks utilisation rate: {}%".format(res["peak_utilisation"] * 100))
+    print("Atlas utilisation rate: {}%".format(res["atlas_utilisation"] * 100))
 
-c.plot_search_space(
-    save_fig="png",
-    filename=os.path.join(
-        base_dir, "output", "gtc-osiris-manual-atlas-search-space"
-    ),
-)
+    c.plot_search_space(
+        display=False,
+        save_fig=True,
+        filename=os.path.join(
+            output_dir, "gtc-osiris-manual-atlas-search-space"
+        ),
+    )
+else:
+    print("Calibration failed to find a valid solution.")

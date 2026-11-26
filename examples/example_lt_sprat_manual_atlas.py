@@ -11,6 +11,8 @@ from rascal.calibrator import Calibrator
 
 # Load the LT SPRAT data
 base_dir = os.path.dirname(os.path.abspath(__file__))
+output_dir = os.path.join(base_dir, "output_lt_sprat")
+os.makedirs(output_dir, exist_ok=True)
 
 fits_file = fits.open(
     os.path.join(base_dir, "data_lt_sprat", "v_a_20190516_57_1_0_1.fits")
@@ -24,10 +26,9 @@ plt.xlabel("Spectral Direction / Pix")
 plt.ylabel("Spatial Direction / Pix")
 plt.tight_layout()
 plt.savefig(
-    os.path.join(
-        base_dir, "output_lt_sprat", "lt-sprat-manual-atlas-arc-image.png"
-    )
+    os.path.join(output_dir, "lt-sprat-manual-atlas-arc-image.png")
 )
+plt.close()
 
 # Collapse into 1D spectrum between row 110 and 120
 spectrum = np.median(spectrum2D[110:120], axis=0)
@@ -85,10 +86,9 @@ sprat_atlas_lines = [
     7967.34,
     8057.258,
 ]
-element = ["Xe"] * len(sprat_atlas_lines)
 
 config = {
-    "data": {
+    "detector": {
         "contiguous_range": None,
         "detector_min_wave": 3500.0,
         "detector_max_wave": 8000.0,
@@ -115,7 +115,7 @@ atlas = Atlas(
     min_wavelength=3800.0,
     max_wavelength=8000.0,
     range_tolerance=250.0,
-    elements=element,
+    element="Xe",
 )
 
 # Initialise the calibrator
@@ -123,41 +123,41 @@ c = Calibrator(
     peaks, atlas_lines=atlas.atlas_lines, config=config, spectrum=spectrum
 )
 
+c.plot_arc(
+    display=False,
+    save_fig=True,
+    filename=os.path.join(output_dir, "lt-sprat-manual-atlas-arc-spectrum"),
+)
+
 # Run the wavelength calibration
 res = c.fit()
 
-c.plot_arc(
-    display=False,
-    save_fig="png",
-    filename=os.path.join(
-        base_dir, "output_lt_sprat", "lt-sprat-manual-atlas-arc-spectrum"
-    ),
-)
+if res["success"]:
+    # Plot the solution
+    c.plot_fit(
+        res["fit_coeff"],
+        spectrum=spectrum,
+        display=False,
+        plot_atlas=True,
+        log_spectrum=False,
+        save_fig=True,
+        filename=os.path.join(
+            output_dir, "lt-sprat-manual-atlas-wavelength-calibration"
+        ),
+    )
 
-# Plot the solution
-c.plot_fit(
-    res["fit_coeff"],
-    spectrum=spectrum,
-    display=False,
-    plot_atlas=True,
-    log_spectrum=False,
-    save_fig="png",
-    filename=os.path.join(
-        base_dir,
-        "output_lt_sprat",
-        "lt-sprat-manual-atlas-wavelength-calibration",
-    ),
-)
+    # Show the parameter space for searching possible solution
+    c.plot_search_space(
+        display=False,
+        save_fig=True,
+        filename=os.path.join(
+            output_dir, "lt-sprat-manual-atlas-search-space"
+        ),
+    )
 
-# Show the parameter space for searching possible solution
-c.plot_search_space(
-    save_fig="png",
-    filename=os.path.join(
-        base_dir, "output_lt_sprat", "lt-sprat-manual-atlas-search-space"
-    ),
-)
-
-print("RMS: {}".format(res["rms"]))
-print("Stdev error: {} A".format(res["residual"].std()))
-print("Peaks utilisation rate: {}%".format(res["peak_utilisation"] * 100))
-print("Atlas utilisation rate: {}%".format(res["atlas_utilisation"] * 100))
+    print("RMS: {}".format(res["rms"]))
+    print("Stdev error: {} A".format(res["residual"].std()))
+    print("Peaks utilisation rate: {}%".format(res["peak_utilisation"] * 100))
+    print("Atlas utilisation rate: {}%".format(res["atlas_utilisation"] * 100))
+else:
+    print("Calibration failed to find a valid solution.")
