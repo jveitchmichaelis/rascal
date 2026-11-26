@@ -24,7 +24,7 @@ More background information can be referred to this [arXiv article](https://ui.a
 
 ## Dependencies
 
-*   Python 3.10 to 3.13
+*   Python 3.11 to 3.13
 *   kaleido>=1.1.0
 *   matplotlib>=3.10.6
 *   numpy>=2.2.6
