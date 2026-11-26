@@ -489,33 +489,40 @@ class RansacSolver:
             else:
                 coeffs = self.polyfit(inliers_x, inliers_y, self.config.degree)
 
-            # Validate using the new coefficients
+            # Re-expand inliers using the robust fit coefficients - more candidates
+            # may now be within tolerance.
+            residual_robust, inliers_x, inliers_y = self._match_bijective(
+                self.sampler.y_for_x, self.unique_x, coeffs
+            )
+            mask_robust = residual_robust < self.config.rms_tolerance
+            inliers_x = inliers_x[mask_robust]
+            inliers_y = inliers_y[mask_robust]
+            n_inliers = len(inliers_x)
+
+            # Overfit
+            if n_inliers <= self.config.degree + 1:
+                self.logger.debug(
+                    f"Overfit: number of inliers {n_inliers} is less than what's required to fit: {self.config.degree+1}"
+                )
+                return False
+
+            # Get the residual of the (re-expanded) inliers
+            residual = self.polyval(inliers_x, coeffs) - inliers_y
+            residual[
+                np.abs(residual) > self.config.rms_tolerance
+            ] = self.config.rms_tolerance
+
+            rms_residual = np.sqrt(np.mean(residual**2))
+
+            # Validate using the new coefficients and post-robust inliers
             robust_result = SolveResult(
                 fit_coeffs=coeffs,
-                residual=result.residual,
-                x=result.x,
-                y=result.y,
+                residual=np.abs(residual),
+                x=inliers_x,
+                y=inliers_y,
                 rms_tolerance=self.config.rms_tolerance,
             )
             if self._fit_valid(robust_result):
-
-                # Re-expand inliers using the robust fit coefficients - more candidates
-                # may now be within tolerance.
-                residual_robust, inliers_x, inliers_y = self._match_bijective(
-                    self.sampler.y_for_x, self.unique_x, coeffs
-                )
-                mask_robust = residual_robust < self.config.rms_tolerance
-                inliers_x = inliers_x[mask_robust]
-                inliers_y = inliers_y[mask_robust]
-                n_inliers = len(inliers_x)
-
-                # Get the residual of the (re-expanded) inliers
-                residual = self.polyval(inliers_x, coeffs) - inliers_y
-                residual[
-                    np.abs(residual) > self.config.rms_tolerance
-                ] = self.config.rms_tolerance
-
-                rms_residual = np.sqrt(np.mean(residual**2))
 
                 if (
                     not self.config.use_msac
@@ -529,22 +536,10 @@ class RansacSolver:
                     )
                     return False
 
-                # Overfit
-                if n_inliers <= self.config.degree + 1:
-                    self.logger.debug(
-                        f"Overfit: number of inliers {n_inliers} is less than what's required to fit: {self.config.degree+1}"
-                    )
-                    return False
-
                 # Sanity check that matching peaks/atlas lines are 1:1
                 assert len(np.unique(inliers_x)) == len(inliers_x)
                 assert len(np.unique(inliers_y)) == len(inliers_y)
                 assert len(np.unique(inliers_x)) == len(np.unique(inliers_y))
-
-                # Are these still required?
-                # assert n_inliers == len(result.x)
-                # assert n_inliers == len(result.y)
-                # assert len(result.y) == len(set(result.y))
 
                 self.best_result = SolveResult(
                     fit_coeffs=coeffs,

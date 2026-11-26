@@ -6,7 +6,7 @@ import numpy as np
 # Suppress tqdm output
 from tqdm import tqdm
 
-from rascal.ransac import RansacSolver
+from rascal.ransac import RansacSolver, SolveResult
 
 tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 
@@ -62,3 +62,32 @@ def test_filter_close_updates_sampler_and_unique_x():
     assert len(solver.unique_x) == len(np.unique(solver.x)) == 9
     assert set(solver.sampler.y_for_x.keys()) == set(solver.unique_x)
     assert 3005.0 not in np.concatenate(list(solver.sampler.y_for_x.values()))
+
+
+def test_update_best_validates_post_robust_inliers():
+    # Construct points where the pre-robust result claims 8 inliers,
+    # but re-matching with the robust fit yields only 5 inliers (< minimum_matches=7).
+    x = np.arange(10, dtype=float)
+    y = 3000.0 + 5.0 * x
+    # Make 5 points match the line and 5 points be alternating outliers (> rms_tolerance=4.0)
+    y[5:] += np.array([15.0, -15.0, 15.0, -15.0, 15.0])
+
+    solver = RansacSolver(
+        x,
+        y,
+        config={"degree": 1, "sample_size": 2, "rms_tolerance": 4.0},
+        fit_valid_fn=lambda res: len(res.inliers_x) >= 7,
+    )
+
+    # Pre-robust result with 8 fake small residuals so pre-robust _fit_valid would pass,
+    # while post-robust bijective re-matching only finds 5 true inliers (< 7).
+    fake_result = SolveResult(
+        fit_coeffs=np.array([3000.0, 5.0]),
+        cost=1.0,
+        x=x,
+        y=y,
+        residual=np.array([0.1] * 8 + [50.0] * 2),
+        rms_tolerance=4.0,
+    )
+    solver._update_best(fake_result)
+    assert not solver.valid_solution
