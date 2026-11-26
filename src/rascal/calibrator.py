@@ -25,6 +25,7 @@ from . import atlas, models, plotting
 from .atlas import Atlas, AtlasCollection, AtlasLine
 from .config import CalibratorConfig
 from .houghtransform import HoughTransform
+from .optimal_ransac import OptimalRansacSolver
 from .ransac import RansacSolver, SolveResult
 from .util import _clean_matches, _make_unique_permutation, gauss
 
@@ -1134,8 +1135,19 @@ class Calibrator:
             f"Candidates: {[xy for xy in list(zip(_x.round(2), _y.round(2)))]}"
         )
 
-        self.logger.debug("Starting RANSAC")
-        solver = RansacSolver(
+        solver_name = self.config.ransac.solver
+        if solver_name == "ransac":
+            solver_cls = RansacSolver
+        elif solver_name == "optimal":
+            solver_cls = OptimalRansacSolver
+        else:
+            raise ValueError(
+                f"Unknown RANSAC solver '{solver_name}'. "
+                "Choose 'ransac' or 'optimal'."
+            )
+
+        self.logger.debug(f"Starting RANSAC ({solver_name})")
+        solver = solver_cls(
             _x,
             _y,
             hough=self.hough_transformer,

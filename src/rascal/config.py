@@ -123,6 +123,7 @@ class RansacConfig:
     sample_size: int = 5
     match_method: str = "hungarian"
     sampler: str = "probabilistic"
+    solver: str = "ransac"
     top_n_candidate: int = 5
     use_msac: bool = True
 
