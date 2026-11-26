@@ -246,3 +246,33 @@ def test_sampler_not_updated_without_consensus_beyond_sample_size():
     np.random.seed(0)
     solver.solve()
     assert all(count == 1 for count in solver.sampler.sample_count_x.values())
+
+
+def test_update_best_iteratively_reexpands_inliers():
+    # Realistic degree-4 polynomial with small measurement noise across [0, 100].
+    # An initial partial match on the left half (x <= 45) yields a noisy fit
+    # that extrapolates past rms_tolerance at the far right after a single refit,
+    # requiring iterative refit + re-expansion to pull in all 21 points.
+    rng = np.random.default_rng(42)
+    x = np.linspace(0, 100, 21)
+    true_coeffs = np.array([3000.0, 2.0, 0.005, -2e-5, 1e-7])
+    y = np.polynomial.polynomial.polyval(x, true_coeffs) + rng.normal(0, 0.4, len(x))
+
+    solver = RansacSolver(
+        x,
+        y,
+        config={"degree": 4, "sample_size": 5, "rms_tolerance": 4.0},
+    )
+    # Initial partial inlier set: only x <= 40 (9 points)
+    init_res = np.where(x <= 40.0, 0.5, 50.0)
+    pre = SolveResult(
+        fit_coeffs=true_coeffs,
+        cost=100.0,
+        x=x,
+        y=y,
+        residual=init_res,
+        rms_tolerance=4.0,
+    )
+    solver._update_best(pre)
+    assert solver.valid_solution
+    assert len(solver.best_result.x) == len(x)

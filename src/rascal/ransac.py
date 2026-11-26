@@ -536,31 +536,46 @@ class RansacSolver:
 
                 return False
 
-            # Now we do a robust fit
-            if self.config.fit_type == "poly":
-                try:
+            # Iteratively refit and re-expand inliers until the inlier set
+            # stabilizes so a partial consensus can pull in edge peaks.
+            prev_n_inliers = -1
+            for _ in range(5):
+                # Now we do a robust fit
+                if self.config.fit_type == "poly":
+                    try:
 
-                    coeffs = models.robust_polyfit(
+                        coeffs = models.robust_polyfit(
+                            inliers_x, inliers_y, self.config.degree
+                        )
+
+                    except np.linalg.LinAlgError:
+
+                        self.logger.warning(
+                            "Linear algebra error in robust fit"
+                        )
+                        return False
+
+                else:
+                    coeffs = self.polyfit(
                         inliers_x, inliers_y, self.config.degree
                     )
 
-                except np.linalg.LinAlgError:
+                # Re-expand inliers using the robust fit coefficients - more candidates
+                # may now be within tolerance.
+                residual_robust, inliers_x, inliers_y = self._match_bijective(
+                    self.sampler.y_for_x, self.unique_x, coeffs
+                )
+                mask_robust = residual_robust < self.config.rms_tolerance
+                inliers_x = inliers_x[mask_robust]
+                inliers_y = inliers_y[mask_robust]
+                n_inliers = len(inliers_x)
 
-                    self.logger.warning("Linear algebra error in robust fit")
-                    return False
-
-            else:
-                coeffs = self.polyfit(inliers_x, inliers_y, self.config.degree)
-
-            # Re-expand inliers using the robust fit coefficients - more candidates
-            # may now be within tolerance.
-            residual_robust, inliers_x, inliers_y = self._match_bijective(
-                self.sampler.y_for_x, self.unique_x, coeffs
-            )
-            mask_robust = residual_robust < self.config.rms_tolerance
-            inliers_x = inliers_x[mask_robust]
-            inliers_y = inliers_y[mask_robust]
-            n_inliers = len(inliers_x)
+                if (
+                    n_inliers <= self.config.degree + 1
+                    or n_inliers == prev_n_inliers
+                ):
+                    break
+                prev_n_inliers = n_inliers
 
             # Overfit
             if n_inliers <= self.config.degree + 1:
