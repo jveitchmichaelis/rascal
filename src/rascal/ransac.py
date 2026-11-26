@@ -85,6 +85,7 @@ class RansacSolver:
         fit_valid_fn: Callable = lambda x: True,
         fixed_x: Optional[Union[list, np.ndarray]] = None,
         fixed_y: Optional[Union[list, np.ndarray]] = None,
+        weights: Optional[Union[list, np.ndarray]] = None,
     ):
         """
         Josh will write something here.
@@ -101,8 +102,13 @@ class RansacSolver:
             else:
                 self.config = OmegaConf.merge(self.config, config)
 
-        self.x = x
-        self.y = y
+        self.x = np.asarray(x)
+        self.y = np.asarray(y)
+        self.weights = (
+            np.asarray(weights, dtype=float).reshape(-1)
+            if weights is not None
+            else None
+        )
         self.fixed_x = (
             np.asarray(fixed_x, dtype=float).reshape(-1)
             if fixed_x is not None
@@ -162,6 +168,7 @@ class RansacSolver:
                 self.y,
                 self.config.sample_size,
                 n_samples=self.config.max_tries,
+                weights=self.weights,
             )
         elif self.config.sampler == "probabilistic":
             self.logger.debug(f"Using probalistic random sampler")
@@ -170,6 +177,7 @@ class RansacSolver:
                 self.y,
                 self.config.sample_size,
                 n_samples=self.config.max_tries,
+                weights=self.weights,
             )
         elif self.config.sampler == "uniform":
             self.logger.debug("Using uniform random sampler")
@@ -178,6 +186,7 @@ class RansacSolver:
                 self.y,
                 self.config.sample_size,
                 n_samples=self.config.max_tries,
+                weights=self.weights,
             )
         else:
             raise NotImplementedError
@@ -217,6 +226,8 @@ class RansacSolver:
 
         self.y = self.y[separation_mask].flatten()
         self.x = self.x[separation_mask].flatten()
+        if self.weights is not None:
+            self.weights = self.weights[separation_mask].flatten()
 
     def solve(self):
         """

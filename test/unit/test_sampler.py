@@ -98,3 +98,37 @@ def test_monotonicity():
     """
 
     assert len(samples) == 1
+
+
+def test_weighted_y_sampling_prefers_high_weight_candidates():
+    import numpy as np
+
+    np.random.seed(0)
+    # 10 unique x values, each with 1 true high-weight y and 4 low-weight decoy y values
+    x = []
+    y = []
+    weights = []
+    for xi in range(10):
+        true_y = 100.0 * (xi + 1)
+        x.append(xi)
+        y.append(true_y)
+        weights.append(100.0)
+        for d in range(1, 5):
+            x.append(xi)
+            y.append(true_y + d)
+            weights.append(1.0)
+
+    sampler = UniformRandomSampler(
+        x, y, sample_size=3, n_samples=50, weights=weights
+    )
+    samples = list(sampler)
+    assert len(samples) > 0
+    true_picks = sum(
+        1
+        for x_hat, y_hat in samples
+        for xi, yi in zip(x_hat, y_hat)
+        if np.isclose(yi, 100.0 * (xi + 1))
+    )
+    total_picks = sum(len(x_hat) for x_hat, _ in samples)
+    # Uniform would pick true_y ~20% of the time; weighted (100 vs 4) should pick >80%
+    assert true_picks / total_picks > 0.8

@@ -29,6 +29,7 @@ class Sampler:
         y: Union[np.ndarray, list],
         sample_size: int,
         n_samples: int = -1,
+        weights: Union[np.ndarray, list, None] = None,
     ):
         """
         This is a base class for sampling functions for RANSAC. Users should
@@ -58,6 +59,14 @@ class Sampler:
 
         assert len(self.x) == len(self.y)
 
+        if weights is not None:
+            self.weights = np.asarray(weights, dtype=np.float64).reshape(-1)
+            assert len(self.weights) == len(self.x)
+            self.w_for_x = {}
+        else:
+            self.weights = None
+            self.w_for_x = None
+
         self.sample_size = sample_size
         self.n_samples = n_samples
 
@@ -66,7 +75,14 @@ class Sampler:
 
         y_combinations = 0
         for p in self.unique_x:
-            self.y_for_x[p] = np.sort(np.unique(self.y[self.x == p]))
+            x_mask = self.x == p
+            ys_p = self.y[x_mask]
+            uniq_y, inv = np.unique(ys_p, return_inverse=True)
+            self.y_for_x[p] = uniq_y
+            if self.w_for_x is not None:
+                ws_p = np.zeros(len(uniq_y), dtype=np.float64)
+                np.add.at(ws_p, inv, self.weights[x_mask])
+                self.w_for_x[p] = ws_p
             y_combinations += len(self.y_for_x[p])
 
         self.maximum_samples = scipy.special.comb(
@@ -218,8 +234,14 @@ class UniformRandomSampler(Sampler):
                         resample = True
                         break
 
-                # Select at random
-                _y = np.random.choice(y_choice[i:])
+                # Select at random (weighted by Hough consensus if available)
+                if self.w_for_x is not None:
+                    w_slice = self.w_for_x[_x][i:]
+                    w_sum = w_slice.sum()
+                    p_y = w_slice / w_sum if w_sum > 0 else None
+                    _y = np.random.choice(y_choice[i:], p=p_y)
+                else:
+                    _y = np.random.choice(y_choice[i:])
                 sampled_y[_y] = 1
                 y_hat.append(_y)
 

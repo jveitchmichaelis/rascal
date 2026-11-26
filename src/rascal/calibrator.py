@@ -549,6 +549,7 @@ class Calibrator:
 
         out_peaks = []
         out_wavelengths = []
+        out_weights = []
 
         for peak in np.unique(peaks):
             idx = np.where(peaks == peak)
@@ -572,11 +573,12 @@ class Calibrator:
                     idx_j = np.where(wavelengths_matched == wave)
                     aggregated_count[j] = np.sum(counts[idx_j])
 
+                top_idx = np.argsort(-aggregated_count)[:num]
                 out_peaks.extend([peak] * num)
-                out_wavelengths.extend(
-                    unique_wavelengths[np.argsort(-aggregated_count)[:num]]
-                )
+                out_wavelengths.extend(unique_wavelengths[top_idx])
+                out_weights.extend(aggregated_count[top_idx])
 
+        self.candidate_weights = out_weights
         return out_peaks, out_wavelengths
 
     def _get_candidate_points_linear(self, candidate_tolerance: float):
@@ -1143,6 +1145,7 @@ class Calibrator:
             fit_valid_fn=self._fit_valid,
             fixed_x=self.pix_known,
             fixed_y=self.wave_known,
+            weights=self.candidate_weights,
         )
         solver.solve()
 
