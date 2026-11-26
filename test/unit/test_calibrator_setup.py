@@ -119,3 +119,47 @@ def test_calibrator_fit_passes_known_pairs_and_hough(
     assert captured.get("hough") is c.hough_transformer
     assert np.array_equal(captured.get("fixed_x"), c.pix_known)
     assert np.array_equal(captured.get("fixed_y"), c.wave_known)
+
+
+def test_candidate_selection_prioritizes_top_hough_bins(
+    peaks, detector_config, wavelengths_linear
+):
+    # Mix true wavelengths with decoy wavelengths across the detector range
+    rng = np.random.default_rng(42)
+    decoys = rng.uniform(3100.0, 7900.0, size=30)
+    all_waves = np.sort(np.concatenate([wavelengths_linear, decoys]))
+
+    atlas = Atlas(
+        source="manual",
+        element="linear",
+        wavelengths=all_waves,
+        min_wavelength=3000.0,
+        max_wavelength=8000.0,
+    )
+    config = {
+        "seed": 0,
+        "detector": detector_config,
+        "hough": {
+            "num_slopes": 2000,
+            "range_tolerance": 300.0,
+            "xbins": 100,
+            "ybins": 100,
+            "linearity_tolerance": 50.0,
+        },
+        "ransac": {"top_n_candidate": 5},
+    }
+    c = Calibrator(peaks, atlas_lines=atlas.atlas_lines, config=config)
+    c.do_hough_transform()
+    c._get_candidate_points_linear(c.config.hough.linearity_tolerance)
+    cp, ca = c._get_most_common_candidates(
+        c.candidates, top_n_candidate=1, weighted=True
+    )
+
+    recalled = sum(
+        np.any(
+            np.isclose(cp, p, atol=1e-4)
+            & np.isclose(ca, w, atol=1e-4)
+        )
+        for p, w in zip(peaks, wavelengths_linear)
+    )
+    assert recalled / len(peaks) > 0.8

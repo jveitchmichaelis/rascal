@@ -25,6 +25,7 @@ class HoughTransform:
 
         self.hough_points = np.empty(2)
         self.hough_lines = None
+        self.hough_weights = None
         self.hist = np.empty(1)
         self.xedges = np.empty(1)
         self.yedges = np.empty(1)
@@ -224,6 +225,7 @@ class HoughTransform:
         ybin_width = (self.yedges[1] - self.yedges[0]) / 2
 
         lines = []
+        weights = []
 
         for bin_i in hist_sorted_arg:
 
@@ -233,8 +235,10 @@ class HoughTransform:
                     self.yedges[bin_i[1]] + ybin_width,
                 )
             )
+            weights.append(float(self.hist[bin_i[0], bin_i[1]]))
 
         self.hough_lines = lines
+        self.hough_weights = weights
 
     def save(
         self,

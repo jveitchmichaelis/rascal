@@ -92,6 +92,7 @@ class Calibrator:
         self.pix_known = None
         self.wave_known = None
         self.hough_lines = None
+        self.hough_weights = None
         self.hough_points = None
         self.pairs = None
         self.hough_transformer = HoughTransform()
@@ -597,11 +598,25 @@ class Calibrator:
 
         """
 
-        # Locate candidate points for these lines fits
+        # Locate candidate points from the top Hough lines weighted by bin count
         self.candidates = []
 
-        for line in self.hough_lines:
-            gradient, intercept = line
+        max_hough_lines = min(
+            len(self.hough_lines), max(100, len(self.hough_lines) // 100)
+        )
+        hough_weights = (
+            self.hough_weights
+            if self.hough_weights is not None
+            and len(self.hough_weights) == len(self.hough_lines)
+            else None
+        )
+
+        for idx in range(max_hough_lines):
+            hough_weight = hough_weights[idx] if hough_weights is not None else 1.0
+            if hough_weight <= 0:
+                continue
+
+            gradient, intercept = self.hough_lines[idx]
 
             predicted = gradient * self.pairs[:, 0] + intercept
             actual = self.pairs[:, 1]
@@ -614,15 +629,18 @@ class Calibrator:
             # Match the range_tolerance to 1.1775 s.d. to match the FWHM
             # Note that the pairs outside of the range_tolerance were already
             # removed in an earlier stage
-            weight = gauss(
-                actual[mask],
-                1.0,
-                predicted[mask],
-                (
-                    self.config.hough.range_tolerance
-                    + self.config.hough.linearity_tolerance
+            weight = (
+                gauss(
+                    actual[mask],
+                    1.0,
+                    predicted[mask],
+                    (
+                        self.config.hough.range_tolerance
+                        + self.config.hough.linearity_tolerance
+                    )
+                    * 1.1775,
                 )
-                * 1.1775,
+                * hough_weight
             )
 
             self.candidates.append(
@@ -869,6 +887,7 @@ class Calibrator:
         )
         self.hough_points = self.hough_transformer.hough_points
         self.hough_lines = self.hough_transformer.hough_lines
+        self.hough_weights = self.hough_transformer.hough_weights
 
     def save_hough_transform(
         self,
