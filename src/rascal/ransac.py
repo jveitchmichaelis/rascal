@@ -141,9 +141,18 @@ class RansacSolver:
 
         self.logger = logging.getLogger(__name__)
 
-        if len(np.unique(self.x)) <= self.config.degree:
+        if self.config.filter_close:
+            self.logger.debug(
+                "Filtering close y-values with tolerance "
+                + f"{self.config.rms_tolerance}"
+            )
+            self._filter_close()
+
+        self.unique_x = np.sort(np.unique(self.x))
+
+        if len(self.unique_x) <= self.config.degree:
             raise ValueError(
-                f"Fit degree ({self.config.degree}) is greater than the provided number of points ({len(np.unique(self.x))})"
+                f"Fit degree ({self.config.degree}) is greater than the provided number of points ({len(self.unique_x)})"
             )
 
         if self.config.sampler == "weighted":
@@ -172,13 +181,6 @@ class RansacSolver:
             )
         else:
             raise NotImplementedError
-
-        if self.config.filter_close:
-            self.logger.debug(
-                "Filtering close x-values with tolerance "
-                + f"{self.config.rms_tolerance}"
-            )
-            self._filter_close()
 
         if self.hough is not None and self.hough.hist is not None:
             self.logger.debug("Using hough weighting")
