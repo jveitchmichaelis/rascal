@@ -233,3 +233,45 @@ def test_msac_cost_prefers_more_inliers_at_rms_tolerance():
         rms_tolerance=4.0,
     )
     assert solver._cost(res_a) < solver._cost(res_b)
+
+
+def test_probabilistic_sampler_only_updates_on_inliers():
+    x = np.arange(15, dtype=float)
+    y = 3000.0 + 5.0 * x
+    # Corrupt half the points into huge outliers
+    y_noisy = y.copy()
+    y_noisy[::2] += 500.0
+
+    solver = RansacSolver(
+        x,
+        y_noisy,
+        config={
+            "degree": 1,
+            "sample_size": 2,
+            "max_tries": 20,
+            "rms_tolerance": 4.0,
+            "sampler": "probabilistic",
+        },
+    )
+
+    updated_counts = []
+    orig_update = solver.sampler.update
+    orig_match = solver._match_bijective
+
+    last_inlier_count = [None]
+
+    def spy_match(*args, **kwargs):
+        res, mx, my = orig_match(*args, **kwargs)
+        last_inlier_count[0] = int(np.sum(res < solver.config.rms_tolerance))
+        return res, mx, my
+
+    def spy_update(mx, my):
+        updated_counts.append((len(mx), last_inlier_count[0]))
+        return orig_update(mx, my)
+
+    solver._match_bijective = spy_match
+    solver.sampler.update = spy_update
+    solver.solve()
+
+    assert len(updated_counts) > 0
+    assert all(n_upd == n_inl for n_upd, n_inl in updated_counts)

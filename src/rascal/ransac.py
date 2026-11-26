@@ -246,7 +246,8 @@ class RansacSolver:
                 self.sampler.y_for_x, self.unique_x, fit_coeffs
             )
 
-            self.sampler.update(matched_x, matched_y)
+            inlier_mask = residual < self.config.rms_tolerance
+            self.sampler.update(matched_x[inlier_mask], matched_y[inlier_mask])
 
             result = SolveResult(
                 fit_coeffs=fit_coeffs,
