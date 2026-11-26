@@ -5,6 +5,7 @@ from astropy.io import fits
 from matplotlib import pyplot as plt
 from scipy.signal import find_peaks
 
+from eval_utils import report_calibration_diagnostics
 from rascal import util
 from rascal.atlas import Atlas
 from rascal.calibrator import Calibrator
@@ -202,3 +203,12 @@ if res["success"]:
     print("Atlas utilisation rate: {}%".format(res["atlas_utilisation"] * 100))
 else:
     print("Calibration failed to find a valid solution.")
+
+gmos_gt_coeffs = [
+    4.66525885e03,
+    1.46720775e00,
+    1.63000305e-05,
+    1.37474397e-10,
+    -1.67109123e-13,
+]
+report_calibration_diagnostics(c, res, gt_coeffs=gmos_gt_coeffs)

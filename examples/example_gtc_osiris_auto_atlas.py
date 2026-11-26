@@ -5,6 +5,7 @@ import numpy as np
 from astropy.io import fits
 from scipy.signal import find_peaks
 
+from eval_utils import report_calibration_diagnostics
 from rascal.atlas import AtlasCollection, NistSource
 from rascal.calibrator import Calibrator
 from rascal.util import refine_peaks
@@ -121,3 +122,12 @@ if res["success"]:
     )
 else:
     print("Calibration failed to find a valid solution.")
+
+osiris_gt_coeffs = [
+    3.63546445e03,
+    1.45549920e00,
+    4.66498922e-04,
+    -9.89023065e-08,
+    9.00463547e-12,
+]
+report_calibration_diagnostics(c, res, gt_coeffs=osiris_gt_coeffs)

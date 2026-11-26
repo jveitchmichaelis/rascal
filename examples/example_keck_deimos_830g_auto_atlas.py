@@ -4,6 +4,7 @@ import os
 import numpy as np
 from scipy.signal import find_peaks
 
+from eval_utils import report_calibration_diagnostics
 from rascal.atlas import AtlasCollection
 from rascal.calibrator import Calibrator
 from rascal.util import refine_peaks
@@ -109,3 +110,7 @@ if res["success"]:
     )
 else:
     print("Calibration failed to find a valid solution.")
+
+gt_pix = np.array(spectrum_json["xfit"]) * spectrum_json["xnorm"]
+gt_wave = np.array(spectrum_json["yfit"])
+report_calibration_diagnostics(c, res, gt_pairs=(gt_pix, gt_wave))

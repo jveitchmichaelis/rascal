@@ -4,6 +4,7 @@ import numpy as np
 from astropy.io import fits
 from scipy.signal import find_peaks
 
+from eval_utils import report_calibration_diagnostics
 from rascal import util
 from rascal.atlas import AtlasCollection, NistSource
 from rascal.calibrator import Calibrator
@@ -104,3 +105,5 @@ if res["success"]:
     print("Atlas utilisation rate: {}%".format(res["atlas_utilisation"] * 100))
 else:
     print("Calibration failed to find a valid solution.")
+
+report_calibration_diagnostics(c, res)
