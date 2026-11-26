@@ -132,3 +132,35 @@ def test_weighted_y_sampling_prefers_high_weight_candidates():
     total_picks = sum(len(x_hat) for x_hat, _ in samples)
     # Uniform would pick true_y ~20% of the time; weighted (100 vs 4) should pick >80%
     assert true_picks / total_picks > 0.8
+
+
+def test_slope_bounded_sampling_enforces_secant_bounds():
+    import numpy as np
+
+    np.random.seed(0)
+    # 10 x values spaced by 10 px, true slope = 2.0 A/px (y = 3000 + 2*x),
+    # plus decoy y values with huge/tiny slopes relative to neighbors.
+    x = []
+    y = []
+    for xi in range(0, 100, 10):
+        true_y = 3000.0 + 2.0 * xi
+        for cand_y in [true_y, true_y + 150.0, true_y + 300.0]:
+            x.append(float(xi))
+            y.append(cand_y)
+
+    min_slope = 1.0
+    max_slope = 3.0
+    sampler = UniformRandomSampler(
+        x,
+        y,
+        sample_size=4,
+        n_samples=50,
+        min_slope=min_slope,
+        max_slope=max_slope,
+    )
+    samples = list(sampler)
+    assert len(samples) > 0
+    for x_hat, y_hat in samples:
+        secants = np.diff(y_hat) / np.diff(x_hat)
+        assert np.all(secants >= min_slope)
+        assert np.all(secants <= max_slope)

@@ -30,6 +30,8 @@ class Sampler:
         sample_size: int,
         n_samples: int = -1,
         weights: Union[np.ndarray, list, None] = None,
+        min_slope: Union[float, None] = None,
+        max_slope: Union[float, None] = None,
     ):
         """
         This is a base class for sampling functions for RANSAC. Users should
@@ -69,6 +71,8 @@ class Sampler:
 
         self.sample_size = sample_size
         self.n_samples = n_samples
+        self.min_slope = min_slope
+        self.max_slope = max_slope
 
         self.y_for_x = {}
         self.unique_x = np.sort(np.unique(self.x))
@@ -197,7 +201,7 @@ class UniformRandomSampler(Sampler):
         """
 
         resample = True
-        retries = 5
+        retries = 20
 
         while resample and retries > 0:
 
@@ -216,32 +220,46 @@ class UniformRandomSampler(Sampler):
             sampled_y = {}
 
             # Get a random y for this x
-            for _x in x_hat:
+            for idx_k, _x in enumerate(x_hat):
 
                 y_choice = self.y_for_x[_x]
 
                 # No samples yet, free choice
-
-                i = 0
+                lo = 0
+                hi = len(y_choice)
 
                 if len(y_hat) > 0:
 
-                    # Enforce monotonic increasing
-                    i = bisect.bisect(y_choice, y_hat[-1])
+                    # Enforce monotonic increasing (and physical secant slope
+                    # bounds when provided) to avoid unphysical jumps before
+                    # fitting.
+                    if (
+                        self.min_slope is not None
+                        and self.max_slope is not None
+                    ):
+                        dx = _x - x_hat[idx_k - 1]
+                        y_lo = y_hat[-1] + self.min_slope * dx
+                        y_hi = y_hat[-1] + self.max_slope * dx
+                        lo = bisect.bisect_left(y_choice, y_lo)
+                        hi = bisect.bisect_right(y_choice, y_hi)
+                        if lo < len(y_choice) and y_choice[lo] <= y_hat[-1]:
+                            lo = bisect.bisect_right(y_choice, y_hat[-1])
+                    else:
+                        lo = bisect.bisect(y_choice, y_hat[-1])
 
                     # Pick a random y
-                    if i == len(y_choice):
+                    if lo >= hi:
                         resample = True
                         break
 
                 # Select at random (weighted by Hough consensus if available)
                 if self.w_for_x is not None:
-                    w_slice = self.w_for_x[_x][i:]
+                    w_slice = self.w_for_x[_x][lo:hi]
                     w_sum = w_slice.sum()
                     p_y = w_slice / w_sum if w_sum > 0 else None
-                    _y = np.random.choice(y_choice[i:], p=p_y)
+                    _y = np.random.choice(y_choice[lo:hi], p=p_y)
                 else:
-                    _y = np.random.choice(y_choice[i:])
+                    _y = np.random.choice(y_choice[lo:hi])
                 sampled_y[_y] = 1
                 y_hat.append(_y)
 
