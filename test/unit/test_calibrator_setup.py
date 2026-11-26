@@ -163,3 +163,45 @@ def test_candidate_selection_prioritizes_top_hough_bins(
         for p, w in zip(peaks, wavelengths_linear)
     )
     assert recalled / len(peaks) > 0.8
+
+
+def test_fit_valid_uses_max_contiguous_pixel_for_chip_gaps():
+    # Two 500-px chips with a 100-px gap -> max(contiguous_pixel) = 1099
+    # Linear dispersion: w(x) = 3000 + 5 * x
+    # At x=1000 (len(spectrum)): w = 8000; at x=1099 (max contiguous): w = 8495
+    # With detector_max_wave=8500 and range_tolerance=200:
+    # valid upper range is [8300, 8700] -> x=1099 (8495) is valid, x=1000 (8000) is NOT!
+    contiguous_range = [0.0, 499.0, 600.0, 1099.0]
+    peaks = np.linspace(50.0, 950.0, 15)
+    spectrum = np.zeros(1000)
+    atlas = Atlas(
+        source="manual",
+        element="Test",
+        wavelengths=3000.0 + 5.0 * np.linspace(50.0, 1050.0, 15),
+        min_wavelength=3000.0,
+        max_wavelength=8500.0,
+    )
+    config = {
+        "detector": {
+            "num_pix": 1000,
+            "contiguous_range": contiguous_range,
+            "detector_min_wave": 3000.0,
+            "detector_max_wave": 8500.0,
+        },
+        "hough": {"range_tolerance": 200.0},
+        "ransac": {"minimum_matches": 5, "minimum_fit_error": 1e-6},
+    }
+    c = Calibrator(
+        peaks, atlas_lines=atlas.atlas_lines, config=config, spectrum=spectrum
+    )
+
+    inliers_x = c.peaks_effective
+    inliers_y = 3000.0 + 5.0 * inliers_x
+    result = SolveResult(
+        fit_coeffs=np.array([3000.0, 5.0]),
+        x=inliers_x,
+        y=inliers_y,
+        residual=np.full(len(inliers_x), 0.1),
+        rms_tolerance=4.0,
+    )
+    assert c._fit_valid(result) is True

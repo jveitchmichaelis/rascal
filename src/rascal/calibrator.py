@@ -1241,7 +1241,9 @@ class Calibrator:
             )
             return False
 
-        if self.spectrum is not None:
+        if len(self.contiguous_pixel) > 0:
+            fit_max_wavelength = max(self.contiguous_pixel)
+        elif self.spectrum is not None:
             fit_max_wavelength = len(self.spectrum)
         else:
             fit_max_wavelength = self.config.detector.num_pix
