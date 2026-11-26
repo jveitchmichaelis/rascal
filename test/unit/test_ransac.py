@@ -91,3 +91,27 @@ def test_update_best_validates_post_robust_inliers():
     )
     solver._update_best(fake_result)
     assert not solver.valid_solution
+
+
+def test_match_hungarian_outlier_does_not_steal_inlier():
+    # Three peaks with true linear relation y = 1000 + 10 * x:
+    #   x=0 -> true y=1000, x=1 -> true y=1010, x=2 -> true y=1020
+    # Peak x=2 is an outlier whose true line 1020 is NOT in its candidates;
+    # its only candidate is 1010 (error 10.0 > rms_tolerance=4.0).
+    # Peak x=1 has candidates [1000, 1010], peak x=0 has [1000, 1050].
+    # An outlier peak must NEVER steal 1010 from x=1 (or trigger a cascade
+    # stealing 1000 from x=0) just to avoid an unmatched sentinel cost.
+    x = np.array([0.0, 0.0, 1.0, 1.0, 2.0])
+    y = np.array([1000.0, 1050.0, 1000.0, 1010.0, 1010.0])
+    solver = RansacSolver(
+        x,
+        y,
+        config={"degree": 1, "sample_size": 2, "rms_tolerance": 4.0},
+    )
+    coeffs = np.array([1000.0, 10.0])
+    err, matched_x, matched_y = solver._match_bijective(
+        solver.sampler.y_for_x, solver.unique_x, coeffs
+    )
+    inlier_mask = err < 4.0
+    matched_pairs = set(zip(matched_x[inlier_mask], matched_y[inlier_mask]))
+    assert matched_pairs == {(0.0, 1000.0), (1.0, 1010.0)}

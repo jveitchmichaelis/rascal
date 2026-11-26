@@ -330,33 +330,65 @@ class RansacSolver:
         x: Union[list, np.ndarray],
         fit_coeff: Union[list, np.ndarray],
     ):
-        # Collect all unique atlas lines that are candidates for any peak
-        all_y = np.unique(np.concatenate([y_for_x[x_i] for x_i in x]))
-        y_to_idx = {y: i for i, y in enumerate(all_y)}
+        tol = (
+            self.config.rms_tolerance
+            if self.config.use_msac
+            else self.config.inlier_tolerance
+        )
 
-        n_peaks = len(x)
-        n_atlas = len(all_y)
+        # Collect only inlier candidate edges (err < tol) so outlier peaks
+        # remain unmatched at cost tol rather than displacing true inlier
+        # matches.
+        fits = self.polyval(x, fit_coeff)
+        active_rows = []
+        active_edges = []
+        y_to_idx = {}
+        active_y = []
 
-        # Build cost matrix: cost[i,j] = |polyval(x_i, coeff) - all_y[j]|
-        # Non-candidate pairs get a large sentinel value.
-        LARGE = 1e9
-        cost_matrix = np.full((n_peaks, n_atlas), LARGE)
+        for x_i, fit in zip(x, fits):
+            ys = y_for_x[x_i]
+            errs = np.abs(fit - ys)
+            inlier_idx = np.flatnonzero(errs < tol)
+            if len(inlier_idx) == 0:
+                continue
+            r = len(active_rows)
+            active_rows.append(x_i)
+            for k in inlier_idx:
+                y_val = ys[k]
+                j = y_to_idx.get(y_val)
+                if j is None:
+                    j = len(active_y)
+                    y_to_idx[y_val] = j
+                    active_y.append(y_val)
+                active_edges.append((r, j, float(errs[k])))
 
-        for i, x_i in enumerate(x):
-            fit = self.polyval(x_i, fit_coeff)
-            for y in y_for_x[x_i]:
-                j = y_to_idx[y]
-                cost_matrix[i, j] = np.abs(fit - y)
+        n_active_peaks = len(active_rows)
+        if n_active_peaks == 0:
+            empty = np.array([], dtype=float)
+            return empty, empty, empty
+
+        n_active_atlas = len(active_y)
+
+        # Pad with n_active_peaks unmatched dummy columns of cost tol so any
+        # peak can remain unmatched at cost tol rather than displacing a lower-
+        # error match. This globally minimizes the exact M-SAC bijective cost.
+        cost_matrix = np.full(
+            (n_active_peaks, n_active_atlas + n_active_peaks), tol
+        )
+        for r, j, err_val in active_edges:
+            cost_matrix[r, j] = err_val
 
         # Globally optimal bijective assignment (Hungarian algorithm)
         row_ind, col_ind = linear_sum_assignment(cost_matrix)
 
-        # Drop assignments that were to sentinel (non-candidate) slots
+        # Drop assignments that were to unmatched dummy columns
         costs = cost_matrix[row_ind, col_ind]
-        valid = costs < LARGE
+        valid = (col_ind < n_active_atlas) & (costs < tol)
 
-        matched_x = x[row_ind[valid]]
-        matched_y = all_y[col_ind[valid]]
+        active_rows_arr = np.asarray(active_rows)
+        active_y_arr = np.asarray(active_y)
+        matched_x = active_rows_arr[row_ind[valid]]
+        matched_y = active_y_arr[col_ind[valid]]
         err = costs[valid]
 
         assert len(np.unique(matched_x)) == len(np.unique(matched_y))
@@ -444,10 +476,16 @@ class RansacSolver:
 
         if self.config.use_msac:
 
-            # M-SAC Estimator (Torr and Zisserman, 1996)
+            # M-SAC Estimator (Torr and Zisserman, 1996): every unmatched peak
+            # incurs the clipped outlier penalty rms_tolerance.
             clipped = np.minimum(result.residual, self.config.rms_tolerance)
-            dof = max(1, len(result.residual) - len(result.fit_coeffs) + 1)
-            cost = (np.sum(clipped) + 1e-16) / dof / (weight + 1e-9)
+            n_total = max(len(self.unique_x), len(result.residual))
+            n_unmatched = n_total - len(result.residual)
+            total_clipped = (
+                np.sum(clipped) + n_unmatched * self.config.rms_tolerance
+            )
+            dof = max(1, n_total - len(result.fit_coeffs) + 1)
+            cost = (total_clipped + 1e-16) / dof / (weight + 1e-9)
 
         else:
 
