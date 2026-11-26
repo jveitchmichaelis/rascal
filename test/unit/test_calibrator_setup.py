@@ -205,3 +205,31 @@ def test_fit_valid_uses_max_contiguous_pixel_for_chip_gaps():
         rms_tolerance=4.0,
     )
     assert c._fit_valid(result) is True
+
+
+def test_msac_cost_prefers_more_inliers_at_rms_tolerance():
+    x = np.arange(15, dtype=float)
+    y = 3000.0 + 5.0 * x
+    solver = RansacSolver(
+        x,
+        y,
+        config={"degree": 1, "rms_tolerance": 4.0, "use_msac": True},
+    )
+
+    # Result A: 10 tight inliers + 5 large outliers
+    res_a = SolveResult(
+        fit_coeffs=np.array([3000.0, 5.0]),
+        x=x,
+        y=y,
+        residual=np.array([0.5] * 10 + [500.0] * 5),
+        rms_tolerance=4.0,
+    )
+    # Result B: only 2 tight inliers + 13 moderate outliers
+    res_b = SolveResult(
+        fit_coeffs=np.array([3000.0, 5.0]),
+        x=x,
+        y=y,
+        residual=np.array([0.5] * 2 + [20.0] * 13),
+        rms_tolerance=4.0,
+    )
+    assert solver._cost(res_a) < solver._cost(res_b)

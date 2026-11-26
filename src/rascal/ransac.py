@@ -413,33 +413,27 @@ class RansacSolver:
         """
 
         # modified cost function weighted by the Hough space density
-        if (self.hough is not None) & (self.twoditp is not None):
+        if (self.hough is not None) and (self.twoditp is not None):
 
             wave = self.polyval(self.x, result.fit_coeffs)
             gradient = self.polyval(self.x, _derivative(result.fit_coeffs))
-            intercept = wave - gradient
+            intercept = wave - gradient * self.x
 
-            # weight = self.config.hough_weight * np.sum(
-            #    self.twoditp(intercept, gradient, grid=False)
-            # )
+            hough_density = np.maximum(
+                0.0, self.twoditp(gradient, intercept, grid=False)
+            )
+            weight = self.config.hough_weight * np.sum(hough_density)
 
         else:
 
-            # weight = 1.0
-            pass
+            weight = 1.0
 
         if self.config.use_msac:
 
             # M-SAC Estimator (Torr and Zisserman, 1996)
-
-            tolerance = 1.96 * result.residual.std()
-
-            clipped = np.minimum(result.residual, tolerance)
-
-            # Remove for now: / (len(result.residual) - len(result.fit_coeffs) + 1)
-            # / (weight + 1e-16)
-
-            cost = sum(clipped) + 1e-16
+            clipped = np.minimum(result.residual, self.config.rms_tolerance)
+            dof = max(1, len(result.residual) - len(result.fit_coeffs) + 1)
+            cost = (np.sum(clipped) + 1e-16) / dof / (weight + 1e-9)
 
         else:
 
