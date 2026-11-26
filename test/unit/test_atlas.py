@@ -11,7 +11,7 @@ import pytest
 # Suppress tqdm output
 from tqdm import tqdm
 
-from rascal.atlas import Atlas
+from rascal.atlas import Atlas, NistSource
 from rascal.calibrator import Calibrator
 from rascal.util import get_elements
 
@@ -206,17 +206,55 @@ def test_setting_nones_to_known_pairs_expect_fail():
         cal.set_known_pairs([None], [None])
 
 
-element_list = ["Hg", "Ar", "Xe", "Kr"]
-user_atlas = Atlas(
-    element="Test",
-    source="manual",
-    wavelengths=np.arange(10),
-    min_wavelength=0,
-    max_wavelength=10,
-)
+def test_load_nist_all_comment_header():
+    atlas = Atlas(
+        element="Fe I",
+        source="nist",
+        nist_source=NistSource.NIST_ALL,
+        min_wavelength=5900.0,
+        max_wavelength=7100.0,
+        min_intensity=20.0,
+    )
+    assert len(atlas) > 0
 
-cal = Calibrator(
-    np.arange(10),
-    user_atlas.atlas_lines,
-    config={"detector": {"detector_min_wave": 0.0, "detector_max_wave": 10.0}},
-)
+
+def test_atlas_brightest_n_lines():
+    atlas_all = Atlas(
+        element="Xe",
+        source="nist",
+        min_wavelength=4000.0,
+        max_wavelength=8000.0,
+        min_intensity=10.0,
+        min_distance=0.0,
+        brightest_n_lines=None,
+    )
+    atlas_top = Atlas(
+        element="Xe",
+        source="nist",
+        min_wavelength=4000.0,
+        max_wavelength=8000.0,
+        min_intensity=10.0,
+        min_distance=0.0,
+        brightest_n_lines=10,
+    )
+    assert len(atlas_all) > 10
+    assert len(atlas_top) == 10
+    # Must be the 10 brightest lines, not the 10 faintest
+    expected_min = sorted(atlas_all.get_intensities(), reverse=True)[9]
+    assert min(atlas_top.get_intensities()) >= expected_min
+
+
+def test_atlas_min_distance_filtering():
+    atlas = Atlas(
+        element="Ar",
+        source="nist",
+        min_wavelength=4000.0,
+        max_wavelength=8000.0,
+        min_intensity=10.0,
+        min_distance=50.0,
+    )
+    lines = sorted(atlas.get_lines())
+    assert len(lines) > 1
+    diffs = np.diff(lines)
+    assert np.all(diffs >= 50.0)
+

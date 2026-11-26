@@ -22,7 +22,7 @@ import numpy as np
 import yaml
 from omegaconf import OmegaConf
 
-from .util import vacuum_to_air_wavelength
+from .util import filter_distance, vacuum_to_air_wavelength
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +99,7 @@ class Atlas:
         self.atlas_lines = []
 
         logger.info(
-            f"Loading lines from {self.source} between {self.min_atlas_wavelength} and {self.max_atlas_wavelength} for element: {set(self.element)}"
+            f"Loading lines from {self.source} between {self.min_atlas_wavelength} and {self.max_atlas_wavelength} for element: {self.element}"
         )
         logger.info(
             f"Filtering lines by intensity > {self.min_intensity} and separation > {self.min_distance} Å"
@@ -166,7 +166,7 @@ class Atlas:
         s = self.element.split(" ")
 
         if len(s) == 2:
-            states = s[1]
+            states = [s[1]]
         else:
             states = []
 
@@ -267,6 +267,19 @@ class Atlas:
                     source=source,
                 )
             )
+
+        if self.brightest_n_lines is not None:
+            self.atlas_lines.sort(key=lambda x: x.intensity, reverse=True)
+            self.atlas_lines = self.atlas_lines[: self.brightest_n_lines]
+
+        self.atlas_lines.sort(key=lambda x: x.wavelength)
+
+        if self.min_distance and self.min_distance > 0 and len(self.atlas_lines) > 1:
+            valid_idx = filter_distance(
+                [line.wavelength for line in self.atlas_lines],
+                min_distance=self.min_distance,
+            )
+            self.atlas_lines = [self.atlas_lines[i] for i in valid_idx]
 
     def get_elements(self):
         """
@@ -521,6 +534,8 @@ def open_line_list(
 
     with open(path) as fp:
         lines_raw = fp.readlines()
+        if lines_raw and lines_raw[0].startswith("#"):
+            lines_raw[0] = lines_raw[0].lstrip("#")
         line_reader = csv.DictReader(lines_raw)
 
     # Validate line list columns:
