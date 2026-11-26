@@ -264,7 +264,10 @@ class RansacSolver:
             )
 
             inlier_mask = residual < self.config.rms_tolerance
-            self.sampler.update(matched_x[inlier_mask], matched_y[inlier_mask])
+            if np.count_nonzero(inlier_mask) > self.config.sample_size:
+                self.sampler.update(
+                    matched_x[inlier_mask], matched_y[inlier_mask]
+                )
 
             result = SolveResult(
                 fit_coeffs=fit_coeffs,

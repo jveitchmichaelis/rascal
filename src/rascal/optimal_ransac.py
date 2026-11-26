@@ -137,8 +137,9 @@ class OptimalRansacSolver(RansacSolver):
             mask = residual < self.config.rms_tolerance
             inliers_x = matched_x[mask]
             inliers_y = matched_y[mask]
-            self.sampler.update(inliers_x, inliers_y)
             ninliers = len(inliers_x)
+            if ninliers > self.config.sample_size:
+                self.sampler.update(inliers_x, inliers_y)
 
             # --- Local optimisation (only when we have enough inliers) ---
             if ninliers > self.low:

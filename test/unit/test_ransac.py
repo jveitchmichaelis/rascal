@@ -224,3 +224,25 @@ def test_update_best_uses_post_robust_cost():
     )
     solver._update_best(worse)
     assert len(solver.best_result.x) == 10
+
+
+def test_sampler_not_updated_without_consensus_beyond_sample_size():
+    # 10 non-collinear points where any 2-point linear fit only matches its own
+    # 2 sampled points (no consensus beyond sample_size=2). ProbabilisticSampler
+    # must not drift its sampling counts on non-consensus minimal samples.
+    x = np.arange(10, dtype=float)
+    y = 1000.0 + 10.0 * x**2  # strictly convex: no 3 points are collinear
+    solver = RansacSolver(
+        x,
+        y,
+        config={
+            "degree": 1,
+            "sample_size": 2,
+            "rms_tolerance": 1.0,
+            "max_tries": 20,
+            "sampler": "probabilistic",
+        },
+    )
+    np.random.seed(0)
+    solver.solve()
+    assert all(count == 1 for count in solver.sampler.sample_count_x.values())
