@@ -161,6 +161,26 @@ class RansacSolver:
                 f"Fit degree ({self.config.degree}) is greater than the provided number of points ({len(self.unique_x)})"
             )
 
+        # Derive relaxed physical secant-slope bounds from the Hough transform
+        # (allowing curvature outside the linear slope range) so the sampler
+        # prunes unphysical jumps before polynomial fitting.
+        min_slope = None
+        max_slope = None
+        if (
+            self.hough is not None
+            and getattr(self.hough, "xedges", None) is not None
+            and len(self.hough.xedges) >= 2
+            and float(self.hough.xedges[-1]) > 0.0
+        ):
+            min_slope = max(0.0, 0.5 * float(self.hough.xedges[0]))
+            max_slope = 1.5 * float(self.hough.xedges[-1])
+
+        self._mono_grid = (
+            np.linspace(self.unique_x[0], self.unique_x[-1], 25)
+            if len(self.unique_x) >= 2
+            else None
+        )
+
         if self.config.sampler == "weighted":
             self.logger.debug(f"Using weighted random sampler")
             self.sampler = WeightedRandomSampler(
@@ -169,6 +189,8 @@ class RansacSolver:
                 self.config.sample_size,
                 n_samples=self.config.max_tries,
                 weights=self.weights,
+                min_slope=min_slope,
+                max_slope=max_slope,
             )
         elif self.config.sampler == "probabilistic":
             self.logger.debug(f"Using probalistic random sampler")
@@ -178,6 +200,8 @@ class RansacSolver:
                 self.config.sample_size,
                 n_samples=self.config.max_tries,
                 weights=self.weights,
+                min_slope=min_slope,
+                max_slope=max_slope,
             )
         elif self.config.sampler == "uniform":
             self.logger.debug("Using uniform random sampler")
@@ -187,6 +211,8 @@ class RansacSolver:
                 self.config.sample_size,
                 n_samples=self.config.max_tries,
                 weights=self.weights,
+                min_slope=min_slope,
+                max_slope=max_slope,
             )
         else:
             raise NotImplementedError
@@ -258,6 +284,10 @@ class RansacSolver:
 
             fit_coeffs = self._fit_sample(x, y)
             self.logger.debug(f"Sample fit coeffs: {fit_coeffs}")
+
+            # Skip non-monotonic minimal fits before bijective matching
+            if not self._is_monotonic(fit_coeffs):
+                continue
 
             residual, matched_x, matched_y = self._match_bijective(
                 self.sampler.y_for_x, self.unique_x, fit_coeffs
@@ -431,6 +461,12 @@ class RansacSolver:
         assert len(np.unique(matched_x)) == len(np.unique(matched_y))
 
         return err, matched_x, matched_y
+
+    def _is_monotonic(self, fit_coeffs: Union[list, np.ndarray]) -> bool:
+        """Return True if the polynomial is strictly increasing on the pixel span."""
+        if self._mono_grid is None or len(fit_coeffs) <= 1:
+            return True
+        return bool(np.all(np.diff(self.polyval(self._mono_grid, fit_coeffs)) > 0))
 
     def _fit_sample(
         self, x_hat: Union[list, np.ndarray], y_hat: Union[list, np.ndarray]

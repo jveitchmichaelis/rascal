@@ -130,6 +130,9 @@ class OptimalRansacSolver(RansacSolver):
             except Exception:
                 continue
 
+            if not self._is_monotonic(fit_coeffs):
+                continue
+
             residual, matched_x, matched_y = self._match_bijective(
                 self.sampler.y_for_x, self.unique_x, fit_coeffs
             )

@@ -276,3 +276,29 @@ def test_update_best_iteratively_reexpands_inliers():
     solver._update_best(pre)
     assert solver.valid_solution
     assert len(solver.best_result.x) == len(x)
+
+
+def test_ransac_passes_hough_slope_bounds_and_skips_non_monotonic_fits():
+    from rascal.houghtransform import HoughTransform
+
+    x = np.linspace(0, 100, 12)
+    y = 3000.0 + 2.0 * x
+    ht = HoughTransform()
+    ht.set_constraints(
+        min_slope=1.5, max_slope=2.5, min_intercept=2900.0, max_intercept=3100.0
+    )
+    ht.generate_hough_points(x, y, num_slopes=50)
+    ht.bin_hough_points(xbins=10, ybins=10)
+
+    solver = RansacSolver(
+        x, y, hough=ht, config={"degree": 2, "sample_size": 3, "max_tries": 20}
+    )
+    assert solver.sampler.min_slope is not None
+    assert solver.sampler.max_slope is not None
+    assert solver.sampler.min_slope <= 1.5
+    assert solver.sampler.max_slope >= 2.5
+
+    # A turning quadratic y = 3000 + 2*x - 0.05*x^2 peaks at x=20 and decreases
+    # for x > 20, so _is_monotonic must reject it before bijective matching.
+    assert not solver._is_monotonic(np.array([3000.0, 2.0, -0.05]))
+    assert solver._is_monotonic(np.array([3000.0, 2.0, 0.005]))
