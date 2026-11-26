@@ -81,7 +81,7 @@ atlas = AtlasCollection(
             "min_intensity": 25.0,
             "min_distance": 5.0,
             "range_tolerance": 500.0,
-            "vacuum": True,
+            "vacuum": False,
             "pressure": 61700.0,
             "temperature": 276.55,
             "relative_humidity": 4.0,

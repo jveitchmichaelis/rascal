@@ -5,7 +5,7 @@ import numpy as np
 from scipy.signal import find_peaks
 
 from eval_utils import report_calibration_diagnostics
-from rascal.atlas import AtlasCollection
+from rascal.atlas import AtlasCollection, NistSource
 from rascal.calibrator import Calibrator
 from rascal.util import refine_peaks
 
@@ -30,12 +30,13 @@ atlas = AtlasCollection(
     atlases=[
         {
             "element": el,
+            "nist_source": NistSource.NIST_ALL,
             "min_intensity": 1000.0,
             "pressure": 70000.0,
             "temperature": 285.0,
             "range_tolerance": 500.0,
             "min_wavelength": 6500.0,
-            "max_wavelength": 10500.0,
+            "max_wavelength": 8500.0,
         }
         for el in ["Ne", "Ar", "Kr"]
     ]
@@ -44,14 +45,14 @@ atlas = AtlasCollection(
 config = {
     "detector": {
         "detector_min_wave": 6500.0,
-        "detector_max_wave": 10500.0,
+        "detector_max_wave": 8500.0,
     },
     "hough": {
         "num_slopes": 5000,
         "range_tolerance": 500.0,
         "linearity_tolerance": 50.0,
-        "xbins": 500,
-        "ybins": 500,
+        "xbins": 200,
+        "ybins": 200,
     },
     "ransac": {
         "sample_size": 5,

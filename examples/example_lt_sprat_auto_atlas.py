@@ -7,7 +7,7 @@ from scipy.signal import find_peaks
 
 from eval_utils import report_calibration_diagnostics
 from rascal import util
-from rascal.atlas import Atlas
+from rascal.atlas import Atlas, NistSource
 from rascal.calibrator import Calibrator
 
 # Load the LT SPRAT data
@@ -61,14 +61,16 @@ config = {
     "ransac": {
         "max_tries": 5000,
         "inlier_tolerance": 8.0,
-        "sample_size": 8,
+        "sample_size": 5,
         "top_n_candidate": 5,
         "filter_close": False,
     },
 }
 
 atlas = Atlas(
-    element="Xe",
+    element="Xe I",
+    nist_source=NistSource.NIST_ALL,
+    use_accurate_lines=False,
     min_intensity=50.0,
     min_wavelength=3800.0,
     max_wavelength=8200.0,
