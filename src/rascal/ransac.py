@@ -582,6 +582,14 @@ class RansacSolver:
                 y=inliers_y,
                 rms_tolerance=self.config.rms_tolerance,
             )
+            robust_cost = self._cost(robust_result)
+            if robust_cost > self.best_result.cost:
+                self.logger.debug(
+                    f"Post-robust solution cost {robust_cost} is worse than "
+                    f"current best {self.best_result.cost}."
+                )
+                return False
+
             if self._fit_valid(robust_result):
 
                 if (
@@ -603,7 +611,7 @@ class RansacSolver:
 
                 self.best_result = SolveResult(
                     fit_coeffs=coeffs,
-                    cost=result.cost,
+                    cost=robust_cost,
                     residual=residual,
                     x=list(copy.deepcopy(inliers_x)),
                     y=list(copy.deepcopy(inliers_y)),

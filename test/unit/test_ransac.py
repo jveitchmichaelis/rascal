@@ -182,3 +182,45 @@ def test_hough_weight_scales_relative_preference():
     assert np.isclose(ratios[0], 1.0)
     assert ratios[0] < ratios[1] < 10.0
     assert ratios[2] > ratios[1] * 1.1
+
+
+def test_update_best_uses_post_robust_cost():
+    # 10 points on y = 3000 + 5*x. Give _update_best a result with a high
+    # pre-robust cost (e.g. from a noisy minimal sample), which after robust
+    # refit + re-expansion matches all 10 points with ~0 residual.
+    # best_result.cost must be updated to the low post-robust cost (~0),
+    # not left at the stale pre-robust cost (2.5), so a worse 6-inlier fit
+    # cannot later overwrite it.
+    x = np.arange(10, dtype=float)
+    y = 3000.0 + 5.0 * x
+
+    solver = RansacSolver(
+        x,
+        y,
+        config={"degree": 1, "sample_size": 2, "rms_tolerance": 4.0},
+    )
+    good_pre = SolveResult(
+        fit_coeffs=np.array([3000.0, 5.0]),
+        cost=2.5,
+        x=x,
+        y=y,
+        residual=np.array([0.0] * 10),
+        rms_tolerance=4.0,
+    )
+    solver._update_best(good_pre)
+    assert solver.valid_solution
+    assert solver.best_result.cost < 1e-6
+
+    # Now try to overwrite with a worse fit whose pre-robust cost (2.0) is
+    # below the stale pre-robust cost (2.5) but well above the true post-robust
+    # cost (~0). It must be rejected.
+    worse = SolveResult(
+        fit_coeffs=np.array([3000.0, 5.5]),
+        cost=2.0,
+        x=x[:6],
+        y=y[:6],
+        residual=np.abs(3000.0 + 5.5 * x[:6] - y[:6]),
+        rms_tolerance=4.0,
+    )
+    solver._update_best(worse)
+    assert len(solver.best_result.x) == 10
