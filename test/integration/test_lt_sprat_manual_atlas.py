@@ -22,6 +22,7 @@ fits_file = fits.open(
     os.path.join(
         HERE,
         "..",
+        "..",
         "examples",
         "data_lt_sprat",
         "v_a_20190516_57_1_0_1.fits",
@@ -32,7 +33,6 @@ spectrum2D = fits_file.data
 
 # Collapse into 1D spectrum between row 110 and 120
 spectrum = np.median(spectrum2D[110:120], axis=0)
-print(spectrum.shape)
 
 temperature = fits_file.header["REFTEMP"]
 pressure = fits_file.header["REFPRES"] * 100.0
@@ -94,6 +94,7 @@ user_atlas = Atlas(
 )
 
 config = {
+    "seed": 0,
     "log_level": "INFO",
     "detector": {
         "contiguous_range": None,
@@ -111,179 +112,144 @@ config = {
     "ransac": {
         "max_tries": 5000,
         "inlier_tolerance": 5.0,
-        "sample_size": 8,
+        "sample_size": 5,
         "top_n_candidate": 5,
         "filter_close": True,
     },
 }
 
 
-# Initialise the calibrator
-c = Calibrator(
-    peaks, atlas_lines=user_atlas.atlas_lines, config=config, spectrum=spectrum
-)
+@pytest.fixture(scope="module")
+def calibrator():
+    c = Calibrator(
+        peaks,
+        atlas_lines=user_atlas.atlas_lines,
+        config=config,
+        spectrum=spectrum,
+    )
+    c.do_hough_transform()
+    return c
 
 
-def test_plot_arc():
+def test_plot_arc(calibrator, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    calibrator.use_matplotlib()
 
     # auto filename
-    c.plot_arc(display=False, fig_type="png+html", save_fig=True)
-    os.remove("rascal_arc.png")
+    calibrator.plot_arc(display=False, fig_type="png", save_fig=True)
+    assert (tmp_path / "rascal_arc.png").exists()
+
     # user provided filename
-    c.plot_arc(
+    calibrator.plot_arc(
         display=False,
         log_spectrum=True,
-        fig_type="png+html",
+        fig_type="png",
         save_fig=True,
-        filename=os.path.join(
-            HERE, "test_output", "test_lt_sprat_arc_matplotlib"
-        ),
+        filename=str(tmp_path / "test_lt_sprat_arc_matplotlib"),
     )
+    assert (tmp_path / "test_lt_sprat_arc_matplotlib.png").exists()
 
-    c.use_plotly()
-    assert c.which_plotting_library() == "plotly"
+    calibrator.use_plotly()
+    assert calibrator.which_plotting_library() == "plotly"
 
-    # auto filename
-    c.plot_arc(display=False, fig_type="png+html", save_fig=True)
-    os.remove("rascal_arc.png")
+    # auto filename (iframe HTML export)
+    calibrator.plot_arc(display=False, fig_type="iframe", save_fig=True)
+    assert (tmp_path / "rascal_arc.iframe").exists()
+
     # user provided filename
-    c.plot_arc(
+    calibrator.plot_arc(
         display=False,
         log_spectrum=True,
-        fig_type="png+html",
+        fig_type="iframe",
         save_fig=True,
-        filename=os.path.join(HERE, "test_output", "test_lt_sprat_arc_plotly"),
+        filename=str(tmp_path / "test_lt_sprat_arc_plotly"),
     )
-
-    # Not taking the log of the spectrum
-    c.plot_arc(
-        display=False,
-        save_fig=True,
-        filename=os.path.join(
-            HERE, "test_output", "test_lt_sprat_arc_matplotlib"
-        ),
-    )
-
-    c.plot_arc(
-        display=False,
-        save_fig=True,
-        fig_type="png+html",
-        filename=os.path.join(
-            HERE, "test_output", "test_lt_sprat_arc_log_matplotlib"
-        ),
-    )
+    assert (tmp_path / "test_lt_sprat_arc_plotly.iframe").exists()
 
 
-def test_sprat_manual_atlas_fit_match_peaks_and_create_summary():
+def test_sprat_manual_atlas_fit_match_peaks_and_create_summary(
+    calibrator, tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
 
     # Run the wavelength calibration
-    res = c.fit()
+    res = calibrator.fit()
     assert res["success"]
     assert res["atlas_utilisation"] >= 0.7
 
-    # Plot the solution
-    c.plot_fit(
+    # Plot with plotly
+    calibrator.use_plotly()
+    calibrator.plot_fit(
         res["fit_coeff"],
         spectrum,
         plot_atlas=True,
         log_spectrum=False,
         display=False,
         save_fig=True,
-        fig_type="png+html",
-        filename=os.path.join(HERE, "test_output", "test_lt_sprat_fit_plotly"),
+        fig_type="iframe",
+        filename=str(tmp_path / "test_lt_sprat_fit_plotly"),
     )
 
-    res = c.match_peaks(res["fit_coeff"])
+    res = calibrator.match_peaks(res["fit_coeff"])
     assert res["atlas_utilisation"] > 0.9
 
-    c.plot_fit(
-        res["fit_coeff"],
-        spectrum,
-        plot_atlas=True,
-        log_spectrum=False,
-        display=False,
-        fig_type="png+html",
-        save_fig=True,
-        filename=os.path.join(HERE, "test_output", "test_lt_sprat_fit_plotly"),
-    )
+    # repeat with matplotlib
+    calibrator.use_matplotlib()
+    assert calibrator.which_plotting_library() == "matplotlib"
 
-    # repeat everything with matplotlib
-    c.use_matplotlib()
-    assert c.which_plotting_library() == "matplotlib"
-
-    # Plot the solution
-    c.plot_fit(
+    calibrator.plot_fit(
         res["fit_coeff"],
         spectrum,
         plot_atlas=True,
         log_spectrum=False,
         display=False,
         save_fig=True,
-        fig_type="png+html",
-        filename=os.path.join(
-            HERE, "test_output", "test_lt_sprat_fit_matplotlib"
-        ),
+        fig_type="png",
+        filename=str(tmp_path / "test_lt_sprat_fit_matplotlib"),
     )
+    assert (tmp_path / "test_lt_sprat_fit_matplotlib.png").exists()
 
-    # Plot the solution and return json
-    c.plot_fit(
+    calibrator.plot_fit(
         res["fit_coeff"],
         spectrum,
         plot_atlas=True,
         log_spectrum=True,
         save_fig=True,
-        fig_type="png+html",
+        fig_type="png",
         display=False,
-        filename=os.path.join(
-            HERE, "test_output", "test_lt_sprat_fit_log_matplotlib"
-        ),
+        filename=str(tmp_path / "test_lt_sprat_fit_log_matplotlib"),
         return_jsonstring=True,
     )
 
-    c.summary()
+    calibrator.summary()
 
     # save with a filename provided
-    c.save_summary(
-        filename=os.path.join(HERE, "test_output", "test_lt_sprat_summary.txt")
-    )
+    summary_path = tmp_path / "test_lt_sprat_summary.txt"
+    calibrator.save_summary(filename=str(summary_path))
+    assert summary_path.exists()
 
     # save without providing a filename
-    out_path = c.save_summary()
-    os.remove(out_path)
+    out_path = calibrator.save_summary()
+    assert os.path.exists(out_path)
 
 
-def test_plot_hough_space():
-    # Show the parameter space for searching possible solution
-    c.plot_search_space(
+def test_plot_hough_space(calibrator, tmp_path):
+    calibrator.use_plotly()
+    calibrator.plot_search_space(
         display=False,
-        fig_type="png+html",
+        fig_type="iframe",
         save_fig=True,
-        filename=os.path.join(
-            HERE, "test_output", "test_lt_sprat_search_space_plotly"
-        ),
+        filename=str(tmp_path / "test_lt_sprat_search_space_plotly"),
     )
+    assert (tmp_path / "test_lt_sprat_search_space_plotly.iframe").exists()
 
-    # repeat everything with matplotlib
-    c.use_matplotlib()
-    assert c.which_plotting_library() == "matplotlib"
+    calibrator.use_matplotlib()
+    assert calibrator.which_plotting_library() == "matplotlib"
 
-    # Show the parameter space for searching possible solution
-    c.plot_search_space(
+    calibrator.plot_search_space(
         save_fig=True,
-        fig_type="png+html",
+        fig_type="png",
         display=False,
-        filename=os.path.join(
-            HERE, "test_output", "test_lt_sprat_search_space_matplotlib"
-        ),
+        filename=str(tmp_path / "test_lt_sprat_search_space_matplotlib"),
     )
-
-    # Show the parameter space for searching possible solution and return json
-    c.plot_search_space(
-        save_fig=True,
-        fig_type="png+html",
-        display=False,
-        filename=os.path.join(
-            HERE, "test_output", "test_lt_sprat_search_space_matplotlib"
-        ),
-        return_jsonstring=True,
-    )
+    assert (tmp_path / "test_lt_sprat_search_space_matplotlib.png").exists()

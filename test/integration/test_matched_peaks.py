@@ -119,7 +119,13 @@ def calibrator(base_dir):
     )
 
     config = {
-        "data": {"contiguous_range": None, "num_pix": 1024},
+        "seed": 0,
+        "detector": {
+            "contiguous_range": None,
+            "num_pix": 1024,
+            "detector_min_wave": 3500.0,
+            "detector_max_wave": 8100.0,
+        },
         "hough": {
             "num_slopes": 2000,
             "range_tolerance": 200.0,
@@ -130,21 +136,14 @@ def calibrator(base_dir):
             "sample_size": 5,
             "top_n_candidate": 5,
             "filter_close": True,
+            "max_tries": 7500,
+            "degree": 4,
+            "candidate_tolerance": 5.0,
         },
     }
 
     # Initialise the calibrator
     c = Calibrator(peaks, atlas_lines=user_atlas.atlas_lines, config=config)
-
-    # TODO Check this
-    """
-    c.atlas.clear()
-    assert len(a.atlas_lines) == 0
-    c.set_atlas(a)
-    c.atlas.remove_atlas_lines_range(9999.0)
-    assert len(c.atlas.atlas_lines) == len(wavelengths) - 1
-    c.atlas.list()
-    """
 
     return c
 
@@ -152,9 +151,8 @@ def calibrator(base_dir):
 @pytest.fixture(scope="session")
 def result(calibrator):
     # Run the wavelength calibration
-    res = calibrator.fit(max_tries=7500, fit_deg=4, candidate_tolerance=5.0)
-    assert res
-    rms = res["rms"]
+    res = calibrator.fit()
+    assert res["success"]
     n_peaks = len(calibrator.matched_peaks)
 
     assert n_peaks > 10
@@ -217,7 +215,7 @@ def test_match_peaks_robust_refit_different_fit_deg(calibrator, result):
         check_fit(calibrator, result)
 
 
-def test_match_peaks_output(calibrator, tmp_path):
+def test_match_peaks_output(calibrator, result, tmp_path):
     calibrator.save_matches(
         filename=str(tmp_path / "matches"),
         file_format="csv",

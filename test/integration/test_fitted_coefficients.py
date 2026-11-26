@@ -89,6 +89,7 @@ def test_gmos_fit():
         os.path.join(
             base_dir,
             "..",
+            "..",
             "examples",
             "data_gemini_gmos",
             "N20181115S0215_flattened.fits",
@@ -105,8 +106,11 @@ def test_gmos_fit():
     peaks = util.refine_peaks(spectrum, peaks, window_width=3)
 
     config = {
+        "seed": 0,
         "detector": {
-            "contiguous_range": [0, 1023, 1057.5, 2080.5, 2115.0, 3138.0]
+            "contiguous_range": [0, 1023, 1057.5, 2080.5, 2115.0, 3138.0],
+            "detector_min_wave": 5000.0,
+            "detector_max_wave": 9500.0,
         },
         "hough": {
             "num_slopes": 5000,
@@ -115,6 +119,7 @@ def test_gmos_fit():
             "ybins": 200,
         },
         "ransac": {
+            "solver": "optimal",
             "sample_size": 5,
             "top_n_candidate": 10,
             "minimum_matches": 18,
@@ -240,7 +245,12 @@ def test_osiris_fit():
     )
 
     config = {
-        "data": {"contiguous_range": None},
+        "seed": 0,
+        "detector": {
+            "contiguous_range": None,
+            "detector_min_wave": 3500.0,
+            "detector_max_wave": 8000.0,
+        },
         "hough": {
             "num_slopes": 2000,
             "range_tolerance": 500.0,
@@ -259,7 +269,6 @@ def test_osiris_fit():
             "minimum_matches": 11,
             "sampler": "probabilistic",
             "max_tries": 5000,
-            "fit_tolerance": 10.0,
             "degree": 4,
         },
     }
@@ -267,6 +276,7 @@ def test_osiris_fit():
     data = fits.open(
         os.path.join(
             base_dir,
+            "..",
             "..",
             "examples",
             "data_gtc_osiris",
@@ -304,6 +314,7 @@ def test_sprat_fit():
     fits_file = fits.open(
         os.path.join(
             base_dir,
+            "..",
             "..",
             "examples",
             "data_lt_sprat",
@@ -374,14 +385,19 @@ def test_sprat_fit():
         min_wavelength=3500.0,
         max_wavelength=8000.0,
         range_tolerance=500.0,
-        elements="Xe",
+        element="Xe",
         pressure=pressure,
         temperature=temperature,
         relative_humidity=relative_humidity,
     )
 
     config = {
-        "data": {"contiguous_range": None},
+        "seed": 0,
+        "detector": {
+            "contiguous_range": None,
+            "detector_min_wave": 3500.0,
+            "detector_max_wave": 8000.0,
+        },
         "hough": {
             "num_slopes": 2000,
             "range_tolerance": 200.0,
