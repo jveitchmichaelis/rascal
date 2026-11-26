@@ -1103,13 +1103,13 @@ class Calibrator:
         if self.config.ransac.linear:
             self.logger.debug("Using linear candidate points")
             self._get_candidate_points_linear(
-                self.config.hough.linearity_tolerance
+                self.config.ransac.candidate_tolerance
             )
 
         else:
             self.logger.debug("Using polynomial candidate points")
             self._get_candidate_points_poly(
-                self.config.ransac.inlier_tolerance
+                self.config.ransac.candidate_tolerance
             )
 
         (

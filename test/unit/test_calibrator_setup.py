@@ -275,3 +275,44 @@ def test_probabilistic_sampler_only_updates_on_inliers():
 
     assert len(updated_counts) > 0
     assert all(n_upd == n_inl for n_upd, n_inl in updated_counts)
+
+
+def test_calibrator_uses_ransac_candidate_tolerance(
+    peaks, detector_config, wavelengths_linear
+):
+    atlas = Atlas(
+        source="manual",
+        element="linear",
+        wavelengths=wavelengths_linear,
+        min_wavelength=3000.0,
+        max_wavelength=8000.0,
+    )
+    config = {
+        "seed": 0,
+        "detector": detector_config,
+        "hough": {
+            "num_slopes": 500,
+            "xbins": 50,
+            "ybins": 50,
+            "linearity_tolerance": 100.0,
+        },
+        "ransac": {
+            "degree": 1,
+            "sample_size": 3,
+            "max_tries": 20,
+            "candidate_tolerance": 5.0,
+        },
+    }
+    c = Calibrator(peaks, atlas_lines=atlas.atlas_lines, config=config)
+
+    called_with = []
+    orig_get = c._get_candidate_points_linear
+
+    def spy_get(tol):
+        called_with.append(tol)
+        return orig_get(tol)
+
+    c._get_candidate_points_linear = spy_get
+    c.fit()
+
+    assert called_with == [5.0]

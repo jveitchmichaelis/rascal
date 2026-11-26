@@ -106,6 +106,7 @@ class HoughConfig:
 
 @dataclass
 class RansacConfig:
+    candidate_tolerance: float = 10.0
     candidate_weighted: bool = True
     degree: int = 4
     filter_close: bool = False
