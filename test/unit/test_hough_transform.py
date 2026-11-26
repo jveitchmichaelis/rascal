@@ -26,21 +26,34 @@ ht.bin_hough_points(xbins=100, ybins=100)
 
 @pytest.fixture(scope="module")
 def tmp_output(tmp_path_factory):
-    return tmp_path_factory.mktemp("output")
-
-
-def test_save_as_npy(tmp_output):
+    out_dir = tmp_path_factory.mktemp("output")
     ht.save(
-        filename=str(tmp_output / "test_hough_transform_npy"),
+        filename=str(out_dir / "test_hough_transform_npy"),
         fileformat="npy",
     )
-
-
-def test_save_as_json(tmp_output):
     ht.save(
-        filename=str(tmp_output / "test_hough_transform_json"),
+        filename=str(out_dir / "test_hough_transform_json"),
         fileformat="json",
     )
+    return out_dir
+
+
+def test_save_as_npy(tmp_path):
+    target = tmp_path / "test_hough_transform_npy"
+    ht.save(
+        filename=str(target),
+        fileformat="npy",
+    )
+    assert (tmp_path / "test_hough_transform_npy.npy").exists()
+
+
+def test_save_as_json(tmp_path):
+    target = tmp_path / "test_hough_transform_json"
+    ht.save(
+        filename=str(target),
+        fileformat="json",
+    )
+    assert (tmp_path / "test_hough_transform_json.json").exists()
 
 
 def test_load_npy(tmp_output):
@@ -50,10 +63,10 @@ def test_load_npy(tmp_output):
         filetype="npy",
     )
 
-    assert (ht_loaded.hough_points == ht.hough_points).all
-    assert (ht_loaded.hist == ht.hist).all
-    assert (ht_loaded.xedges == ht.xedges).all
-    assert (ht_loaded.yedges == ht.yedges).all
+    assert np.array_equal(ht_loaded.hough_points, ht.hough_points)
+    assert np.array_equal(ht_loaded.hist, ht.hist)
+    assert np.array_equal(ht_loaded.xedges, ht.xedges)
+    assert np.array_equal(ht_loaded.yedges, ht.yedges)
     assert ht_loaded.min_slope == ht.min_slope
     assert ht_loaded.max_slope == ht.max_slope
     assert ht_loaded.min_intercept == ht.min_intercept
@@ -67,10 +80,10 @@ def test_load_json(tmp_output):
         filetype="json",
     )
 
-    assert (ht_loaded.hough_points == ht.hough_points).all
-    assert (ht_loaded.hist == ht.hist).all
-    assert (ht_loaded.xedges == ht.xedges).all
-    assert (ht_loaded.yedges == ht.yedges).all
+    assert np.allclose(ht_loaded.hough_points, ht.hough_points)
+    assert np.allclose(ht_loaded.hist, ht.hist)
+    assert np.allclose(ht_loaded.xedges, ht.xedges)
+    assert np.allclose(ht_loaded.yedges, ht.yedges)
     assert ht_loaded.min_slope == ht.min_slope
     assert ht_loaded.max_slope == ht.max_slope
     assert ht_loaded.min_intercept == ht.min_intercept
@@ -84,10 +97,10 @@ def test_load_json_without_extension(tmp_output):
         filetype="json",
     )
 
-    assert (ht_loaded.hough_points == ht.hough_points).all
-    assert (ht_loaded.hist == ht.hist).all
-    assert (ht_loaded.xedges == ht.xedges).all
-    assert (ht_loaded.yedges == ht.yedges).all
+    assert np.allclose(ht_loaded.hough_points, ht.hough_points)
+    assert np.allclose(ht_loaded.hist, ht.hist)
+    assert np.allclose(ht_loaded.xedges, ht.xedges)
+    assert np.allclose(ht_loaded.yedges, ht.yedges)
     assert ht_loaded.min_slope == ht.min_slope
     assert ht_loaded.max_slope == ht.max_slope
     assert ht_loaded.min_intercept == ht.min_intercept

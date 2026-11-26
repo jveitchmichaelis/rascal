@@ -48,6 +48,7 @@ def test_default():
     assert len(atlas.atlas_lines) == len(waves)
 
     config = {
+        "seed": 0,
         "detector": {
             "contiguous_range": None,
             "num_pix": int(max_pix[0]),

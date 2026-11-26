@@ -25,12 +25,14 @@ def test_ransac():
 
 
 def test_ransac_outliers():
+    rng = np.random.default_rng(0)
+    random.seed(0)
 
     noise_mag = 5
     n = 15
     inlier_ratio = 0.5
     x = np.arange(n)
-    eps = noise_mag * np.random.random(n)
+    eps = noise_mag * rng.random(n)
     y = x**2 + eps
 
     assert inlier_ratio <= 1

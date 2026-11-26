@@ -21,6 +21,7 @@ def test_linear_fit(peaks, detector_config, wavelengths_linear):
     )
 
     config = {
+        "seed": 0,
         "detector": detector_config,
         "hough": {
             "num_slopes": 1000,
@@ -65,6 +66,7 @@ def test_manual_refit(peaks, detector_config, wavelengths_linear):
     )
 
     config = {
+        "seed": 0,
         "detector": detector_config,
         "hough": {
             "num_slopes": 1000,
@@ -107,6 +109,7 @@ def test_manual_refit_remove_points(peaks, detector_config, wavelengths_linear):
     )
 
     config = {
+        "seed": 0,
         "detector": detector_config,
         "hough": {
             "num_slopes": 1000,
@@ -152,6 +155,7 @@ def test_manual_refit_add_points(peaks, detector_config, wavelengths_linear):
     )
 
     config = {
+        "seed": 0,
         "detector": detector_config,
         "hough": {
             "num_slopes": 1000,
@@ -196,6 +200,7 @@ def test_quadratic_fit(peaks, detector_config, wavelengths_quadratic):
     )
 
     config = {
+        "seed": 0,
         "detector": detector_config,
         "hough": {
             "num_slopes": 1000,
@@ -258,6 +263,7 @@ def test_quadratic_fit_legendre(peaks, detector_config, wavelengths_quadratic):
     )
 
     config = {
+        "seed": 0,
         "detector": detector_config,
         "hough": {
             "num_slopes": 500,
@@ -315,6 +321,7 @@ def test_quadratic_fit_chebyshev(peaks, detector_config, wavelengths_quadratic):
     )
 
     config = {
+        "seed": 0,
         "detector": detector_config,
         "hough": {
             "num_slopes": 500,
